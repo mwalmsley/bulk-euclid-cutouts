@@ -1,7 +1,6 @@
 from collections import namedtuple
 import os
 import shutil
-import json
 import warnings
 import hashlib
 
