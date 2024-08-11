@@ -15,8 +15,6 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 #
 
-# update via copying from MER_Morphology
-
 """
 File: python/Asterism/morphology.py
 
@@ -38,7 +36,9 @@ from astropy import wcs
 from astropy.coordinates import SkyCoord
 
 
-
+"""
+Selection cuts
+"""
 
 def apply_zoobot_selection_cuts(df: pd.DataFrame, instrument='VIS'):
     df = add_zoobot_selection_flags(df)
@@ -50,33 +50,48 @@ def passes_zoobot_selection_cuts(dictlike: dict, instrument='VIS'):
     if 'LOW_SEGMENTATION_AREA_VIS_FLAG' not in dictlike.keys():
         dictlike = add_zoobot_selection_flags(dictlike)  # adds all selection cut columns I need
     
-    if instrument == 'VIS':
-        instrument_size_flag_col = 'LOW_SEGMENTATION_AREA_VIS_FLAG'
-    elif instrument == 'NISP':
-        instrument_size_flag_col = 'LOW_SEGMENTATION_AREA_NISP_FLAG'
+    # if instrument == 'VIS':
+    #     instrument_size_flag_col = 'LOW_SEGMENTATION_AREA_VIS_FLAG'
+    # elif instrument == 'NISP':
+    #     instrument_size_flag_col = 'LOW_SEGMENTATION_AREA_NISP_FLAG'
 
-    return ~(dictlike['IS_GAIA_STAR'] | dictlike['LOW_SEGMENTED_FLUX_FLAG'] | dictlike['BAD_VIS_APER_FLUX_FLAG'] | dictlike[instrument_size_flag_col])
+    return ~(dictlike['IS_GAIA_STAR'] | dictlike['BAD_VIS_APER_FLUX_FLAG'] | dictlike['BAD_VIS_APER_FLUX_FLAG'] | dictlike['NO_VIS_DET'] | dictlike['HIGH_SPURIOUS_PROB'] | dictlike['FAILS_FLUX_AND_AREA_CUT'] )
 
 
 def add_zoobot_selection_flags(df: pd.DataFrame):  # works on either dataframe or dict
     # with dataframe, useful to have these broken out as columns for counting how many sources we lose with each cut
 
     # no stars
+    # MW: updated to also check pd.NAType, which is returned by SAS for final catalog
     df['IS_GAIA_STAR'] = ~(np.isnan(df['GAIA_ID']) | df['GAIA_ID'].isna())
-
-    # flag for weirdly low flux given area
-    # parameters just from manual tinkering with placing a line and looking at thumbnails, could be refined
-    gradient = 0.9
-    intercept = 3.1
-    df['LOW_SEGMENTED_FLUX_FLAG'] = np.log10(df['SEGMENTATION_AREA']) > np.log10(df['FLUX_VIS_APER'])*gradient+intercept
 
     # flag for bad flux
     df['BAD_VIS_APER_FLUX_FLAG'] = np.isnan(df['FLUX_VIS_APER']) | (df['FLUX_VIS_APER'] < 0)
 
-    df['LOW_SEGMENTATION_AREA_VIS_FLAG'] = df['SEGMENTATION_AREA'] < 1200
-    df['LOW_SEGMENTATION_AREA_NISP_FLAG'] = df['SEGMENTATION_AREA'] < 2000
+    df['NO_VIS_DET'] = df['VIS_DET'] != 1
+    df['HIGH_SPURIOUS_PROB'] = df['SPURIOUS_PROB'] > 0.2
+    df['LOW_SEGMENTATION_AREA'] = df['SEGMENTATION_AREA'] < 0.1
+    df['LOW_SEGMENTATION_FLUX'] = df['FLUX_SEGMENTATION'] < 22.90867652  # equiv to VIS mag fainter than 20.5
+    df['FAILS_FLUX_AND_AREA_CUT'] = df['LOW_SEGMENTATION_AREA'] & df['LOW_SEGMENTATION_FLUX']
+
+
+    # df['LOW_SEGMENTED_FLUX_FLAG'] = np.log10(df['SEGMENTATION_AREA']) < 1200
+    # df['LOG_SEGMENTED_VIS_MAG_FLAG'] = 
+
+    """
+    WHERE flux_vis_aper > 0
+    AND gaia_id IS NULL
+    AND vis_det=1
+    AND spurious_prob < 0.2
+    AND (segmentation_area > 1200 OR flux_segmentation > 22.90867652)
+    """
 
     return df
+
+
+"""
+Slicing within MER pipeline
+"""
 
     
 
@@ -92,8 +107,6 @@ def get_cutout_mosaic_coordinates(mosaic, source, buff, allow_radius_estimate=Fa
     # Get cluster centroid
     cluster_x = source['X_CENTER']
     cluster_y = source['Y_CENTER']
-    # assert cluster_x > 0, f'cluster_x {cluster_x} < 0'
-    # assert cluster_y > 0, f'cluster_x {cluster_y} < 0'
 
     # r_max is the maximum distance from the source center to the edge of the source segmap, in pixels
     # segmap is calculated by asterism in MER_DEBLENDING
@@ -106,7 +119,6 @@ def get_cutout_mosaic_coordinates(mosaic, source, buff, allow_radius_estimate=Fa
         else:
             raise KeyError(f'Source radius not found and radius estimation is not allowed: {source}')
     assert source_r_max > 0, f'source_r_max {source_r_max} < 0'
-
     # try to slice a square cutout
     # can still ultimately be non-square if galaxy is near edge (via min, max below)
     # thanks to tile overlap, these are hopefully covered by the other tile
@@ -116,12 +128,11 @@ def get_cutout_mosaic_coordinates(mosaic, source, buff, allow_radius_estimate=Fa
     # calculate cutout corners
     # do not return corners off the low edge (i.e. below 0)
     # return corners 
-    r1 = np.max([0, cluster_y-dy]).astype(int)  # pixel index of lower y corner of cutout
-    r2 = np.min([r, cluster_y+dy]).astype(int)  # pixel index of upper y corner of cutout
-    c1 = np.max([0, cluster_x-dx]).astype(int)  # pixel index of lower x corner of cutout
-    c2 = np.min([c, cluster_x+dx]).astype(int) # pixel index of upper x corner of cutout
-    # print(r, cluster_y, dy, r1, r2)
-    
+    r1 = np.max([0, cluster_y-dy]).astype(int)
+    r2 = np.min([r, cluster_y+dy]).astype(int)
+    c1 = np.max([0, cluster_x-dx]).astype(int)  # pixel index of lower left corner of cutout
+    c2 = np.min([c, cluster_x+dx]).astype(int)
+
     # sanity check; if you attempt to make cutouts from the wrong tile, this will fail
     assert r1 < r2, f'cutout low y edge above high y edge: (r1, r2)={(r1, r2)}, cluster_y={cluster_y}, mosaic={mosaic.shape}'
     assert c1 < c2, f'cutout low x edge above high x edge: (c1, c2)={(c1, c2)}, cluster_x={cluster_x}, mosaic={mosaic.shape}'
@@ -149,6 +160,27 @@ def estimate_source_r_max(source):
     return 10 ** log_r_max_estimate
 
 
+def extract_cutout_from_array(mosaic: np.ndarray, source, buff, allow_radius_estimate=False, enforce_shape=True):
+    # pixel coordinates of cutout (r=x, c=y, not sure why this syntax)
+    _, _, r1, r2, c1, c2 = get_cutout_mosaic_coordinates(
+        mosaic,
+        source,
+        buff,
+        allow_radius_estimate
+    )
+    # cut mosaic
+    data = np.copy(mosaic[r1:r2+1, c1:c2+1])
+    if enforce_shape:
+        assert np.abs(data.shape[0] - data.shape[1]) <= 1, f'Shape mismatch: cutout of shape {data.shape} not square'
+        # sometimes it is 1 pixel off, probably from rounding, and that's okay
+    return data
+
+
+
+
+"""
+Image processing
+"""
 
 def adjust_dynamic_range(flux, q=100, clip=99.85):
     im = np.arcsinh(flux * q)
@@ -174,53 +206,20 @@ def fits_to_pandas(fits_loc):
     return final_cat
 
 
-def get_pixel_centers(df, fits_loc):
-    wcs_frame = load_wcs_from_file(fits_loc)
-    world_c = SkyCoord(df["RIGHT_ASCENSION"], df["DECLINATION"], frame='icrs', unit="deg")
-    pix_c = wcs_frame.world_to_pixel(world_c)
-    return pix_c
 
 
-def load_wcs_from_file(filename):
-    # https://docs.astropy.org/en/stable/wcs/loading_from_fits.html
-    # Load the FITS hdulist using astropy.io.fits
-    hdulist = fits.open(filename)
-    # Parse the WCS keywords in the primary HDU
-    w = wcs.WCS(hdulist[0].header)
-    return w
-
-
-def extract_cutout(mosaic, source, buff, allow_radius_estimate=False, enforce_shape=True):
-    # pixel coordinates of cutout (r=x, c=y, not sure why this syntax)
-    _, _, r1, r2, c1, c2 = get_cutout_mosaic_coordinates(
-        mosaic,
-        source,
-        buff,
-        allow_radius_estimate
-    )
-
-    # print(r1, r2, c1, c2)
-    
-    # cut mosaic
-
-    data = np.copy(mosaic[r1:r2+1, c1:c2+1])
-    if enforce_shape:
-        assert np.abs(data.shape[0] - data.shape[1]) <= 1, f'Shape mismatch: cutout of shape {data.shape} not square'
-        # sometimes it is 1 pixel off, probably from rounding, and that's okay
-        # assert np.abs(data.shape[0] - (r2+1-r1)) <= 1, f'Shape mismatch: actual {data.shape}, expected {(r2+1-r1, c2+1-c1)}'
-        # assert np.abs(data.shape[1] - (c2+1-c1)) <= 1, f'Shape mismatch: actual {data.shape}, expected {(r2+1-r1, c2+1-c1)}'
-        # assert data.shape == (r2+1-r1, c2+1-c1), 
-    return data
-
-
-def make_vis_only_cutout_from_tiles(source, vis_im, allow_radius_estimate=False):
-    vis_cutout = extract_cutout(vis_im, source, buff=0, allow_radius_estimate=allow_radius_estimate)
+def make_vis_only_cutout_from_tiles(source: dict, vis_im, allow_radius_estimate=False):
+    vis_cutout = extract_cutout_from_array(vis_im, source, buff=0, allow_radius_estimate=allow_radius_estimate)
     return make_vis_only_cutout(vis_cutout)
 
 def make_vis_only_cutout(vis_cutout):
     vis_flux_adjusted = adjust_dynamic_range(vis_cutout, q=100, clip=99.85)
     vis_uint8 = to_uint8(vis_flux_adjusted)
     return vis_uint8
+
+
+
+
 
 def convert_final_cat_to_within_pipeline_cat(df, vis_tile_loc):
     # Zoobot cutout code is designed to expect the columns of the intermediate catalog
@@ -247,3 +246,18 @@ def convert_final_cat_to_within_pipeline_cat(df, vis_tile_loc):
     df['SOURCE_ID'] = df['OBJECT_ID']
 
     return df
+
+def get_pixel_centers(df, fits_loc):
+    wcs_frame = load_wcs_from_file(fits_loc)
+    world_c = SkyCoord(df["RIGHT_ASCENSION"], df["DECLINATION"], frame='icrs', unit="deg")
+    pix_c = wcs_frame.world_to_pixel(world_c)
+    return pix_c
+
+
+def load_wcs_from_file(filename):
+    # https://docs.astropy.org/en/stable/wcs/loading_from_fits.html
+    # Load the FITS hdulist using astropy.io.fits
+    hdulist = fits.open(filename)
+    # Parse the WCS keywords in the primary HDU
+    w = wcs.WCS(hdulist[0].header)
+    return w

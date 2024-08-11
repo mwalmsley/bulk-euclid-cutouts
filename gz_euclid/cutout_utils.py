@@ -1,4 +1,4 @@
-import morphology_utils as m_utils  # uses local paste, not MER version
+from gz_euclid import morphology_utils as m_utils  # uses local paste, not MER version
 
 import numpy as np
 

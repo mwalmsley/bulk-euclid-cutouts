@@ -19,6 +19,7 @@ def create_folders(cfg: OmegaConf):
     cfg.jpg_dir = cfg.cutout_dir + '/jpg'
 
     logging.info(f'Saving to {cfg.download_dir}')
+    assert os.path.exists(cfg.download_dir)
 
     for d in [cfg.jpg_dir, cfg.tile_dir, cfg.catalog_dir]:
         if not os.path.exists(d):
@@ -59,18 +60,23 @@ def get_tile_catalog(cfg: OmegaConf):
     return tiles
 
 
-def select_tiles(tiles):
-    rng = np.random.default_rng(1)
+def select_tiles(cfg, tiles):
+    rng = np.random.default_rng(cfg.seed)
 
     vis_tiles = tiles.query('filter_name == "VIS"')
     y_tiles = tiles.query('filter_name == "NIR_Y"')
     possible_indices = list(set(vis_tiles['tile_index']).intersection(set(y_tiles['tile_index'])))
-    # possible_indices
+    logging.info(f'Num. of tiles with VIS and Y: {len(possible_indices)}')
 
     # tile_indices_to_use = rng.choice(possible_indices, 100)
     # [102034406, 102033246, 102012403,
-    tile_indices_to_use = rng.choice(possible_indices, 200)
-    return tiles[tiles['tile_index'].isin(tile_indices_to_use)].reset_index(drop=True)
+    assert len(possible_indices) > cfg.num_tiles, f'Not enough tiles with both VIS and Y: {len(possible_indices)}'
+    tile_indices_to_use = rng.choice(possible_indices, cfg.num_tiles, replace=False)
+    tiles_to_use = tiles[tiles['tile_index'].isin(tile_indices_to_use)].reset_index(drop=True)  
+    logging.info(f'Num. of tiles to use after random subselection: {len(tiles_to_use)}')
+    # should be exactly twice as many tiles to use as sampled (1 for vis, 1 for y)
+    assert len(tiles_to_use) == 2 * cfg.num_tiles
+    return tiles_to_use
 
 
 def download_tiles(cfg: OmegaConf, tiles_to_download, refresh_catalogs=False):
@@ -80,7 +86,7 @@ def download_tiles(cfg: OmegaConf, tiles_to_download, refresh_catalogs=False):
 
         vis_loc, nisp_loc = pipeline_utils.download_mosaics(tile_index, tiles_to_download, cfg.tile_dir)
         try:
-            vis_tile = tiles.query('filter_name == "VIS"').query(f'tile_index == {tile_index}').squeeze()
+            vis_tile = tiles_to_download.query('filter_name == "VIS"').query(f'tile_index == {tile_index}').squeeze()
             tile_catalog_loc = cfg.catalog_dir + f'/{tile_index}_mer_catalog.csv'
             if (not os.path.isfile(tile_catalog_loc)) or refresh_catalogs:
                 tile_galaxies = pipeline_utils.find_zoobot_sources_in_tile(vis_tile)
@@ -97,11 +103,11 @@ def download_tiles(cfg: OmegaConf, tiles_to_download, refresh_catalogs=False):
 
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    cfg = OmegaConf.load('/home/walml/repos/gz-euclid-datalab/run_pipeline/v2_challenge_launch.yaml')
+#     cfg = OmegaConf.load('/home/walml/repos/gz-euclid-datalab/run_pipeline/v2_challenge_launch.yaml')
 
-    cfg = create_folders(cfg)
-    tiles = get_tile_catalog(cfg)
-    tiles = select_tiles(tiles)
-    download_tiles(cfg, tiles, cfg.tile_dir, refresh_catalogs = False)
+#     cfg = create_folders(cfg)
+#     tiles = get_tile_catalog(cfg)
+#     tiles = select_tiles(tiles)
+#     download_tiles(cfg, tiles, refresh_catalogs=False)
