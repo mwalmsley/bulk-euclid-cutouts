@@ -1,10 +1,5 @@
-import sys
-from pathlib import Path
-repo_dir = Path('/home/walml/repos')
-sys.path.append(str(repo_dir / 'MER_Morphology/MER_Morphology/python/MER_Morphology'))
-
-
 import morphology_utils as m_utils
+
 import numpy as np
 
 
@@ -91,3 +86,12 @@ def get_alpha(x, original_min, stretch, power):
     
     # maximum not used
     return ( stretch * np.abs(x - original_min) / (1+stretch*np.abs(x-original_min)) ) ** power
+
+
+
+
+import sys
+from pathlib import Path
+repo_dir = Path('/home/walml/repos')
+sys.path.append(str(repo_dir / 'MER_Morphology/MER_Morphology/python/MER_Morphology'))
+

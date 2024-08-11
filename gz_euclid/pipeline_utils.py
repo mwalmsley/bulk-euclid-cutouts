@@ -14,7 +14,8 @@ from astropy.coordinates import SkyCoord
 from astropy.io.fits.verify import VerifyWarning
 from PIL import Image
 
-# from astroquery.esa.euclid.core import EuclidClass, Euclid
+if os.path.isdir('/media/home/team_workspaces'):  # on datalabs
+    from astroquery.esa.euclid.core import EuclidClass, Euclid
 
 import morphology_utils
 import cutout_utils
@@ -123,15 +124,15 @@ def get_tiles_in_survey(survey: Survey, bands=None, release_name=None, ra_limits
     return df
 
 
-# def get_tile_extent(tile_ra, tile_dec, tile_width_arcmin: float):
-def get_tile_extents(tiles, survey):
-    tiles = tiles.copy()
-    tile_half_width_deg = (survey.tile_width / 60.)/2.  #  arcmin to deg, halved
-    tiles['ra_min'] = tiles['ra'] - tile_half_width_deg
-    tiles['ra_max'] = tiles['ra'] + tile_half_width_deg
-    tiles['dec_min'] = tiles['dec'] - tile_half_width_deg
-    tiles['dec_max'] = tiles['dec'] + tile_half_width_deg
-    return tiles
+# # def get_tile_extent(tile_ra, tile_dec, tile_width_arcmin: float):
+# def get_tile_extents(tiles, survey):
+#     tiles = tiles.copy()
+#     tile_half_width_deg = (survey.tile_width / 60.)/2.  #  arcmin to deg, halved
+#     tiles['ra_min'] = tiles['ra'] - tile_half_width_deg
+#     tiles['ra_max'] = tiles['ra'] + tile_half_width_deg
+#     tiles['dec_min'] = tiles['dec'] - tile_half_width_deg
+#     tiles['dec_max'] = tiles['dec'] + tile_half_width_deg
+#     return tiles
 
 
 def get_tile_extents_fov(tiles):

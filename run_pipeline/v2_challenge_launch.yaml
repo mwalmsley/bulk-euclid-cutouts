@@ -1,0 +1,9 @@
+release_name: F-006
+ra_upper_limit: 100
+dec_upper_limit: -20
+
+download_dir: '/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/pipeline/v2_challenge_launch'
+tile_dir: !
+catalog_dir: !
+cutout_dir: !
+jpg_dir: !
