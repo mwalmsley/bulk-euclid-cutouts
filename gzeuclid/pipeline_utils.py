@@ -1,0 +1,379 @@
+from collections import namedtuple
+import os
+import shutil
+import json
+import warnings
+import hashlib
+
+import numpy as np
+import pandas as pd
+from astropy.io import fits
+from astropy.wcs import WCS
+from astropy.coordinates import SkyCoord
+# from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
+from astropy.io.fits.verify import VerifyWarning
+from PIL import Image
+
+# from astroquery.esa.euclid.core import EuclidClass, Euclid
+
+import morphology_utils
+import cutout_utils
+
+
+Survey = namedtuple('Survey', ['name', 'min_tile_index', 'max_tile_index', 'tile_width', 'tile_overlap'])
+
+# https://www.cosmos.esa.int/documents/10647/12245842/EUCL-EST-ME-8-007_v11_EST_Q1_memo_2022-10-06.pdf
+# https://www.cosmos.esa.int/documents/10647/12245842/EUCL-EST-ME-8-014_v10_Q1_product_definition_2023-08-14.pdf
+# https://www.cosmos.esa.int/documents/10647/12245842/EUCL-EST-ME-8-018_v1_Q1_fields_definition_2024-07-04.pdf/841e9693-3b5c-89b6-828f-f0faa4f7545b?t=1720533267223
+
+# https://euclid.roe.ac.uk/projects/mer_pf/wiki/Tiling
+# tile ids figure
+
+# deep fields are 17x17 arcmin always
+# wide tiles are 32x32 arcmin except when edited for special objects
+
+# wide tiles include 2' of overlap (so 30' without overlap, and 1' on each side)
+# deep tiles are exactly the same (despite being smaller)
+
+# nominal v1.2 tiling for these surveys, but no data yet except PV-005 below
+# EDF_SOUTH = pipeline_utils.Survey(
+#     name='edf_south',
+#     min_tile_index=0,
+#     max_tile_index=int(1.013e8),
+#     tile_width=17,
+#     tile_overlap=2
+# )
+# EDF_NORTH = pipeline_utils.Survey(
+#     name='edf_north',
+#     min_tile_index=int(1.017e8),
+#     max_tile_index=int(1.019e8),
+#     tile_width=17,
+#     tile_overlap=2
+# )
+
+# tiles from both south and north in PV-005, likely to be removed in near future (and no catalogues)
+EDF_PV = Survey(
+    name='edf_pv',
+    min_tile_index=0,
+    max_tile_index=int(1.013e8),
+    tile_width=17,
+    tile_overlap=2
+)
+
+# no data yet
+EDF_FORNAX = Survey(
+    name='edf_fornax',
+    min_tile_index=int(1.0132e8),
+    max_tile_index=int(1.014e8),
+    tile_width=17,
+    tile_overlap=2
+)
+    
+# 1700 tiles :)
+WIDE = Survey(
+    name='wide',
+    min_tile_index=int(1.02e8),
+    max_tile_index=int(1.022e8),
+    tile_width=32,
+    tile_overlap=2
+)
+    
+
+
+
+
+def get_tiles_in_survey(survey: Survey, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
+
+    # TODO move release name into survey property, once happy with what it means, if it is per survey?
+    query_str = f"""
+        SELECT * FROM sedm.mosaic_product 
+        WHERE (tile_index > {survey.min_tile_index}) AND (tile_index < {survey.max_tile_index})
+        AND (product_type='DpdMerBksMosaic')
+        """
+    
+    if bands is not None:
+        if len(bands) == 1 or isinstance(bands, str):
+            query_str += f"AND (filter_name='{bands}')"
+        else:
+            query_str += f"AND (filter_name IN {tuple(bands)})"
+            
+    if ra_limits:
+        query_str += f" AND (ra > {ra_limits[0]}) AND (ra < {ra_limits[1]})"
+        
+    if dec_limits:
+        query_str += f" AND (dec > {dec_limits[0]}) AND (dec < {dec_limits[1]})"
+        
+    if release_name:
+        query_str += f" AND release_name='{release_name}'"
+    
+    query_str += " ORDER BY tile_index ASC"
+    
+
+        # AND (release_name='F-006')    
+        # WHERE (instrument_name='VIS') 
+        # WHERE (instrument_name IN ('VIS', 'NISP')) 
+    
+    # async to avoid 2k max, just not it saves results somewhere on server
+    job = Euclid.launch_job_async(query_str, verbose=False, background=False) 
+    assert job is not None, 'Query failed with: \n' + query_str
+    df = job.get_results().to_pandas()
+    
+    assert len(df) > 0, 'No results for query with: \n' + query_str
+    print("Found", len(df), " query results")
+    return df
+
+
+# def get_tile_extent(tile_ra, tile_dec, tile_width_arcmin: float):
+def get_tile_extents(tiles, survey):
+    tiles = tiles.copy()
+    tile_half_width_deg = (survey.tile_width / 60.)/2.  #  arcmin to deg, halved
+    tiles['ra_min'] = tiles['ra'] - tile_half_width_deg
+    tiles['ra_max'] = tiles['ra'] + tile_half_width_deg
+    tiles['dec_min'] = tiles['dec'] - tile_half_width_deg
+    tiles['dec_max'] = tiles['dec'] + tile_half_width_deg
+    return tiles
+
+
+def get_tile_extents_fov(tiles):
+    
+    tiles = tiles.copy()
+    float_fovs = tiles['fov'].apply(lambda x: np.array(x[1:-1].split(", ")).astype(np.float64)) # from one big string to arrays of floats
+    array_fovs = np.array(float_fovs.values.tolist()) #from pandas series to numpy array
+    ras = array_fovs[:, ::2]
+    decs = array_fovs[:, 1::2]
+
+    tiles['ra_min'] = np.min(ras, axis=1)
+    tiles['ra_max'] = np.max(ras, axis=1)
+    tiles['dec_min'] = np.min(decs, axis=1)
+    tiles['dec_max'] = np.max(decs, axis=1)
+    return tiles
+
+
+#making a query for sources
+
+# min seg area and min viz flux copied into SQL from Zoobot filters to reduce query size (dramatically)
+# other filters are a touch fiddly in SQL so just do next in python as always
+
+
+def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
+    
+
+    # apply our final selection criteria:
+    # non-negative vis flux
+    # no cross-match to gaia stars
+    # detected in vis
+    # not "spurious" (very similar to detected in vis)
+    # at least 1200px in area OR vis mag < 20.5 (expressed as flux)
+    # and within the tile, of course
+    
+    query_str = f"""SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_vis_aper, ellipticity, kron_radius
+                FROM catalogue.mer_catalogue
+                WHERE flux_vis_aper > 0
+                AND gaia_id IS NULL
+                AND vis_det=1
+                AND spurious_prob < 0.2
+                AND (segmentation_area > 1200 OR flux_segmentation > 22.90867652)
+                AND right_ascension > {tile['ra_min']} AND right_ascension < {tile['ra_max']}
+                AND declination > {tile['dec_min']} AND declination < {tile['dec_max']}
+                ORDER BY object_id ASC
+                """
+    
+    retries = 0
+    while retries < max_retries:
+        try:
+            if run_async:
+                output_tmpfile = f'tmpfile_{np.random.rand(int(1e8))}.csv'
+                job = Euclid.launch_job_async(query_str, background=False, output_file=output_tmpfile, output_format='csv')
+                df = pd.read_csv(output_tmpfile)
+                shutil.rm(output_tmpfile)
+            else:
+                job = Euclid.launch_job(query_str)
+                df = job.get_results().to_pandas()
+                assert len(df) < 2000, 'Hit query limit, set run_async=True'
+            break
+        except AttributeError as e:
+            print(e)
+            print(f'Retrying, {retries}')
+        retries += 1
+
+    print("Found", len(df), " query results")
+
+    # apply python cuts - NO LONGER NEEDED, all in SQL except the weirdly-low-flux-line which is replaced by VIS_DET=1
+    # df.columns = df.columns.str.upper()
+    # df = morphology_utils.apply_zoobot_selection_cuts(df, 'VIS') no longer needed, the only one added here is the
+    # df.columns = df.columns.str.lower()
+    # print("Found", len(df), " after all cuts")
+    
+    df['tile_index'] = tile['tile_index']
+    df['mag_segmentation'] = -2.5 * np.log10(df['flux_segmentation']) + 23.9  # for convenience
+    
+    return df.reset_index(drop=True)
+
+
+def download_mosaics(tile_index, tiles, download_dir):
+    
+    vis_tile = tiles.query(f'tile_index == {tile_index}').query('filter_name == "VIS"').squeeze()
+    assert isinstance(vis_tile, pd.Series), f'No or multiple VIS tiles ({len(vis_tile)}) found for tile index {tile_index}'
+    
+    nisp_tile = tiles.query(f'tile_index == {tile_index}').query('filter_name == "NIR_Y"').squeeze()
+    assert isinstance(nisp_tile, pd.Series), nisp_tile
+    
+    vis_loc, nisp_loc = save_tiles_temporarily([vis_tile, nisp_tile], download_dir)
+    return vis_loc, nisp_loc
+
+
+#downloading the file
+# example_file_name = "EUC_MER_BGSUB-MOSAIC-VIS_TILE101019587-F96AF8_20240112T194212.916693Z_00.00.fits"
+# print("Getting file:", tile["file_name"])
+
+def save_tile_temporarily(tile_filename, download_dir):
+    # TODO place in tmpdir of some kind
+    output_loc = os.path.join(download_dir, tile_filename)
+    if not os.path.isfile(output_loc):
+        downloaded_path = Euclid.get_product(file_name=tile_filename, output_file=output_loc)[0]  # 0 as one product
+        # abs_path = downloaded_path.replace('./', '/media/user/')  # gives a path relative to this notebook, not great
+        print("File saved at:", downloaded_path)
+    return output_loc
+
+
+def save_tiles_temporarily(tiles, download_dir):
+    return [save_tile_temporarily(tile['file_name'], download_dir) for tile in tiles]
+
+
+def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, oneway_hash=False):
+    tile_index = str(int(galaxy['tile_index']))
+    object_id = str(int(galaxy['object_id'])).replace('-', 'NEG')
+    subdir = tile_index
+    filename_without_format = tile_index + '_' + object_id
+    if version_suffix is not None:
+        filename_without_format = filename_without_format + '_' + version_suffix
+        
+    if oneway_hash:
+        hasher = hashlib.sha256()
+        hasher.update(filename_without_format.encode())
+        filename_without_format = hasher.hexdigest()
+    return os.path.join(base_dir, subdir, filename_without_format + '.' + output_format)
+
+
+def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:str='jpg', overwrite:bool=False, allow_radius_estimate:bool=True):
+    
+    print('loading tile')
+    vis_data, header = fits.getdata(vis_loc, header=True, memmap=False, decompress_in_memory=True)
+    nisp_data = fits.getdata(nisp_loc, header=False, memmap=False, decompress_in_memory=True)
+    print('tile loaded')
+    
+    # vis_data = vis_data.astype(np.float32) * 1
+    # nisp_data = nisp_data.astype(np.float32) * 1
+    # print('tile converted')
+
+    tile_galaxies = tile_galaxies.reset_index(drop=True)
+    
+    tile_wcs = WCS(header)
+
+    for i, galaxy in tile_galaxies.iterrows():
+        
+        if i % 100 == 0:
+            print(f'galaxy {i} of {len(tile_galaxies)}')
+                  
+        c = SkyCoord(galaxy['right_ascension'], galaxy['declination'], frame='icrs', unit="deg")
+        x_center, y_center = tile_wcs.world_to_pixel(c)
+
+         # these are the pixel coordinates of the galaxy wrt. the tile.
+         # for big sources, it might be possible to be centered off the edge of the tile?
+        galaxy['x_center'] = x_center  
+        galaxy['y_center'] = y_center
+        galaxy['log_segmentation_area'] = np.log10(galaxy['segmentation_area'])
+        galaxy['log_kron_radius'] = np.log10(galaxy['kron_radius'])
+        
+        if output_format == 'jpg':
+            
+            try:
+                
+                # really should make this a class...
+
+                cutout_locs = galaxy[['jpg_loc_composite', 'jpg_loc_vis_only', 'jpg_loc_vis_lsb']]
+
+                # assume they all are in the same subdir
+                if i == 0:
+                    cutout_subdir = os.path.dirname(cutout_locs['jpg_loc_composite'])
+                    if not os.path.isdir(cutout_subdir):
+                        os.makedirs(cutout_subdir)
+    
+                
+                if np.all([os.path.isfile(loc) for loc in cutout_locs]) and not overwrite:
+                    # print('skipping', cutout_locs[0])
+                    continue
+                # print(cutout_locs[0])
+                    
+                # print('getting slice')
+                galaxy.index = galaxy.index.str.upper()
+                vis_cutout = morphology_utils.extract_cutout(vis_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
+                nisp_cutout = morphology_utils.extract_cutout(nisp_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
+                galaxy.index = galaxy.index.str.lower()
+                # extremely lazy coding, I should make a class or smth
+                # print(f'got slice {vis_cutout.shape}, {nisp_cutout.shape}')
+
+                # version_suffix = 'composite'
+                # cutout_loc = get_cutout_loc(base_dir, galaxy, output_format, version_suffix, oneway_hash)
+                cutout = cutout_utils.make_composite_cutout(vis_cutout, nisp_cutout)
+                # print('composite ready')
+                Image.fromarray(cutout).save(galaxy['jpg_loc_composite'])
+                # print('composite saved')
+
+
+                # version_suffix = 'vis_only'
+                # cutout_loc = get_cutout_loc(base_dir, galaxy, output_format, version_suffix, oneway_hash)
+                cutout = morphology_utils.make_vis_only_cutout(vis_cutout)
+                # print('vis only ready')
+                Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only'])
+                # print('vis only saved')
+
+                # version_suffix = 'vis_lsb'
+                # cutout_loc = get_cutout_loc(base_dir, galaxy, output_format, version_suffix, oneway_hash)
+                # magic params from tinkering
+                cutout = cutout_utils.make_lsb_cutout(vis_cutout, stretch=20, power=0.5)
+                # print('vis lsb ready')
+                Image.fromarray(cutout).save(galaxy['jpg_loc_vis_lsb'])
+                # print('vis lsb saved')
+                
+            except AssertionError as e:
+                galaxy.index = galaxy.index.str.lower()
+                print(f'skipping galaxy {galaxy["object_id"]} in tile {galaxy["tile_index"]} due to \n{e}')
+
+            
+        elif (output_format == 'fits.gz') or (output_format == 'fits'):
+
+    
+
+            # lazy copy
+            # assume they all are in the same subdir
+            if i == 0:
+                cutout_subdir = os.path.dirname(galaxy['fits_loc'])
+                if not os.path.isdir(cutout_subdir):
+                    os.makedirs(cutout_subdir)
+
+
+            # lazy copy
+
+            galaxy.index = galaxy.index.str.upper()
+            vis_cutout = morphology_utils.extract_cutout(vis_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
+            nisp_cutout = morphology_utils.extract_cutout(nisp_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
+            # galaxy.index = galaxy.index.str.lower()
+
+    
+            hdr = fits.Header()
+            # hdr['COMMENT'] = json.dumps(galaxy[['object_id', 'tile_index', 'release_name']].to_dict())
+            hdr.update(galaxy[['OBJECT_ID', 'TILE_INDEX', 'RELEASE_NAME']].to_dict())
+            header_hdu = fits.PrimaryHDU(header=hdr)
+            
+            vis_hdu = fits.ImageHDU(data=vis_cutout, name="VIS_FLUX_MICROJANSKY", header=hdr)
+            nisp_hdu = fits.ImageHDU(data=nisp_cutout, name="NISP_Y_FLUX_MICROJANSKY", header=hdr)
+            
+            hdul = fits.HDUList([header_hdu, vis_hdu, nisp_hdu])
+            
+            with warnings.catch_warnings():
+                # it rewrites my columns to fit the FITS standard by adding HEIRARCH
+                warnings.simplefilter('ignore', VerifyWarning)
+                hdul.writeto(galaxy['FITS_LOC'], overwrite=True)
+        else:
+            raise ValueError(f'{output_format} format not recognised')
