@@ -16,7 +16,7 @@ from PIL import Image
 if os.path.isdir('/media/home/team_workspaces'):  # on datalabs
     from astroquery.esa.euclid.core import EuclidClass, Euclid
 
-from gz_euclid import morphology_utils, cutout_utils
+from gz_euclid import morphology_utils_ou_mer as m_utils, cutout_utils
 
 
 Survey = namedtuple('Survey', ['name', 'min_tile_index', 'max_tile_index', 'tile_width', 'tile_overlap'])
@@ -199,7 +199,7 @@ def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
 
     # apply python cuts - NO LONGER NEEDED, all in SQL except the weirdly-low-flux-line which is replaced by VIS_DET=1
     # df.columns = df.columns.str.upper()
-    # df = morphology_utils.apply_zoobot_selection_cuts(df, 'VIS') no longer needed, the only one added here is the
+    # df = m_utils.apply_zoobot_selection_cuts(df, 'VIS') no longer needed, the only one added here is the
     # df.columns = df.columns.str.lower()
     # print("Found", len(df), " after all cuts")
     
@@ -318,8 +318,8 @@ def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:s
                     
                 # print('getting slice')
                 galaxy.index = galaxy.index.str.upper()
-                vis_cutout = morphology_utils.extract_cutout(vis_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
-                nisp_cutout = morphology_utils.extract_cutout(nisp_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
+                vis_cutout = m_utils.extract_cutout_from_array(vis_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
+                nisp_cutout = m_utils.extract_cutout_from_array(nisp_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
                 galaxy.index = galaxy.index.str.lower()
                 # extremely lazy coding, I should make a class or smth
                 # print(f'got slice {vis_cutout.shape}, {nisp_cutout.shape}')
@@ -334,7 +334,7 @@ def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:s
 
                 # version_suffix = 'vis_only'
                 # cutout_loc = get_cutout_loc(base_dir, galaxy, output_format, version_suffix, oneway_hash)
-                cutout = morphology_utils.make_vis_only_cutout(vis_cutout)
+                cutout = m_utils.make_vis_only_cutout(vis_cutout)
                 # print('vis only ready')
                 Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only'])
                 # print('vis only saved')
@@ -367,14 +367,15 @@ def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:s
             # lazy copy
 
             galaxy.index = galaxy.index.str.upper()
-            vis_cutout = morphology_utils.extract_cutout(vis_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
-            nisp_cutout = morphology_utils.extract_cutout(nisp_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
+            vis_cutout, cutout_wcs = m_utils.extract_cutout_from_fits(vis_data, tile_wcs, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
+            nisp_cutout, _ = m_utils.extract_cutout_from_fits(nisp_data, tile_wcs, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
             # galaxy.index = galaxy.index.str.lower()
 
     
             hdr = fits.Header()
             # hdr['COMMENT'] = json.dumps(galaxy[['object_id', 'tile_index', 'release_name']].to_dict())
             hdr.update(galaxy[['OBJECT_ID', 'TILE_INDEX', 'RELEASE_NAME']].to_dict())
+            hdr.update(cutout_wcs.to_header())  # adds WCS for cutout (vs whole tile)
             header_hdu = fits.PrimaryHDU(header=hdr)
             
             vis_hdu = fits.ImageHDU(data=vis_cutout, name="VIS_FLUX_MICROJANSKY", header=hdr)

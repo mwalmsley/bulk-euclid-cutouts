@@ -1,12 +1,17 @@
-from gz_euclid import morphology_utils as m_utils  # uses local paste, not MER version
+from gz_euclid import morphology_utils_ou_mer as m_utils  # try to keep this exactly like ou mer version
 
 import numpy as np
+
+# import Cutout2d
+from astropy.nddata.utils import Cutout2D
+# import WCS
+from astropy.wcs import WCS
 
 
 
 def make_composite_cutout_from_tiles(source, vis_im, nir_im, allow_radius_estimate=False):
-    vis_cutout = m_utils.extract_cutout(vis_im, source, buff=0, allow_radius_estimate=allow_radius_estimate)
-    nisp_cutout = m_utils.extract_cutout(nir_im, source, buff=0, allow_radius_estimate=allow_radius_estimate)
+    vis_cutout = m_utils.extract_cutout_from_array(vis_im, source, buff=0, allow_radius_estimate=allow_radius_estimate)
+    nisp_cutout = m_utils.extract_cutout_from_array(nir_im, source, buff=0, allow_radius_estimate=allow_radius_estimate)
     
     return make_composite_cutout(vis_cutout, nisp_cutout)
     
@@ -65,8 +70,8 @@ def gordon_scaling(x, stretch, power):
     # clip
     # x = np.clip(x, original_min, original_max)
     
-    from astropy.convolution import convolve, Ring2DKernel
-    from photutils.segmentation import make_2dgaussian_kernel
+    # from astropy.convolution import convolve, Ring2DKernel
+    # from photutils.segmentation import make_2dgaussian_kernel
 
     # kernel = Ring2DKernel(radius_in=0, width=2)
     # kernel = make_2dgaussian_kernel(20.0, size=3)  # FWHM = 3.0
@@ -87,9 +92,27 @@ def get_alpha(x, original_min, stretch, power):
     # maximum not used
     return ( stretch * np.abs(x - original_min) / (1+stretch*np.abs(x-original_min)) ) ** power
 
+# fits version of extract_cutout_from_array in moprhology_utils_ou_mer.py
+def extract_cutout_from_fits(mosaic, mosaic_wcs, source, buff, allow_radius_estimate=False, enforce_shape=True):
+    # pixel coordinates of cutout (r=x, c=y, not sure why this syntax)
+    _, _, r1, r2, c1, c2 = m_utils.get_cutout_mosaic_coordinates(
+        mosaic,
+        source,
+        buff,
+        allow_radius_estimate
+    )
+    # cut mosaic (now with astropy)
 
-# import sys
-# from pathlib import Path
-# repo_dir = Path('/home/walml/repos')
-# sys.path.append(str(repo_dir / 'MER_Morphology/MER_Morphology/python/MER_Morphology'))
+    cutout = Cutout2D(
+        mosaic, 
+        position=(source['x_center'], source['y_center']), 
+        size=(abs(r1-r2), abs(c1-c2)), 
+        wcs=mosaic_wcs
+    )
+    data = cutout.data
+    header = cutout.wcs.to_header()
 
+    if enforce_shape:
+        assert np.abs(data.shape[0] - data.shape[1]) <= 1, f'Shape mismatch: cutout of shape {data.shape} not square'
+        # sometimes it is 1 pixel off, probably from rounding, and that's okay
+    return data, header
