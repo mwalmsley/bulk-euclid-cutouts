@@ -19,6 +19,7 @@ dependencies = [
     'scikit-learn',
     'astropy',
     'tqdm',
+    'panoptes-client',
     'omegaconf'  # for config
 ]
 requires-python = ">= 3.9"

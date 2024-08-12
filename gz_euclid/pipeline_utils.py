@@ -165,18 +165,19 @@ def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
     # at least 1200px in area OR vis mag < 20.5 (expressed as flux)
     # and within the tile, of course
     
-    query_str = f"""SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_vis_aper, ellipticity, kron_radius
+    query_str = f"""SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_vis_aper, ellipticity, kron_radius, segmentation_map_id
                 FROM catalogue.mer_catalogue
                 WHERE flux_vis_aper > 0
                 AND gaia_id IS NULL
                 AND vis_det=1
                 AND spurious_prob < 0.2
-                AND (segmentation_area > 1200 OR flux_segmentation > 22.90867652)
+                AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
                 AND right_ascension > {tile['ra_min']} AND right_ascension < {tile['ra_max']}
                 AND declination > {tile['dec_min']} AND declination < {tile['dec_max']}
                 ORDER BY object_id ASC
                 """
-    
+    # added min segmentation area to remove tiny bright artifacts
+    # TODO copy to mer cuts/pipeline
     retries = 0
     while retries < max_retries:
         try:

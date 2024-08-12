@@ -9,3 +9,5 @@ tile_dir: !
 catalog_dir: !
 cutout_dir: !
 jpg_dir: !
+
+tiling_strategy_loc: '/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/tiling_plan/field_all_sky_overview.fits'

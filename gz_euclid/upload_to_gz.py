@@ -1,5 +1,6 @@
 import os
-
+import glob
+import json
 from shared_astro_utils import subject_utils, upload_utils, time_utils
 import tqdm
 import hashlib
@@ -41,8 +42,10 @@ if __name__ == '__main__':
 
 
     # df_loc = '/home/walml/repos/euclid-morphology/datalabs/data/pipeline/v2_challenge_launch_local/catalogs/_master_catalog.csv'
-    df_loc = '/home/walml/repos/euclid-morphology/datalabs/data/pipeline/v2_challenge_launch/catalogs/_master_catalog.csv'
-    local_data_dir = '/home/walml/repos/euclid-morphology/datalabs/data/pipeline/v2_challenge_launch'
+
+    version_name = 'v3_challenge_midaug'
+    df_loc = f'/home/walml/repos/gz-euclid-datalab/data/pipeline/{version_name}/catalogs/_master_catalog.csv'
+    local_data_dir = f'/home/walml/repos/gz-euclid-datalab/data/pipeline/{version_name}'
 
 
     df = pd.read_csv(df_loc)
@@ -50,11 +53,22 @@ if __name__ == '__main__':
     # apply the final filter for galaxies good to classify but not to upload
     # for now, anything about 25k pixels
     df = df[df['segmentation_area'] < 25000]
+    # and anything very small (and bright)
+    df = df[df['segmentation_area'] > 200]
 
-    # select which tiles to upload
-    # selected toa void overlaps, see mer notebook
-    
-    valid_tile_indices = [
+    # and do not upload anything either in the overlap regions or with a catalog older than the overlap region calculation
+    # print(df['in_tile_overlap_region'].value_counts())
+    # print(df['in_tile_overlap_region'].isna().sum())
+    # exit()
+    df = df[df['this_tile_index_is_best'] == True]
+    print(len(df))
+
+    # tmp = df[df['object_id'] == -748122396372829839]
+    # tmp.to_csv('/home/walml/repos/gz-euclid-datalab/overlap_test.csv', index=False)
+    # exit()
+
+
+    already_uploaded_tile_indices_from_notes = [
         102015620, 102021061, 102016036, 102021034, 102015615, 102034406,
        102012400, 102013966, 102026083, 102011655, 102027664, 102033849,
        102020090, 102023521, 102018234, 102019150, 102027661, 102016463,
@@ -65,7 +79,17 @@ if __name__ == '__main__':
        102025018, 102023993, 102027667, 102028753, 102029879, 102030997,
        102026063, 102035627
     ]
-    df = df[df['tile_index'].isin(valid_tile_indices)].reset_index(drop=True)
+    previous_uploads = pd.concat([pd.read_csv(loc) for loc in glob.glob('/home/walml/repos/gz-euclid-datalab/data/pipeline/zooniverse_upload/*.csv')])
+    already_uploaded_tile_indices_from_exports = list(previous_uploads['tile_index'].unique())
+    assert len(already_uploaded_tile_indices_from_exports) == len(set(already_uploaded_tile_indices_from_exports))
+    tiles_to_avoid = set(already_uploaded_tile_indices_from_notes + already_uploaded_tile_indices_from_exports)
+ 
+    df = df[~df['tile_index'].isin(tiles_to_avoid)].reset_index(drop=True)
+    tileset_b = df['tile_index'].unique().tolist()
+    json.dump(tileset_b, open('/home/walml/repos/euclid-morphology/upload/tileset_b.json', 'w'))
+    # completely shuffle df, will now be uploading random galaxies in random order (from tileset b)
+    df = df.sample(frac=1).reset_index(drop=True)
+
     print('Galaxies to resize: ', len(df))
 
     # print(df['object_id'].value_counts())
@@ -80,7 +104,7 @@ if __name__ == '__main__':
     for col in im_cols:
 
         # adjust for local upload
-        df[col] = df[col].apply(lambda x: x.replace('/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/pipeline/v2_challenge_launch', local_data_dir))
+        df[col] = df[col].apply(lambda x: x.replace(f'/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/pipeline/{version_name}', local_data_dir))
         print(df[col][0])
         # exit()
 
@@ -92,8 +116,8 @@ if __name__ == '__main__':
     print('Images ready:', all_images_ready.sum(), 'of ', len(df))
     df = df[all_images_ready].reset_index(drop=True)
 
-    # print(df)
-    # exit()
+    print(df)
+    exit()
 
     
 
@@ -119,17 +143,21 @@ if __name__ == '__main__':
 
     # subject_set_name = '2024_07_31_euclid_challenge_first_50_tiles_0_19900'
     # df = df[:19900]
-
-    subject_set_name = '2024_07_31_euclid_challenge_first_50_tiles_19900_end'
-    df = df[19900:]
-
-
+    # subject_set_name = '2024_07_31_euclid_challenge_first_50_tiles_19900_end'
+    # df = df[19900:]
     # print(df['id_str'])
     # print(df['!filename'])
     # exit()
+
+    import datetime
+
+    subject_set_name = f'{datetime.datetime.now().strftime("%Y_%m_%d")}_euclid_challenge_tileset_b_20k'
     df.to_csv(f'/home/walml/repos/euclid-morphology/upload/master_catalog_during_{subject_set_name}.csv', index=False)
-    # manifest = df[['locations', 'metadata']].to_dict(orient='records')
-    # print(manifest[0])
+    manifest = df[['locations', 'metadata']].to_dict(orient='records')
+    print(manifest[0])
+    # new - shuffle manifest to avoid piecing cutouts together (sorry, volunteers)
+    import random
+    random.shuffle(manifest)
     # exit()
 
         # subject_utils.authenticate()

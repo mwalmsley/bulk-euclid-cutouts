@@ -7,3 +7,5 @@ Pipeline to download tiles and make images on ESA Datalabs
 From root repo folder:
     pip install -e .
 
+Also manually install:
+    https://github.com/mwalmsley/shared-astro-utilities/

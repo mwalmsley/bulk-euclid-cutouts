@@ -94,7 +94,7 @@ def make_volunteer_cutouts(df):
 
 def zip_for_download(cfg: OmegaConf):
     # save to e.g. v1_challenge_launch_cutouts.zip
-    shutil.make_archive(cfg.download_dir + '_cutouts', 'zip', root_dir=cfg.cutout_dir)  # should be jpg only
+    # shutil.make_archive(cfg.download_dir + '_cutouts', 'zip', root_dir=cfg.cutout_dir)  # should be jpg only
     shutil.make_archive(cfg.download_dir + '_catalogs', 'zip', cfg.catalog_dir)
     logging.info('Zipped cutouts and catalogs')
 
