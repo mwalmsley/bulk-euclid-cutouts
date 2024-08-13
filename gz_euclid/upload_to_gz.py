@@ -1,11 +1,15 @@
 import os
 import glob
 import json
+import random
+import datetime
+
+import numpy as np
 from shared_astro_utils import subject_utils, upload_utils, time_utils
 import tqdm
 import hashlib
 from PIL import Image
-from panoptes_client import Project
+# from panoptes_client import Project
 import pandas as pd
 
 
@@ -37,9 +41,6 @@ def get_resized_loc(galaxy, im_col):
 
 if __name__ == '__main__':
 
-    # TODO download cutouts/catalogs again from datalabs and rerun, we need the lsb also
-
-
 
     # df_loc = '/home/walml/repos/euclid-morphology/datalabs/data/pipeline/v2_challenge_launch_local/catalogs/_master_catalog.csv'
 
@@ -60,6 +61,10 @@ if __name__ == '__main__':
     # print(df['in_tile_overlap_region'].value_counts())
     # print(df['in_tile_overlap_region'].isna().sum())
     # exit()
+
+    # NO LONGER calculated using kdtree to pick the closest tile in the tiling strategy table
+    # now calculated by parsing out tile_index from within segmentation_map_id (first 9 digits)
+    # only objects in tile core areas have a segmentation_map_id/are in the MER final catalog
     df = df[df['this_tile_index_is_best'] == True]
     print(len(df))
 
@@ -67,8 +72,8 @@ if __name__ == '__main__':
     # tmp.to_csv('/home/walml/repos/gz-euclid-datalab/overlap_test.csv', index=False)
     # exit()
 
-
-    already_uploaded_tile_indices_from_notes = [
+    # I specifically picked these tiles for the first upload
+    launch_tiles = [
         102015620, 102021061, 102016036, 102021034, 102015615, 102034406,
        102012400, 102013966, 102026083, 102011655, 102027664, 102033849,
        102020090, 102023521, 102018234, 102019150, 102027661, 102016463,
@@ -79,23 +84,28 @@ if __name__ == '__main__':
        102025018, 102023993, 102027667, 102028753, 102029879, 102030997,
        102026063, 102035627
     ]
+    already_uploaded_tile_indices_from_notes = launch_tiles.copy()  # will add more here
+    # and here is the record of what was actually uploaded
     previous_uploads = pd.concat([pd.read_csv(loc) for loc in glob.glob('/home/walml/repos/gz-euclid-datalab/data/pipeline/zooniverse_upload/*.csv')])
     already_uploaded_tile_indices_from_exports = list(previous_uploads['tile_index'].unique())
-    assert len(already_uploaded_tile_indices_from_exports) == len(set(already_uploaded_tile_indices_from_exports))
-    tiles_to_avoid = set(already_uploaded_tile_indices_from_notes + already_uploaded_tile_indices_from_exports)
- 
+    # check it matches what should have been uploaded
+    assert set(already_uploaded_tile_indices_from_exports) == set(already_uploaded_tile_indices_from_exports)
+    tiles_to_avoid = set(already_uploaded_tile_indices_from_exports) # could pick either
+    
+    # don't upload those
     df = df[~df['tile_index'].isin(tiles_to_avoid)].reset_index(drop=True)
+
+    # tileset b will be the tiles for the second block of uploads after launch (the first being launch tiles)
     tileset_b = df['tile_index'].unique().tolist()
-    json.dump(tileset_b, open('/home/walml/repos/euclid-morphology/upload/tileset_b.json', 'w'))
-    # completely shuffle df, will now be uploading random galaxies in random order (from tileset b)
-    df = df.sample(frac=1).reset_index(drop=True)
+    # now frozen to avoid accidental changes later
+    # json.dump(tileset_b, open('/home/walml/repos/euclid-morphology/upload/tileset_b.json', 'w'))
+    # record it here for later adding to 'tiles to avoid'
 
     print('Galaxies to resize: ', len(df))
 
     # print(df['object_id'].value_counts())
     assert df['object_id'].value_counts().max() == 1, 'There are duplicate object ids'
     # exit()
-
 
     # resize to 424 and save elsewhere
     save_dir = '/home/walml/repos/euclid-morphology/upload/resized'
@@ -116,8 +126,8 @@ if __name__ == '__main__':
     print('Images ready:', all_images_ready.sum(), 'of ', len(df))
     df = df[all_images_ready].reset_index(drop=True)
 
-    print(df)
-    exit()
+    # print(df)
+    # exit()
 
     
 
@@ -149,23 +159,47 @@ if __name__ == '__main__':
     # print(df['!filename'])
     # exit()
 
-    import datetime
+    # now the upload itself
 
-    subject_set_name = f'{datetime.datetime.now().strftime("%Y_%m_%d")}_euclid_challenge_tileset_b_20k'
-    df.to_csv(f'/home/walml/repos/euclid-morphology/upload/master_catalog_during_{subject_set_name}.csv', index=False)
-    manifest = df[['locations', 'metadata']].to_dict(orient='records')
+    # df has 130k entries, and I would prefer to upload tile-by-tile
+    # so let's pick 1 tile for each 1k galaxies
+
+    tileset_b = json.load(open('/home/walml/repos/euclid-morphology/upload/tileset_b.json'))
+    # shuffle
+    np.random.seed(42)
+    np.random.shuffle(tileset_b)
+
+    tile_low = 0
+    tile_high = 6
+    tiles_to_upload = tileset_b[tile_low:tile_high]
+
+    # for galaxies in those tiles, completely shuffle df, will now be uploading random galaxies in random order (from tileset b and those selected tiles only)
+    df_to_upload = df[df['tile_index'].isin(tiles_to_upload)]
+    df_to_upload = df_to_upload.sample(frac=1, random_state=42).reset_index(drop=True)
+    print(df_to_upload['tile_index'].value_counts())
+
+
+    # for testing
+    # subject_set_name = f'{datetime.datetime.now().strftime("%Y_%m_%d")}_euclid_challenge_tileset_b_dev'
+
+    subject_set_name = f'{datetime.datetime.now().strftime("%Y_%m_%d")}_euclid_challenge_tileset_b_tiles_{tile_low}_{tile_high}'
+    df.to_csv(f'/home/walml/repos/gz-euclid-datalab/data/pipeline/zooniverse_upload/master_catalog_during_{subject_set_name}.csv', index=False)
+
+    manifest = df_to_upload[['locations', 'metadata']].to_dict(orient='records')
+    print(len(manifest))
     print(manifest[0])
-    # new - shuffle manifest to avoid piecing cutouts together (sorry, volunteers)
-    import random
-    random.shuffle(manifest)
-    # exit()
 
-        # subject_utils.authenticate()
+    # fast async way
+    upload_utils.bulk_upload_subjects(subject_set_name, manifest, project_id='5733')
+
+
+
+
+    # slower way
+
+    # subject_utils.authenticate()
 
     # project = Project.find(5733)
-
- 
-    # upload_utils.bulk_upload_subjects(subject_set_name, manifest, project_id='5733')
 
     # for _, subject in tqdm.tqdm(df.iterrows(), total=len(df), unit='subjects'):
 
