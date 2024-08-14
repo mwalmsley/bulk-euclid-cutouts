@@ -87,6 +87,7 @@ if __name__ == '__main__':
     already_uploaded_tile_indices_from_notes = launch_tiles.copy()  # will add more here
     # and here is the record of what was actually uploaded
     previous_uploads = pd.concat([pd.read_csv(loc) for loc in glob.glob('/home/walml/repos/gz-euclid-datalab/data/pipeline/zooniverse_upload/*.csv')])
+    assert len(previous_uploads) > 0
     already_uploaded_tile_indices_from_exports = list(previous_uploads['tile_index'].unique())
     # check it matches what should have been uploaded
     assert set(already_uploaded_tile_indices_from_exports) == set(already_uploaded_tile_indices_from_exports)
@@ -124,7 +125,10 @@ if __name__ == '__main__':
     
     all_images_ready = df[[col + '_ready_to_resize' for col in im_cols]].all(axis=1)
     print('Images ready:', all_images_ready.sum(), 'of ', len(df))
+    # drop all images not ready to be resized
     df = df[all_images_ready].reset_index(drop=True)
+    assert len(df) > 0
+    # exit()
 
     # print(df)
     # exit()
@@ -139,6 +143,7 @@ if __name__ == '__main__':
             assert current_loc != new_loc, 'You are about to overwrite the original image'
             resize_image(current_loc, new_loc, (424, 424), overwrite=False)
             # print(save_loc)
+            # all resizes must be successful, no need to drop any additional rows
 
     # get hashed filename col
     df['id_str'] = get_id_str(df)
@@ -166,8 +171,7 @@ if __name__ == '__main__':
 
     tileset_b = json.load(open('/home/walml/repos/euclid-morphology/upload/tileset_b.json'))
     # shuffle
-    np.random.seed(42)
-    np.random.shuffle(tileset_b)
+    np.random.default_rng(42).shuffle(tileset_b)
 
     tile_low = 0
     tile_high = 6
@@ -177,10 +181,12 @@ if __name__ == '__main__':
     df_to_upload = df[df['tile_index'].isin(tiles_to_upload)]
     df_to_upload = df_to_upload.sample(frac=1, random_state=42).reset_index(drop=True)
     print(df_to_upload['tile_index'].value_counts())
+    print(len(df_to_upload))
 
 
     # for testing
     # subject_set_name = f'{datetime.datetime.now().strftime("%Y_%m_%d")}_euclid_challenge_tileset_b_dev'
+    # exit()
 
     subject_set_name = f'{datetime.datetime.now().strftime("%Y_%m_%d")}_euclid_challenge_tileset_b_tiles_{tile_low}_{tile_high}'
     df.to_csv(f'/home/walml/repos/gz-euclid-datalab/data/pipeline/zooniverse_upload/master_catalog_during_{subject_set_name}.csv', index=False)
