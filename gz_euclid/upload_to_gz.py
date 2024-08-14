@@ -73,25 +73,23 @@ if __name__ == '__main__':
     # exit()
 
     # I specifically picked these tiles for the first upload
-    launch_tiles = [
-        102015620, 102021061, 102016036, 102021034, 102015615, 102034406,
-       102012400, 102013966, 102026083, 102011655, 102027664, 102033849,
-       102020090, 102023521, 102018234, 102019150, 102027661, 102016463,
-       102022002, 102030421, 102021511, 102031525, 102026603, 102030405,
-       102022988, 102016054, 102018712, 102022015, 102022017, 102021057,
-       102022027, 102032104, 102028219, 102028213, 102034444, 102032115,
-       102022990, 102031550, 102032117, 102022013, 102036817, 102018254,
-       102025018, 102023993, 102027667, 102028753, 102029879, 102030997,
-       102026063, 102035627
-    ]
-    already_uploaded_tile_indices_from_notes = launch_tiles.copy()  # will add more here
+    # launch_tiles = [
+    #     102015620, 102021061, 102016036, 102021034, 102015615, 102034406,
+    #    102012400, 102013966, 102026083, 102011655, 102027664, 102033849,
+    #    102020090, 102023521, 102018234, 102019150, 102027661, 102016463,
+    #    102022002, 102030421, 102021511, 102031525, 102026603, 102030405,
+    #    102022988, 102016054, 102018712, 102022015, 102022017, 102021057,
+    #    102022027, 102032104, 102028219, 102028213, 102034444, 102032115,
+    #    102022990, 102031550, 102032117, 102022013, 102036817, 102018254,
+    #    102025018, 102023993, 102027667, 102028753, 102029879, 102030997,
+    #    102026063, 102035627
+    # ]
+    # already_uploaded_tile_indices_from_notes = launch_tiles.copy()  # will add more here
     # and here is the record of what was actually uploaded
     previous_uploads = pd.concat([pd.read_csv(loc) for loc in glob.glob('/home/walml/repos/gz-euclid-datalab/data/pipeline/zooniverse_upload/*.csv')])
     assert len(previous_uploads) > 0
     already_uploaded_tile_indices_from_exports = list(previous_uploads['tile_index'].unique())
-    # check it matches what should have been uploaded
-    assert set(already_uploaded_tile_indices_from_exports) == set(already_uploaded_tile_indices_from_exports)
-    tiles_to_avoid = set(already_uploaded_tile_indices_from_exports) # could pick either
+    tiles_to_avoid = set(already_uploaded_tile_indices_from_exports)
     
     # don't upload those
     df = df[~df['tile_index'].isin(tiles_to_avoid)].reset_index(drop=True)
@@ -173,8 +171,12 @@ if __name__ == '__main__':
     # shuffle
     np.random.default_rng(42).shuffle(tileset_b)
 
-    tile_low = 0
-    tile_high = 6
+    # tile_low = 0
+    # tile_high = 4
+    # tile_low = 4
+    # tile_high = 6
+    tile_low = 6
+    tile_high = 26
     tiles_to_upload = tileset_b[tile_low:tile_high]
 
     # for galaxies in those tiles, completely shuffle df, will now be uploading random galaxies in random order (from tileset b and those selected tiles only)
@@ -189,8 +191,8 @@ if __name__ == '__main__':
     # exit()
 
     subject_set_name = f'{datetime.datetime.now().strftime("%Y_%m_%d")}_euclid_challenge_tileset_b_tiles_{tile_low}_{tile_high}'
-    df.to_csv(f'/home/walml/repos/gz-euclid-datalab/data/pipeline/zooniverse_upload/master_catalog_during_{subject_set_name}.csv', index=False)
-
+    df_to_upload.to_csv(f'/home/walml/repos/gz-euclid-datalab/data/pipeline/zooniverse_upload/master_catalog_during_{subject_set_name}.csv', index=False)
+    # exit()
     manifest = df_to_upload[['locations', 'metadata']].to_dict(orient='records')
     print(len(manifest))
     print(manifest[0])
