@@ -9,7 +9,7 @@ from shared_astro_utils import subject_utils, upload_utils, time_utils
 import tqdm
 import hashlib
 from PIL import Image
-# from panoptes_client import Project
+from panoptes_client import Project
 import pandas as pd
 
 
@@ -175,8 +175,10 @@ if __name__ == '__main__':
     # tile_high = 4
     # tile_low = 4
     # tile_high = 6
-    tile_low = 6
-    tile_high = 26
+    # tile_low = 6
+    # tile_high = 15
+    tile_low = 15
+    tile_high = 25
     tiles_to_upload = tileset_b[tile_low:tile_high]
 
     # for galaxies in those tiles, completely shuffle df, will now be uploading random galaxies in random order (from tileset b and those selected tiles only)
@@ -193,29 +195,26 @@ if __name__ == '__main__':
     subject_set_name = f'{datetime.datetime.now().strftime("%Y_%m_%d")}_euclid_challenge_tileset_b_tiles_{tile_low}_{tile_high}'
     df_to_upload.to_csv(f'/home/walml/repos/gz-euclid-datalab/data/pipeline/zooniverse_upload/master_catalog_during_{subject_set_name}.csv', index=False)
     # exit()
-    manifest = df_to_upload[['locations', 'metadata']].to_dict(orient='records')
-    print(len(manifest))
-    print(manifest[0])
 
     # fast async way
-    upload_utils.bulk_upload_subjects(subject_set_name, manifest, project_id='5733')
+    # manifest = df_to_upload[['locations', 'metadata']].to_dict(orient='records')
+    # print(len(manifest))
+    # print(manifest[0])
+    # upload_utils.bulk_upload_subjects(subject_set_name, manifest, project_id='5733', async_batch_size=1)
 
 
 
 
     # slower way
 
-    # subject_utils.authenticate()
+    subject_utils.authenticate()
 
-    # project = Project.find(5733)
+    project = Project.find(5733)
 
-    # for _, subject in tqdm.tqdm(df.iterrows(), total=len(df), unit='subjects'):
+    for _, subject in tqdm.tqdm(df_to_upload.iterrows(), total=len(df_to_upload), unit='subjects'):
+        locations = list(subject[[col + '_resized' for col in im_cols]])
+        metadata = subject[['!filename', '#campaign', '#upload_date']]
+        subject_utils.upload_subject(locations, project, subject_set_name, metadata)
 
-    #     locations = list(subject[[col + '_resized' for col in im_cols]])
-    #     metadata = subject[['!filename']]
-
-    #     subject_utils.upload_subject(locations, project, subject_set_name, metadata)
-
-    #     https://github.com/zooniverse/kade/pull/170/files
-    #     df['!filename']
+        # https://github.com/zooniverse/kade/pull/170/files
 
