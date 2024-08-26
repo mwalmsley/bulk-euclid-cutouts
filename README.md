@@ -9,3 +9,9 @@ From root repo folder:
 
 Also manually install:
     https://github.com/mwalmsley/shared-astro-utilities/
+
+
+## Usage
+
+Download a set of zipped cutouts/catalogs to pipeline/folder e.g. pipeline/v2_challenge_launch. Unzip.
+
