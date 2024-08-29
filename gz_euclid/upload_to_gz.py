@@ -257,8 +257,13 @@ if __name__ == '__main__':
     # tile_high = 50
     # tile_low = 50
     # tile_high = 70
-    tile_low = 70
-    tile_high = 100
+    # tile_low = 70
+    # tile_high = 100
+    # tile_low = 100
+    # tile_high = 150
+    # TODO last tile block
+    tile_low = 150
+    tile_high = 999
     tiles_to_upload = tileset_b[tile_low:tile_high]
     # print(tiles_to_upload)
 
