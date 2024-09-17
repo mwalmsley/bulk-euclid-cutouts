@@ -1,7 +1,6 @@
 import os
 import logging
 # from tqdm.notebook import tqdm # TODO ask Kristin to add?
-import shutil
 
 from omegaconf import OmegaConf
 import numpy as np
@@ -23,10 +22,12 @@ def run(cfg):
         try:
             tile_catalog = download_tile_and_catalog(cfg, tiles, tile_index)
             make_volunteer_cutouts(tile_catalog)
+            # make_fits_cutouts(master_catalog)
         except AssertionError as e:
             logging.critical(e)
+
+    logging.info('Done :)')
     
-    zip_for_download(cfg)
 
 def login():
 
@@ -171,16 +172,6 @@ def make_volunteer_cutouts(df):
         vis_loc = tile_galaxies['vis_tile'].iloc[0]
         nisp_loc = tile_galaxies['y_tile'].iloc[0]
         pipeline_utils.save_cutouts(vis_loc, nisp_loc, tile_galaxies, overwrite=False)
-
-
-def zip_for_download(cfg: OmegaConf):
-    logging.info('Zipping cutouts and catalogs')
-    # save to e.g. v1_challenge_launch_cutouts.zip
-    shutil.make_archive(cfg.download_dir + '_catalogs', 'zip', root_dir=cfg.catalog_dir)
-    logging.info('Zipped catalogs')
-    shutil.make_archive(cfg.download_dir + '_jpg_cutouts', 'zip', root_dir=cfg.jpg_dir)
-    logging.info('Zipped cutouts')
-
 
 
 # pretty much cannot locally debug, requires Euclid data access

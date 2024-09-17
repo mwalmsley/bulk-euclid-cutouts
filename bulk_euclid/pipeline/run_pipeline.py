@@ -13,11 +13,11 @@ def run(cfg):
     os.path.isdir(repo_dir)
     sys.path.insert(0,repo_dir)
 
-    from bulk_euclid.pipeline import a_download_tiles_and_catalogs, b_create_master_catalog_and_cutouts
+    from bulk_euclid.pipeline import a_make_catalogs_and_cutouts, b_export
     logging.info('Import successful')
 
-    a_download_tiles_and_catalogs.run(cfg)
-    b_create_master_catalog_and_cutouts.run(cfg)
+    a_make_catalogs_and_cutouts.run(cfg)
+    b_export.run(cfg)
 
     
 

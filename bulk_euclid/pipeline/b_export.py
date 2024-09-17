@@ -11,11 +11,12 @@ from bulk_euclid.utils import pipeline_utils
 
 
 def run(cfg):
-    make_galaxy_catalog(cfg)
-    master_catalog = pd.read_csv(cfg.catalog_dir + '/_master_catalog.csv')
+    master_catalog = group_to_master_catalog(cfg)
+    # master_catalog = pd.read_csv(cfg.catalog_dir + '/_master_catalog.csv')
+
     visualise_catalog(cfg, master_catalog)
-    make_volunteer_cutouts(master_catalog)
-    # make_fits_cutouts(master_catalog)
+
+    zip_for_download(cfg)
 
 
 
@@ -27,7 +28,7 @@ def group_to_master_catalog(cfg: OmegaConf):
     master_catalog = pd.concat([pd.read_csv(c) for c in catalog_locs], axis=0)
     logging.info(f'Found {len(master_catalog)} sources')
     
-    add_cutout_paths(cfg, master_catalog)
+    # add_cutout_paths(cfg, master_catalog)
                                                             
     master_catalog.to_csv(cfg.catalog_dir + '/_master_catalog.csv', index=False)  # _ to appear first
     return master_catalog.reset_index(drop=True)
@@ -63,6 +64,16 @@ def visualise_catalog(cfg: OmegaConf, df):
     logging.info(f'Saving catalog viz to {save_loc}')
     plt.savefig(save_loc)
     return fig, ax
+
+
+
+def zip_for_download(cfg: OmegaConf):
+    logging.info('Zipping cutouts and catalogs')
+    # save to e.g. v1_challenge_launch_cutouts.zip
+    shutil.make_archive(cfg.download_dir + '_catalogs', 'zip', root_dir=cfg.catalog_dir)
+    logging.info('Zipped catalogs')
+    shutil.make_archive(cfg.download_dir + '_jpg_cutouts', 'zip', root_dir=cfg.jpg_dir)
+    logging.info('Zipped cutouts')
 
 
 
