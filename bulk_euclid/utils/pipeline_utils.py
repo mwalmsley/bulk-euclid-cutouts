@@ -149,7 +149,13 @@ def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
     # not "spurious" (very similar to detected in vis)
     # at least 1200px in area OR vis mag < 20.5 (expressed as flux)
     # and within the tile, of course
-    
+
+    """
+    SELECT TOP 10 segmentation_map_id
+    FROM catalogue.mer_catalogue
+    WHERE CAST(segmentation_map_id as varchar) LIKE '102020107%'
+    """
+        
     query_str = f"""SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_vis_aper, ellipticity, kron_radius, segmentation_map_id
                 FROM catalogue.mer_catalogue
                 WHERE flux_vis_aper > 0
@@ -157,7 +163,7 @@ def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
                 AND vis_det=1
                 AND spurious_prob < 0.2
                 AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
-                AND segmentation_map_id LIKE "{tile['tile_index']}%"
+                AND CAST(segmentation_map_id as varchar) LIKE '{tile['tile_index']}%'
                 ORDER BY object_id ASC
                 """
     
