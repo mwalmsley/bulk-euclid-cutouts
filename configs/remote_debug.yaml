@@ -2,6 +2,7 @@ release_name: F-006
 num_tiles: 4
 refresh_catalogs: True
 seed: 1
+delete_tiles: True
 debug: True
 
 base_dir: '/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/pipeline_runs'

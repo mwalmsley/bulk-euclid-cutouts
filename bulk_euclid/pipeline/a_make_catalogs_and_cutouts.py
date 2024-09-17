@@ -21,6 +21,12 @@ def run(cfg):
         try:
             tile_catalog = download_tile_and_catalog(cfg, tiles, tile_index)
             make_volunteer_cutouts(tile_catalog)
+            if cfg.delete_tiles:
+                logging.info('Deleting tile')
+                vis_loc = tile_catalog['vis_tile'].iloc[0]
+                nisp_loc = tile_catalog['y_tile'].iloc[0]
+                os.remove(vis_loc)
+                os.remove(nisp_loc)
         except AssertionError as e:
             logging.warning('Skipping tile {} due to fatal error'.format(tile_index))
             logging.warning(e)
