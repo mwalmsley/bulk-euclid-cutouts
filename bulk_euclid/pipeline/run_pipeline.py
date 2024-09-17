@@ -8,12 +8,12 @@ import b_create_master_catalog_and_cutouts
 
 def run(cfg):
 
-    # add the path to the local bin
-    # os.environ['PATH'] = os.environ['PATH'] + ':/usr/local/bin:'
-
-    # import sys
-    # sys.path.insert(0,'/home/mwalms01/.local/bin')
-    # sys.path.insert(0,'/home/mwalms01/.local/bin')
+    # temp hack to "install" this package, pending a proper dockerfile
+    # does not seem to pip install -e correctly
+    import sys
+    repo_dir = '/media/user/repos/bulk-euclid-cutouts'
+    os.path.isdir(repo_dir)
+    sys.path.insert(0,repo_dir)
 
     a_download_tiles_and_catalogs.run(cfg)
     b_create_master_catalog_and_cutouts.run(cfg)
