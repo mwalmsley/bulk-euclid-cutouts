@@ -200,20 +200,21 @@ def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
     df['tile_index'] = tile['tile_index']
     df['mag_segmentation'] = -2.5 * np.log10(df['flux_segmentation']) + 23.9  # for convenience
 
-    df = check_on_edge(df, tile[['ra_min', 'ra_max', 'dec_min', 'dec_max']])
+    # deprecated
+    # df = check_on_edge(df, tile[['ra_min', 'ra_max', 'dec_min', 'dec_max']])
     
     return df.reset_index(drop=True)
 
-def check_on_edge(df, tile_extents):
-    df = df.copy()  # will modify and return
-    # srcs = df[['right_ascension', 'declination']].copy()
-    df['edge_dist_left'] = abs(df['right_ascension'] - tile_extents['ra_min'])
-    df['edge_dist_right'] = abs(df['right_ascension'] - tile_extents['ra_max'])
-    df['edge_dist_lower'] = abs(df['declination'] - tile_extents['dec_min'])
-    df['edge_dist_upper'] = abs(df['declination'] - tile_extents['dec_max'])
-    # df['on_far_edge'] = (df['edge_dist1'] < 1/60) | (df['edge_dist2'] < 1/60) | (df['edge_dist3'] < 1/60) | (df['edge_dist4'] < 1/60)
-    df['in_tile_overlap_region'] = df[['edge_dist_left', 'edge_dist_right', 'edge_dist_lower', 'edge_dist_upper']].min(axis=1) < 1/60
-    return df
+# def check_on_edge(df, tile_extents):
+#     df = df.copy()  # will modify and return
+#     # srcs = df[['right_ascension', 'declination']].copy()
+#     df['edge_dist_left'] = abs(df['right_ascension'] - tile_extents['ra_min'])
+#     df['edge_dist_right'] = abs(df['right_ascension'] - tile_extents['ra_max'])
+#     df['edge_dist_lower'] = abs(df['declination'] - tile_extents['dec_min'])
+#     df['edge_dist_upper'] = abs(df['declination'] - tile_extents['dec_max'])
+#     # df['on_far_edge'] = (df['edge_dist1'] < 1/60) | (df['edge_dist2'] < 1/60) | (df['edge_dist3'] < 1/60) | (df['edge_dist4'] < 1/60)
+#     df['in_tile_overlap_region'] = df[['edge_dist_left', 'edge_dist_right', 'edge_dist_lower', 'edge_dist_upper']].min(axis=1) < 1/60
+#     return df
 
 def download_mosaics(tile_index, tiles, download_dir):
     
