@@ -189,7 +189,7 @@ def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
             logging.info(f'Retrying, {retries}')
         retries += 1
 
-    logging.info("Found", len(df), " query results")
+    logging.info(f"Found {len(df)} query results")
 
     # apply python cuts - NO LONGER NEEDED, all in SQL except the weirdly-low-flux-line which is replaced by VIS_DET=1
     # df.columns = df.columns.str.upper()
