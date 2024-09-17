@@ -15,6 +15,10 @@ def run(cfg):
     os.path.isdir(repo_dir)
     sys.path.insert(0,repo_dir)
 
+    from bulk_euclid.utils import pipeline_utils
+    logging.info('Success')
+    exit()
+
     a_download_tiles_and_catalogs.run(cfg)
     b_create_master_catalog_and_cutouts.run(cfg)
 
