@@ -30,6 +30,9 @@ if __name__ == "__main__":
 
     cfg.log_file = cfg.base_dir + f'/pipeline_{cfg.name}_{time.time()}.log'
 
-    logging.basicConfig(level=logging.INFO, filename=cfg.log_file, filemode='w')
+    logging.basicConfig(
+        level=logging.INFO, filename=cfg.log_file, filemode='w',
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 
     run(cfg)
