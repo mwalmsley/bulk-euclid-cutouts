@@ -5,7 +5,7 @@ num_tiles: 2
 seed: 1
 debug: True
 
-base_dir: '/media/home/team_workspaces/Galaxy-Zoo-Euclid/data'
+base_dir: '/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/pipeline_runs'
 name: 'remote_debug'
 download_dir: !
 tile_dir: !

@@ -10,12 +10,11 @@ import pandas as pd
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
-# from astropy.utils.exceptions import AstropyWarning, AstropyUserWarning
 from astropy.io.fits.verify import VerifyWarning
 from PIL import Image
 
 if os.path.isdir('/media/home/team_workspaces'):  # on datalabs
-    from astroquery.esa.euclid.core import EuclidClass, Euclid
+    from astroquery.esa.euclid.core import Euclid
 
 from bulk_euclid.utils import morphology_utils_ou_mer as m_utils, cutout_utils
 
@@ -132,25 +131,17 @@ def get_tiles_in_survey(survey: Survey, bands=None, release_name=None, ra_limits
 #     tiles['dec_max'] = np.max(decs, axis=1)
 #     return tiles
 
-
-#making a query for sources
-
-# min seg area and min viz flux copied into SQL from Zoobot filters to reduce query size (dramatically)
-# other filters are a touch fiddly in SQL so just do next in python as always
-
-
 def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
-    
-
     # apply our final selection criteria:
     # non-negative vis flux
     # no cross-match to gaia stars
     # detected in vis
     # not "spurious" (very similar to detected in vis)
-    # at least 1200px in area OR vis mag < 20.5 (expressed as flux)
-    # and within the tile, of course
+    # at least 1200px in area OR ( vis mag < 20.5 (expressed as flux) and at least 200px in area)
+    # within the tile via segmentation map id
 
     """
+    segmentation map id query is like:
     SELECT TOP 10 segmentation_map_id
     FROM catalogue.mer_catalogue
     WHERE CAST(segmentation_map_id as varchar) LIKE '102020107%'
@@ -166,9 +157,6 @@ def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
                 AND CAST(segmentation_map_id as varchar) LIKE '{tile['tile_index']}%'
                 ORDER BY object_id ASC
                 """
-    
-                # AND right_ascension > {tile['ra_min']} AND right_ascension < {tile['ra_max']}
-                # AND declination > {tile['dec_min']} AND declination < {tile['dec_max']}
     # added min segmentation area to remove tiny bright artifacts
     # TODO copy to mer cuts/pipeline
     retries = 0
@@ -190,31 +178,12 @@ def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
         retries += 1
 
     logging.info(f"Found {len(df)} query results")
-
-    # apply python cuts - NO LONGER NEEDED, all in SQL except the weirdly-low-flux-line which is replaced by VIS_DET=1
-    # df.columns = df.columns.str.upper()
-    # df = m_utils.apply_zoobot_selection_cuts(df, 'VIS') no longer needed, the only one added here is the
-    # df.columns = df.columns.str.lower()
-    # print("Found", len(df), " after all cuts")
     
     df['tile_index'] = tile['tile_index']
     df['mag_segmentation'] = -2.5 * np.log10(df['flux_segmentation']) + 23.9  # for convenience
 
-    # deprecated
-    # df = check_on_edge(df, tile[['ra_min', 'ra_max', 'dec_min', 'dec_max']])
-    
     return df.reset_index(drop=True)
 
-# def check_on_edge(df, tile_extents):
-#     df = df.copy()  # will modify and return
-#     # srcs = df[['right_ascension', 'declination']].copy()
-#     df['edge_dist_left'] = abs(df['right_ascension'] - tile_extents['ra_min'])
-#     df['edge_dist_right'] = abs(df['right_ascension'] - tile_extents['ra_max'])
-#     df['edge_dist_lower'] = abs(df['declination'] - tile_extents['dec_min'])
-#     df['edge_dist_upper'] = abs(df['declination'] - tile_extents['dec_max'])
-#     # df['on_far_edge'] = (df['edge_dist1'] < 1/60) | (df['edge_dist2'] < 1/60) | (df['edge_dist3'] < 1/60) | (df['edge_dist4'] < 1/60)
-#     df['in_tile_overlap_region'] = df[['edge_dist_left', 'edge_dist_right', 'edge_dist_lower', 'edge_dist_upper']].min(axis=1) < 1/60
-#     return df
 
 def download_mosaics(tile_index, tiles, download_dir):
     
@@ -227,10 +196,6 @@ def download_mosaics(tile_index, tiles, download_dir):
     vis_loc, nisp_loc = save_tiles_temporarily([vis_tile, nisp_tile], download_dir)
     return vis_loc, nisp_loc
 
-
-#downloading the file
-# example_file_name = "EUC_MER_BGSUB-MOSAIC-VIS_TILE101019587-F96AF8_20240112T194212.916693Z_00.00.fits"
-# print("Getting file:", tile["file_name"])
 
 def save_tile_temporarily(tile_filename, download_dir):
     # TODO place in tmpdir of some kind
@@ -263,15 +228,11 @@ def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, o
 
 def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:str='jpg', overwrite:bool=False, allow_radius_estimate:bool=True):
     
-    print('loading tile')
+    logging.info('loading tile')
     vis_data, header = fits.getdata(vis_loc, header=True, memmap=False, decompress_in_memory=True)
     nisp_data = fits.getdata(nisp_loc, header=False, memmap=False, decompress_in_memory=True)
-    print('tile loaded')
+    logging.info('tile loaded')
     
-    # vis_data = vis_data.astype(np.float32) * 1
-    # nisp_data = nisp_data.astype(np.float32) * 1
-    # print('tile converted')
-
     tile_galaxies = tile_galaxies.reset_index(drop=True)
     
     tile_wcs = WCS(header)
@@ -279,7 +240,7 @@ def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:s
     for i, galaxy in tile_galaxies.iterrows():
         
         if i % 100 == 0:
-            print(f'galaxy {i} of {len(tile_galaxies)}')
+            logging.info(f'galaxy {i} of {len(tile_galaxies)}')
                   
         c = SkyCoord(galaxy['right_ascension'], galaxy['declination'], frame='icrs', unit="deg")
         x_center, y_center = tile_wcs.world_to_pixel(c)

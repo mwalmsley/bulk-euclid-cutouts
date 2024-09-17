@@ -29,7 +29,7 @@ def login():
 
 
 def create_folders(cfg: OmegaConf):
-    cfg.download_dir = cfg.base_dir + '/pipeline_runs/' + cfg.name
+    cfg.download_dir = cfg.base_dir + cfg.name
     cfg.tile_dir = cfg.download_dir + '/tiles'
     cfg.catalog_dir = cfg.download_dir + '/catalogs'
 
@@ -65,6 +65,8 @@ def get_tile_catalog(cfg: OmegaConf):
     logging.info(tiles['release_name'].value_counts())
     assert not tiles.duplicated(subset=['ra', 'dec', 'instrument_name']).any()
 
+    # logging.info(f'Tiles after restricting to southern area: {len(tiles)}')
+
     # visual sanity check
     plt.scatter(tiles['ra'], tiles['dec'], s=2., color='r', label='Tile centers')
     plt.xlabel('Right Ascension')
@@ -73,8 +75,8 @@ def get_tile_catalog(cfg: OmegaConf):
     # unlike the tiles, which are in SAS (albeit wrongly indexed), the MER catalogs are only available in SAS for a small corner of the Wide survey
     plt.savefig(cfg.sanity_dir + '/tile_centers.png')
 
-    tiles = tiles.query(f'ra < {cfg.ra_upper_limit}').query(f'dec < {cfg.dec_upper_limit}').reset_index(drop=True)
-    logging.info(f'Tiles after restricting to southern area: {len(tiles)}')
+    # tiles = tiles.query(f'ra < {cfg.ra_upper_limit}').query(f'dec < {cfg.dec_upper_limit}').reset_index(drop=True)
+    # logging.info(f'Tiles after restricting to southern area: {len(tiles)}')
     # TODO automate/remove this hack
 
     # add tile extents (previously useful for querying the MER catalog, but now no longer used)
