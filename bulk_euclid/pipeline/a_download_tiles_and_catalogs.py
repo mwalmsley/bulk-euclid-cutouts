@@ -38,7 +38,13 @@ def create_folders(cfg: OmegaConf):
 
     logging.info(f'Saving to {cfg.download_dir}')
     assert os.path.exists(os.path.dirname(cfg.download_dir))
-    for d in [cfg.download_dir, cfg.jpg_dir, cfg.tile_dir, cfg.catalog_dir]:
+    for d in [
+        cfg.download_dir,
+        cfg.tile_dir, 
+        cfg.catalog_dir,
+        cfg.jpg_dir,
+        cfg.sanity_dir 
+        ]:
         if not os.path.exists(d):
             os.makedirs(d)
 
