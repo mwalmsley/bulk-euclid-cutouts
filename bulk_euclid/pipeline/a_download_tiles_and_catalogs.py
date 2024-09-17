@@ -124,7 +124,8 @@ def select_tiles(cfg, tiles):
 def download_tile_and_catalog(cfg, tiles_to_download, tile_index):
     vis_loc, nisp_loc = pipeline_utils.download_mosaics(tile_index, tiles_to_download, cfg.tile_dir)
     vis_tile = tiles_to_download.query('filter_name == "VIS"').query(f'tile_index == {tile_index}').squeeze()
-    save_tile_catalog(cfg, vis_loc, nisp_loc, vis_tile)
+    tile_catalog = save_tile_catalog(cfg, vis_loc, nisp_loc, vis_tile)
+    return tile_catalog
 
 def save_tile_catalog(cfg, vis_loc, nisp_loc, vis_tile):
     tile_index = vis_tile['tile_index']
