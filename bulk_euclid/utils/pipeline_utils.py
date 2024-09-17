@@ -157,7 +157,7 @@ def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
                 AND vis_det=1
                 AND spurious_prob < 0.2
                 AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
-                AND segmentation_map_id LIKE {tile['tile_index']}%
+                AND segmentation_map_id LIKE "{tile['tile_index']}%"
                 ORDER BY object_id ASC
                 """
     
