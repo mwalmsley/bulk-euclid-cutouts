@@ -109,6 +109,9 @@ def select_tiles(cfg, tiles):
         tile_indices_to_use = rng.choice(possible_indices, cfg.num_tiles, replace=False)
         tiles_to_use = tiles[tiles['tile_index'].isin(tile_indices_to_use)].reset_index(drop=True)  
         logging.info(f'Num. of tiles to use after random subselection: {len(tiles_to_use)}')
+    else:
+        logging.info('Using all tiles')
+        tiles_to_use = tiles
     # should be exactly twice as many tiles to use as sampled (1 for vis, 1 for y)
     assert len(tiles_to_use) == 2 * cfg.num_tiles
     return tiles_to_use
