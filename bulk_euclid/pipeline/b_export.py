@@ -60,7 +60,7 @@ def visualise_catalog(cfg: OmegaConf, df):
     # ax.text(20.1, 5000, 'Includes faint extended galaxies')
 
     plt.legend(loc='upper right')
-    save_loc = cfg.catalog_dir + '/segmentation_area_vs_vis_mag.png'
+    save_loc = cfg.sanity_dir + '/segmentation_area_vs_vis_mag.png'
     logging.info(f'Saving catalog viz to {save_loc}')
     plt.savefig(save_loc)
     return fig, ax

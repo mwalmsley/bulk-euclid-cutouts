@@ -15,18 +15,17 @@ def run(cfg):
     cfg = create_folders(cfg)
     tiles = get_tile_catalog(cfg)
     tiles = select_tiles(cfg, tiles)
-    # download_tiles(cfg, tiles)
 
     for tile_n, tile_index in enumerate(tiles['tile_index'].unique()):
         logging.info(f'tile {tile_index}: {tile_n} of {len(tiles)}')
         try:
             tile_catalog = download_tile_and_catalog(cfg, tiles, tile_index)
             make_volunteer_cutouts(tile_catalog)
-            # make_fits_cutouts(master_catalog)
         except AssertionError as e:
-            logging.critical(e)
+            logging.warning('Skipping tile {} due to fatal error'.format(tile_index))
+            logging.warning(e)
 
-    logging.info('Done :)')
+    logging.info('Cutout creation complete')
     
 
 def login():
@@ -86,13 +85,6 @@ def get_tile_catalog(cfg: OmegaConf):
     plt.legend()
     # unlike the tiles, which are in SAS (albeit wrongly indexed), the MER catalogs are only available in SAS for a small corner of the Wide survey
     plt.savefig(cfg.sanity_dir + '/tile_centers.png')
-
-    # tiles = tiles.query(f'ra < {cfg.ra_upper_limit}').query(f'dec < {cfg.dec_upper_limit}').reset_index(drop=True)
-    # logging.info(f'Tiles after restricting to southern area: {len(tiles)}')
-    # TODO automate/remove this hack
-
-    # add tile extents (previously useful for querying the MER catalog, but now no longer used)
-    # tiles = pipeline_utils.get_tile_extents_fov(tiles)
 
     return tiles
 

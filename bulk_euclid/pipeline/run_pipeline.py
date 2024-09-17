@@ -19,6 +19,8 @@ def run(cfg):
     a_make_catalogs_and_cutouts.run(cfg)
     b_export.run(cfg)
 
+    logging.info('Done :)')
+
     
 
 if __name__ == "__main__":
