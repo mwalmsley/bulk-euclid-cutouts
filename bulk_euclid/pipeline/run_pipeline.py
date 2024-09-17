@@ -1,12 +1,16 @@
 import time
 import logging
-
+import os
 from omegaconf import OmegaConf
 
 import a_download_tiles_and_catalogs
 import b_create_master_catalog_and_cutouts
 
 def run(cfg):
+
+    # add the path to the local bin
+    os.environ['PATH'] = os.environ['PATH'] + ':/usr/local/bin:/home/mwalms01/.local/bin'
+
     a_download_tiles_and_catalogs.run(cfg)
     b_create_master_catalog_and_cutouts.run(cfg)
 
