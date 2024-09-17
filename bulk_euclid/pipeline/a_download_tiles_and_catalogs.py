@@ -23,7 +23,7 @@ def login():
         from astroquery.esa.euclid.core import Euclid
         # two line file, username and password
         # do not commit or put in any team workspace, obviously...
-        Euclid.login(credentials_file='/media/home/_credentials/euclid_login.txt')
+        Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
     else:
         raise ValueError('Not on DataLabs')
 
