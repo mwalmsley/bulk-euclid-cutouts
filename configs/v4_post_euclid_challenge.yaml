@@ -1,0 +1,18 @@
+release_name: F-006
+num_tiles: 0  # all tiles
+refresh_catalogs: True
+seed: 1
+delete_tiles: True
+debug: False
+
+base_dir: '/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/pipeline_runs'
+name: 'v4_post_euclid_challenge'
+download_dir: !
+tile_dir: !
+catalog_dir: !
+cutout_dir: !
+jpg_dir: !
+sanity_dir: !
+log_file: !
+
+# tiling_strategy_loc: 'tiling_plan/field_all_sky_overview.fits'
