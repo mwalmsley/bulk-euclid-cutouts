@@ -3,8 +3,6 @@ import logging
 import os
 from omegaconf import OmegaConf
 
-import a_download_tiles_and_catalogs
-import b_create_master_catalog_and_cutouts
 
 def run(cfg):
 
@@ -15,7 +13,7 @@ def run(cfg):
     os.path.isdir(repo_dir)
     sys.path.insert(0,repo_dir)
 
-    from bulk_euclid.utils import pipeline_utils
+    from bulk_euclid.pipeline import a_download_tiles_and_catalogs, b_create_master_catalog_and_cutouts
     logging.info('Success')
     exit()
 
