@@ -111,9 +111,11 @@ def select_tiles(cfg, tiles):
         logging.info(f'Num. of tiles to use after random subselection: {len(tiles_to_use)}')
     else:
         logging.info('Using all tiles')
-        tiles_to_use = tiles
+        tiles_to_use = tiles[possible_indices].reset_index(drop=True)
+
     # should be exactly twice as many tiles to use as sampled (1 for vis, 1 for y)
     assert len(tiles_to_use) == 2 * cfg.num_tiles
+
     return tiles_to_use
 
 # def download_tiles(cfg: OmegaConf, tiles_to_download):
