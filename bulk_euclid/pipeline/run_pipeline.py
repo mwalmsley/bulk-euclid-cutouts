@@ -14,8 +14,7 @@ def run(cfg):
     sys.path.insert(0,repo_dir)
 
     from bulk_euclid.pipeline import a_download_tiles_and_catalogs, b_create_master_catalog_and_cutouts
-    logging.info('Success')
-    exit()
+    logging.info('Import successful')
 
     a_download_tiles_and_catalogs.run(cfg)
     b_create_master_catalog_and_cutouts.run(cfg)
@@ -24,7 +23,7 @@ def run(cfg):
 
 if __name__ == "__main__":
 
-    cfg = OmegaConf.load('/home/walml/repos/gz-euclid-datalab/run_pipeline/remote_debug.yaml')
+    cfg = OmegaConf.load('configs/remote_debug.yaml')
 
     cfg.log_file = cfg.base_dir + f'/pipeline_{time.time()}.log'
 
