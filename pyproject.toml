@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 # https://stackoverflow.com/questions/72294299/multiple-top-level-packages-discovered-in-a-flat-layout
 [tool.setuptools.packages.find]
 where = ["."]  # list of folders that contain the packages (["."] by default)
-include = ["gz_euclid"]  # package names should match these glob patterns (["*"] by default)
+include = ["bulk_euclid"]  # package names should match these glob patterns (["*"] by default)
 exclude = []  # exclude packages matching these glob patterns (empty by default)
 namespaces = false  # to disable scanning PEP 420 namespaces (true by default)
 
