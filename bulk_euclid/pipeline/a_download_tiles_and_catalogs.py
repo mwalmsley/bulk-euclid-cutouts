@@ -11,6 +11,7 @@ from bulk_euclid.utils import pipeline_utils
 
 
 def run(cfg):
+    login()
     cfg = create_folders(cfg)
     tiles = get_tile_catalog(cfg)
     tiles = select_tiles(tiles)
@@ -28,6 +29,7 @@ def login():
 
 
 def create_folders(cfg: OmegaConf):
+    cfg.download_dir = cfg.base_dir + '/' + cfg.name
     cfg.tile_dir = cfg.download_dir + '/tiles'
     cfg.catalog_dir = cfg.download_dir + '/catalogs'
     cfg.cutout_dir = cfg.download_dir + '/cutouts'
@@ -66,6 +68,7 @@ def get_tile_catalog(cfg: OmegaConf):
 
     tiles = tiles.query(f'ra < {cfg.ra_upper_limit}').query(f'dec < {cfg.dec_upper_limit}').reset_index(drop=True)
     logging.info(f'Tiles after restricting to southern area: {len(tiles)}')
+    # TODO automate/remove this hack
 
     # add tile extents (previously useful for querying the MER catalog, but now no longer used)
     # tiles = pipeline_utils.get_tile_extents_fov(tiles)
@@ -81,8 +84,6 @@ def select_tiles(cfg, tiles):
     possible_indices = list(set(vis_tiles['tile_index']).intersection(set(y_tiles['tile_index'])))
     logging.info(f'Num. of tiles with VIS and Y: {len(possible_indices)}')
 
-    # tile_indices_to_use = rng.choice(possible_indices, 100)
-    # [102034406, 102033246, 102012403,
     assert len(possible_indices) > cfg.num_tiles, f'Not enough tiles with both VIS and Y: {len(possible_indices)}'
     tile_indices_to_use = rng.choice(possible_indices, cfg.num_tiles, replace=False)
     tiles_to_use = tiles[tiles['tile_index'].isin(tile_indices_to_use)].reset_index(drop=True)  
@@ -121,7 +122,6 @@ def download_tiles(cfg: OmegaConf, tiles_to_download, refresh_catalogs=False):
 
 
 # pretty much cannot locally debug, requires Euclid data access
-
 # if __name__ == "__main__":
 
 #     cfg = OmegaConf.load('/home/walml/repos/gz-euclid-datalab/run_pipeline/v2_challenge_launch.yaml')

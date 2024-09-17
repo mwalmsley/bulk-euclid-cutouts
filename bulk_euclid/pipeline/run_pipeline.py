@@ -14,7 +14,7 @@ def run(cfg):
 
 if __name__ == "__main__":
 
-    cfg = OmegaConf.load('/home/walml/repos/gz-euclid-datalab/run_pipeline/v3_challenge_midaug.yaml')
+    cfg = OmegaConf.load('/home/walml/repos/gz-euclid-datalab/run_pipeline/remote_debug.yaml')
 
     cfg.log_file = cfg.base_dir + f'/pipeline_{time.time()}.log'
 

@@ -1,4 +1,5 @@
 from collections import namedtuple
+import logging
 import os
 import shutil
 import warnings
@@ -107,12 +108,7 @@ def get_tiles_in_survey(survey: Survey, bands=None, release_name=None, ra_limits
     
     query_str += " ORDER BY tile_index ASC"
     
-
-        # AND (release_name='F-006')    
-        # WHERE (instrument_name='VIS') 
-        # WHERE (instrument_name IN ('VIS', 'NISP')) 
-    
-    # async to avoid 2k max, just not it saves results somewhere on server
+    # async to avoid 2k max, just note it saves results somewhere on server
     job = Euclid.launch_job_async(query_str, verbose=False, background=False) 
     assert job is not None, 'Query failed with: \n' + query_str
     df = job.get_results().to_pandas()
@@ -120,17 +116,6 @@ def get_tiles_in_survey(survey: Survey, bands=None, release_name=None, ra_limits
     assert len(df) > 0, 'No results for query with: \n' + query_str
     print("Found", len(df), " query results")
     return df
-
-
-# # def get_tile_extent(tile_ra, tile_dec, tile_width_arcmin: float):
-# def get_tile_extents(tiles, survey):
-#     tiles = tiles.copy()
-#     tile_half_width_deg = (survey.tile_width / 60.)/2.  #  arcmin to deg, halved
-#     tiles['ra_min'] = tiles['ra'] - tile_half_width_deg
-#     tiles['ra_max'] = tiles['ra'] + tile_half_width_deg
-#     tiles['dec_min'] = tiles['dec'] - tile_half_width_deg
-#     tiles['dec_max'] = tiles['dec'] + tile_half_width_deg
-#     return tiles
 
 
 def get_tile_extents_fov(tiles):
@@ -192,11 +177,11 @@ def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
                 assert len(df) < 2000, 'Hit query limit, set run_async=True'
             break
         except AttributeError as e:
-            print(e)
-            print(f'Retrying, {retries}')
+            logging.info(e)
+            logging.info(f'Retrying, {retries}')
         retries += 1
 
-    print("Found", len(df), " query results")
+    logging.info("Found", len(df), " query results")
 
     # apply python cuts - NO LONGER NEEDED, all in SQL except the weirdly-low-flux-line which is replaced by VIS_DET=1
     # df.columns = df.columns.str.upper()
