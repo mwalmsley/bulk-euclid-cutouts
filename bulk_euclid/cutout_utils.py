@@ -1,4 +1,4 @@
-from gz_euclid import morphology_utils_ou_mer as m_utils  # try to keep this exactly like ou mer version
+from bulk_euclid import morphology_utils_ou_mer as m_utils  # try to keep this exactly like ou mer version
 
 import numpy as np
 

@@ -10,7 +10,7 @@ from sklearn.neighbors import KDTree
 from astropy.table import Table
 
 
-from gz_euclid import pipeline_utils
+from bulk_euclid import pipeline_utils
 
 
 

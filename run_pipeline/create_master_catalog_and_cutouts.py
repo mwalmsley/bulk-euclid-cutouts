@@ -7,7 +7,7 @@ from omegaconf import OmegaConf
 import numpy as np
 import matplotlib.pyplot as plt
 
-from gz_euclid import pipeline_utils
+from bulk_euclid import pipeline_utils
 
 
 def make_galaxy_catalog(cfg: OmegaConf):

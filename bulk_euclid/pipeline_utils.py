@@ -16,7 +16,7 @@ from PIL import Image
 if os.path.isdir('/media/home/team_workspaces'):  # on datalabs
     from astroquery.esa.euclid.core import EuclidClass, Euclid
 
-from gz_euclid import morphology_utils_ou_mer as m_utils, cutout_utils
+from bulk_euclid import morphology_utils_ou_mer as m_utils, cutout_utils
 
 
 Survey = namedtuple('Survey', ['name', 'min_tile_index', 'max_tile_index', 'tile_width', 'tile_overlap'])
