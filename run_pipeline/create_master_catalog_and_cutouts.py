@@ -102,7 +102,9 @@ def zip_for_download(cfg: OmegaConf):
 if __name__ == '__main__':
 
     logging.basicConfig(level=logging.INFO)
-    cfg = OmegaConf.load('/home/walml/repos/gz-euclid-datalab/run_pipeline/v3_challenge_midaug.yaml')
+    # cfg = OmegaConf.load('configs/v3_challenge_midaug.yaml')
+    cfg = OmegaConf.load('configs/local_debug.yaml')
+    
     make_galaxy_catalog(cfg)
     master_catalog = pd.read_csv(cfg.catalog_dir + '/_master_catalog.csv')
     visualise_catalog(cfg, master_catalog)
