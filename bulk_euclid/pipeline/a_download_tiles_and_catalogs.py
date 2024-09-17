@@ -14,7 +14,7 @@ def run(cfg):
     login()
     cfg = create_folders(cfg)
     tiles = get_tile_catalog(cfg)
-    tiles = select_tiles(tiles)
+    tiles = select_tiles(cfg, tiles)
     download_tiles(cfg, tiles, refresh_catalogs=False)
 
 def login():
