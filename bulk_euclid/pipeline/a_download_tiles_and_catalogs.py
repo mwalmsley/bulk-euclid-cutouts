@@ -32,7 +32,7 @@ def create_folders(cfg: OmegaConf):
     cfg.download_dir = cfg.base_dir + '/pipeline_runs/' + cfg.name
     cfg.tile_dir = cfg.download_dir + '/tiles'
     cfg.catalog_dir = cfg.download_dir + '/catalogs'
-    
+
     cfg.cutout_dir = cfg.download_dir + '/cutouts'
     cfg.jpg_dir = cfg.cutout_dir + '/jpg'
 
@@ -103,7 +103,7 @@ def download_tiles(cfg: OmegaConf, tiles_to_download, refresh_catalogs=False):
 
     for tile_n, tile_index in enumerate(tiles_to_download['tile_index'].unique()): 
         
-        logging.info(f'{tile_n} of {len(tiles_to_download)}', tile_index)
+        logging.info(f'tile {tile_index}: {tile_n} of {len(tiles_to_download)}')
 
         vis_loc, nisp_loc = pipeline_utils.download_mosaics(tile_index, tiles_to_download, cfg.tile_dir)
         try:
@@ -115,7 +115,7 @@ def download_tiles(cfg: OmegaConf, tiles_to_download, refresh_catalogs=False):
   
                 tile_galaxies['tile_index_from_segmentation_map_id'] = tile_galaxies['segmentation_map_id'].apply(lambda x: int( str(x)[:9] ))  # first 9 digits are tile index
                 logging.info(tile_galaxies['tile_index_from_segmentation_map_id'].value_counts())
-                tile_galaxies['this_tile_index_is_best'] = tile_galaxies['tile_index_from_segmentation_map_id'] == tile_index
+                # tile_galaxies['this_tile_index_is_best'] = tile_galaxies['tile_index_from_segmentation_map_id'] == tile_index
 
                 tile_galaxies['vis_tile'] = vis_loc
                 tile_galaxies['y_tile'] = nisp_loc
