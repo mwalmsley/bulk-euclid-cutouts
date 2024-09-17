@@ -29,7 +29,7 @@ def login():
 
 
 def create_folders(cfg: OmegaConf):
-    cfg.download_dir = cfg.base_dir + '/' + cfg.name
+    cfg.download_dir = cfg.base_dir + '/pipeline_runs/' + cfg.name
     cfg.tile_dir = cfg.download_dir + '/tiles'
     cfg.catalog_dir = cfg.download_dir + '/catalogs'
     cfg.cutout_dir = cfg.download_dir + '/cutouts'
@@ -37,9 +37,8 @@ def create_folders(cfg: OmegaConf):
     cfg.sanity_dir = cfg.cutout_dir + '/sanity'
 
     logging.info(f'Saving to {cfg.download_dir}')
-    assert os.path.exists(cfg.download_dir)
-
-    for d in [cfg.jpg_dir, cfg.tile_dir, cfg.catalog_dir]:
+    assert os.path.exists(os.path.dirname(cfg.download_dir))
+    for d in [cfg.download_dir, cfg.jpg_dir, cfg.tile_dir, cfg.catalog_dir]:
         if not os.path.exists(d):
             os.makedirs(d)
 
