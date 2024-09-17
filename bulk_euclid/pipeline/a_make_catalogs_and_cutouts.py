@@ -107,11 +107,12 @@ def select_tiles(cfg, tiles):
         logging.info(f'Randomly subselecting {cfg.num_tiles} tiles')
         assert len(possible_indices) > cfg.num_tiles, f'Not enough tiles with both VIS and Y: {len(possible_indices)}'
         tile_indices_to_use = rng.choice(possible_indices, cfg.num_tiles, replace=False)
-        tiles_to_use = tiles[tiles['tile_index'].isin(tile_indices_to_use)].reset_index(drop=True)  
-        logging.info(f'Num. of tiles to use after random subselection: {len(tiles_to_use)}')
+        logging.info(f'Num. of tiles to use after random subselection: {len(tile_indices_to_use)}')
     else:
         logging.info('Using all tiles')
-        tiles_to_use = tiles[possible_indices].reset_index(drop=True)
+        tile_indices_to_use = possible_indices
+
+    tiles_to_use = tiles[tiles['tile_index'].isin(tile_indices_to_use)].reset_index(drop=True) 
 
     # should be exactly twice as many tiles to use as sampled (1 for vis, 1 for y)
     assert len(tiles_to_use) == 2 * cfg.num_tiles
