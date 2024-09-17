@@ -29,7 +29,7 @@ def login():
 
 
 def create_folders(cfg: OmegaConf):
-    cfg.download_dir = cfg.base_dir + cfg.name
+    cfg.download_dir = cfg.base_dir + '/' + cfg.name
     cfg.tile_dir = cfg.download_dir + '/tiles'
     cfg.catalog_dir = cfg.download_dir + '/catalogs'
 
