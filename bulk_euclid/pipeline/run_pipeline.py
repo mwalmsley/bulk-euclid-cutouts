@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     cfg = OmegaConf.load('configs/remote_debug.yaml')
 
-    cfg.log_file = cfg.base_dir + f'/pipeline_{time.time()}.log'
+    cfg.log_file = cfg.base_dir + f'/pipeline_{cfg.name}_{time.time()}.log'
 
     logging.basicConfig(level=logging.INFO, filename=cfg.log_file, filemode='w')
 
