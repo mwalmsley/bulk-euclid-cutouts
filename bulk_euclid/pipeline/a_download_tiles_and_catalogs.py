@@ -1,6 +1,7 @@
 import os
 import logging
 # from tqdm.notebook import tqdm # TODO ask Kristin to add?
+import shutil
 
 from omegaconf import OmegaConf
 import numpy as np
@@ -15,7 +16,17 @@ def run(cfg):
     cfg = create_folders(cfg)
     tiles = get_tile_catalog(cfg)
     tiles = select_tiles(cfg, tiles)
-    download_tiles(cfg, tiles, refresh_catalogs=False)
+    # download_tiles(cfg, tiles)
+
+    for tile_n, tile_index in enumerate(tiles['tile_index'].unique()):
+        logging.info(f'tile {tile_index}: {tile_n} of {len(tiles)}')
+        try:
+            tile_catalog = download_tile_and_catalog(cfg, tiles, tile_index)
+            make_volunteer_cutouts(tile_catalog)
+        except AssertionError as e:
+            logging.critical(e)
+    
+    zip_for_download(cfg)
 
 def login():
 
@@ -101,33 +112,74 @@ def select_tiles(cfg, tiles):
     assert len(tiles_to_use) == 2 * cfg.num_tiles
     return tiles_to_use
 
-def download_tiles(cfg: OmegaConf, tiles_to_download, refresh_catalogs=False):
+# def download_tiles(cfg: OmegaConf, tiles_to_download):
+#     for tile_n, tile_index in enumerate(tiles_to_download['tile_index'].unique()): 
+#         logging.info(f'tile {tile_index}: {tile_n} of {len(tiles_to_download)}')
+#         try:
+#             download_tile_and_catalog(cfg, tiles_to_download, tile_index)
+#         except AssertionError as e:
+#             logging.critical(e)
+#     logging.info('All downloads complete, safe to time out from Euclid auth')
 
-    for tile_n, tile_index in enumerate(tiles_to_download['tile_index'].unique()): 
-        
-        logging.info(f'tile {tile_index}: {tile_n} of {len(tiles_to_download)}')
+def download_tile_and_catalog(cfg, tiles_to_download, tile_index):
+    vis_loc, nisp_loc = pipeline_utils.download_mosaics(tile_index, tiles_to_download, cfg.tile_dir)
+    vis_tile = tiles_to_download.query('filter_name == "VIS"').query(f'tile_index == {tile_index}').squeeze()
+    save_tile_catalog(cfg, vis_loc, nisp_loc, vis_tile)
 
-        vis_loc, nisp_loc = pipeline_utils.download_mosaics(tile_index, tiles_to_download, cfg.tile_dir)
-        try:
-            vis_tile = tiles_to_download.query('filter_name == "VIS"').query(f'tile_index == {tile_index}').squeeze()
-            tile_catalog_loc = cfg.catalog_dir + f'/{tile_index}_mer_catalog.csv'
-            if (not os.path.isfile(tile_catalog_loc)) or refresh_catalogs:
-                tile_galaxies = pipeline_utils.find_zoobot_sources_in_tile(vis_tile)
-                assert not tile_galaxies.empty
+def save_tile_catalog(cfg, vis_loc, nisp_loc, vis_tile):
+    tile_index = vis_tile['tile_index']
+    tile_catalog_loc = cfg.catalog_dir + f'/{tile_index}_mer_catalog.csv'
+    if (not os.path.isfile(tile_catalog_loc)) or cfg.refresh_catalogs:
+        tile_galaxies = pipeline_utils.find_zoobot_sources_in_tile(vis_tile)
+        assert not tile_galaxies.empty
   
-                tile_galaxies['tile_index_from_segmentation_map_id'] = tile_galaxies['segmentation_map_id'].apply(lambda x: int( str(x)[:9] ))  # first 9 digits are tile index
-                logging.info(tile_galaxies['tile_index_from_segmentation_map_id'].value_counts())
-                # tile_galaxies['this_tile_index_is_best'] = tile_galaxies['tile_index_from_segmentation_map_id'] == tile_index
+        tile_galaxies['tile_index_from_segmentation_map_id'] = tile_galaxies['segmentation_map_id'].apply(lambda x: int( str(x)[:9] ))  # first 9 digits are tile index
+        logging.info(tile_galaxies['tile_index_from_segmentation_map_id'].value_counts())
 
-                tile_galaxies['vis_tile'] = vis_loc
-                tile_galaxies['y_tile'] = nisp_loc
-                tile_galaxies['tile_ra'] = vis_tile['ra']
-                tile_galaxies['tile_dec'] = vis_tile['dec']
-                tile_galaxies['release_name'] = vis_tile['release_name']
-                tile_galaxies.to_csv(tile_catalog_loc, index=False)
-        except AssertionError as e:
-            logging.critical(e)
-    logging.info('All downloads complete, safe to time out from Euclid auth')
+        tile_galaxies['vis_tile'] = vis_loc
+        tile_galaxies['y_tile'] = nisp_loc
+        tile_galaxies['tile_ra'] = vis_tile['ra']
+        tile_galaxies['tile_dec'] = vis_tile['dec']
+        tile_galaxies['release_name'] = vis_tile['release_name']
+        add_cutout_paths(cfg, tile_galaxies)  # inplace
+        tile_galaxies.to_csv(tile_catalog_loc, index=False)
+    else:
+        logging.info(f'Catalog already exists at {tile_catalog_loc}, loading')
+        tile_galaxies = pd.read_csv(tile_catalog_loc)
+    return tile_galaxies
+
+
+def add_cutout_paths(cfg, catalog):
+    catalog['jpg_loc_composite'] = catalog.apply(
+        lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix='composite', oneway_hash=False), axis=1)
+    catalog['jpg_loc_vis_only'] = catalog.apply(
+        lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix='vis_only', oneway_hash=False), axis=1)
+    catalog['jpg_loc_vis_lsb'] = catalog.apply(
+        lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix='vis_lsb', oneway_hash=False), axis=1)
+    
+
+
+def make_volunteer_cutouts(df):
+    valid_tile_indices = list(df['tile_index'].unique())
+    logging.info(f'Tiles to make cutouts from: {len(valid_tile_indices)}')
+
+    for tile_n, tile_index in enumerate(valid_tile_indices):
+        logging.info(f'Tile {tile_index}, {tile_n}')
+        tile_galaxies = df.query(f'tile_index == {tile_index}')
+        logging.info(tile_galaxies[['right_ascension', 'declination']].mean())
+        vis_loc = tile_galaxies['vis_tile'].iloc[0]
+        nisp_loc = tile_galaxies['y_tile'].iloc[0]
+        pipeline_utils.save_cutouts(vis_loc, nisp_loc, tile_galaxies, overwrite=False)
+
+
+def zip_for_download(cfg: OmegaConf):
+    logging.info('Zipping cutouts and catalogs')
+    # save to e.g. v1_challenge_launch_cutouts.zip
+    shutil.make_archive(cfg.download_dir + '_catalogs', 'zip', root_dir=cfg.catalog_dir)
+    logging.info('Zipped catalogs')
+    shutil.make_archive(cfg.download_dir + '_jpg_cutouts', 'zip', root_dir=cfg.jpg_dir)
+    logging.info('Zipped cutouts')
+
 
 
 # pretty much cannot locally debug, requires Euclid data access

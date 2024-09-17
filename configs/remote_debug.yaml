@@ -2,6 +2,7 @@ release_name: F-006
 ra_upper_limit: 100
 dec_upper_limit: -20
 num_tiles: 2
+refresh_catalogs: True
 seed: 1
 debug: True
 
