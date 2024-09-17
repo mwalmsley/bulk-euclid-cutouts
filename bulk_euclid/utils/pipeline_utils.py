@@ -118,19 +118,19 @@ def get_tiles_in_survey(survey: Survey, bands=None, release_name=None, ra_limits
     return df
 
 
-def get_tile_extents_fov(tiles):
+# def get_tile_extents_fov(tiles):
     
-    tiles = tiles.copy()
-    float_fovs = tiles['fov'].apply(lambda x: np.array(x[1:-1].split(", ")).astype(np.float64)) # from one big string to arrays of floats
-    array_fovs = np.array(float_fovs.values.tolist()) #from pandas series to numpy array
-    ras = array_fovs[:, ::2]
-    decs = array_fovs[:, 1::2]
+#     tiles = tiles.copy()
+#     float_fovs = tiles['fov'].apply(lambda x: np.array(x[1:-1].split(", ")).astype(np.float64)) # from one big string to arrays of floats
+#     array_fovs = np.array(float_fovs.values.tolist()) #from pandas series to numpy array
+#     ras = array_fovs[:, ::2]
+#     decs = array_fovs[:, 1::2]
 
-    tiles['ra_min'] = np.min(ras, axis=1)
-    tiles['ra_max'] = np.max(ras, axis=1)
-    tiles['dec_min'] = np.min(decs, axis=1)
-    tiles['dec_max'] = np.max(decs, axis=1)
-    return tiles
+#     tiles['ra_min'] = np.min(ras, axis=1)
+#     tiles['ra_max'] = np.max(ras, axis=1)
+#     tiles['dec_min'] = np.min(decs, axis=1)
+#     tiles['dec_max'] = np.max(decs, axis=1)
+#     return tiles
 
 
 #making a query for sources
@@ -157,10 +157,12 @@ def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
                 AND vis_det=1
                 AND spurious_prob < 0.2
                 AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
-                AND right_ascension > {tile['ra_min']} AND right_ascension < {tile['ra_max']}
-                AND declination > {tile['dec_min']} AND declination < {tile['dec_max']}
+                AND segmentation_map_id LIKE {tile['tile_index']}%
                 ORDER BY object_id ASC
                 """
+    
+                # AND right_ascension > {tile['ra_min']} AND right_ascension < {tile['ra_max']}
+                # AND declination > {tile['dec_min']} AND declination < {tile['dec_max']}
     # added min segmentation area to remove tiny bright artifacts
     # TODO copy to mer cuts/pipeline
     retries = 0
