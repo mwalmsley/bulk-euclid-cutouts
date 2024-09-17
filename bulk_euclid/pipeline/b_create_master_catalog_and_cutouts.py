@@ -7,7 +7,15 @@ from omegaconf import OmegaConf
 import numpy as np
 import matplotlib.pyplot as plt
 
-from bulk_euclid import pipeline_utils
+from bulk_euclid.utils import pipeline_utils
+
+
+def run(cfg):
+    make_galaxy_catalog(cfg)
+    master_catalog = pd.read_csv(cfg.catalog_dir + '/_master_catalog.csv')
+    visualise_catalog(cfg, master_catalog)
+    make_volunteer_cutouts(master_catalog)
+    # make_fits_cutouts(master_catalog)
 
 
 def make_galaxy_catalog(cfg: OmegaConf):
@@ -105,8 +113,4 @@ if __name__ == '__main__':
     # cfg = OmegaConf.load('configs/v3_challenge_midaug.yaml')
     cfg = OmegaConf.load('configs/local_debug.yaml')
     
-    make_galaxy_catalog(cfg)
-    master_catalog = pd.read_csv(cfg.catalog_dir + '/_master_catalog.csv')
-    visualise_catalog(cfg, master_catalog)
-    make_volunteer_cutouts(master_catalog)
-    # make_fits_cutouts(master_catalog)
+    run(cfg)

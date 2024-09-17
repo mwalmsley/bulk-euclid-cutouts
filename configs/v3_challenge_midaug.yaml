@@ -12,5 +12,6 @@ catalog_dir: !
 cutout_dir: !
 jpg_dir: !
 sanity_dir: !
+log_file: !
 
 # tiling_strategy_loc: 'tiling_plan/field_all_sky_overview.fits'

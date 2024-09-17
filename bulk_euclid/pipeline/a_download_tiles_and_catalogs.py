@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from bulk_euclid import pipeline_utils
+from bulk_euclid.utils import pipeline_utils
 
 
 def run(cfg):
@@ -15,6 +15,16 @@ def run(cfg):
     tiles = get_tile_catalog(cfg)
     tiles = select_tiles(tiles)
     download_tiles(cfg, tiles, refresh_catalogs=False)
+
+def login():
+
+    if os.path.isdir('/media/home/team_workspaces'):
+        from astroquery.esa.euclid.core import Euclid
+        # two line file, username and password
+        # do not commit or put in any team workspace, obviously...
+        Euclid.login(credentials_file='/media/home/_credentials/euclid_login.txt')
+    else:
+        raise ValueError('Not on DataLabs')
 
 
 def create_folders(cfg: OmegaConf):
