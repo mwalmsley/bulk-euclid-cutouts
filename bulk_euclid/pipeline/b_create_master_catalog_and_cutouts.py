@@ -30,11 +30,11 @@ def make_galaxy_catalog(cfg: OmegaConf):
     # nah, I think tile-level subselection will be enough. It's clearer to do every relevant source in a given tile. Then we have a list of classified tiles.
 
     master_catalog['jpg_loc_composite'] = master_catalog.apply(
-        lambda x: pipeline_utils.get_cutout_loc(cfg.cutout_dir, x, output_format='jpg', version_suffix='composite', oneway_hash=False), axis=1)
+        lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix='composite', oneway_hash=False), axis=1)
     master_catalog['jpg_loc_vis_only'] = master_catalog.apply(
-        lambda x: pipeline_utils.get_cutout_loc(cfg.cutout_dir, x, output_format='jpg', version_suffix='vis_only', oneway_hash=False), axis=1)
+        lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix='vis_only', oneway_hash=False), axis=1)
     master_catalog['jpg_loc_vis_lsb'] = master_catalog.apply(
-        lambda x: pipeline_utils.get_cutout_loc(cfg.cutout_dir, x, output_format='jpg', version_suffix='vis_lsb', oneway_hash=False), axis=1)
+        lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix='vis_lsb', oneway_hash=False), axis=1)
                                                             
 
     master_catalog.to_csv(cfg.catalog_dir + '/_master_catalog.csv', index=False)  # _ to appear first
