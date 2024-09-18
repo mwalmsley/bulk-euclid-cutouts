@@ -165,10 +165,11 @@ def find_relevant_sources_in_tile(cfg, tile):
     elif cfg.selection_cuts == 'lens_candidates':
         logging.info('Applying lens candidate cuts')
         query_str += """AND segmentation_area > 100
-        AND flux_r_ext_decam_aper < 3.630780547701008
-        AND flux_r_ext_decam_aper > 229.08676527677702
-        AND flux_g_ext_decam_aper > 36.307805477010085
-        AND flux_i_ext_decam_aper < 1.4454397707459257
+        AND flux_r_ext_decam_aper > 3.630780547701008
+        AND flux_r_ext_decam_aper < 229.08676527677702
+        AND flux_g_ext_decam_aper < 36.307805477010085
+        AND flux_i_ext_decam_aper < 190.54607179632464
+        AND flux_i_ext_decam_aper > 1.4454397707459257
         AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) < 5
         AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) > 1.8
         AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) < 3
