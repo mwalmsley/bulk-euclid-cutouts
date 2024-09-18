@@ -286,7 +286,7 @@ def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:s
             try:
                 
                 # really should make this a class...
-
+                # TODO might be different for lens search
                 cutout_locs = galaxy[['jpg_loc_composite', 'jpg_loc_vis_only', 'jpg_loc_vis_lsb']]
 
                 # assume they all are in the same subdir

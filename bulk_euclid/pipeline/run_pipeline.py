@@ -25,8 +25,8 @@ def run(cfg):
 
 if __name__ == "__main__":
 
-    # cfg = OmegaConf.load('configs/remote_debug.yaml')
-    cfg = OmegaConf.load('configs/v4_post_euclid_challenge.yaml')
+    cfg = OmegaConf.load('configs/remote_debug.yaml')
+    # cfg = OmegaConf.load('configs/v4_post_euclid_challenge.yaml')
 
     cfg.log_file = cfg.base_dir + f'/pipeline_{cfg.name}_{time.time()}.log'
 
