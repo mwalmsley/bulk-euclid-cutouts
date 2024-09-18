@@ -170,11 +170,15 @@ def find_relevant_sources_in_tile(cfg, tile):
         AND flux_g_ext_decam_aper < 36.307805477010085
         AND flux_i_ext_decam_aper < 190.54607179632464
         AND flux_i_ext_decam_aper > 1.4454397707459257
-        AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) < 5
-        AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) > 1.8
-        AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) < 3
-        AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) > 0.6
+        AND (flux_g_ext_decam_aper / flux_i_ext_decam_aper) > 0.01
+        AND (flux_g_ext_decam_aper / flux_i_ext_decam_aper) < 0.19054607179632474
+        AND (flux_g_ext_decam_aper / flux_r_ext_decam_aper) > 0.06309573444801933
+        AND (flux_g_ext_decam_aper / flux_r_ext_decam_aper) < 0.5754399373371569
         """
+        # AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) < 5
+        # AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) > 1.8
+        # AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) < 3
+        # AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) > 0.6
 
     # within the tile via segmentation map id
     closing_str = f"""AND CAST(segmentation_map_id as varchar) LIKE '{tile['tile_index']}%'
