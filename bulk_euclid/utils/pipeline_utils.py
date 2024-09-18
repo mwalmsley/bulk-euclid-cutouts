@@ -150,8 +150,7 @@ def find_relevant_sources_in_tile(cfg, tile):
     # no cross-match to gaia stars
     # detected in vis
     # not "spurious" (very similar to detected in vis)
-    standard_quality_cuts = """
-    WHERE flux_vis_aper > 0
+    standard_quality_cuts = """WHERE flux_vis_aper > 0
     AND gaia_id IS NULL
     AND vis_det=1
     AND spurious_prob < 0.2
@@ -161,13 +160,11 @@ def find_relevant_sources_in_tile(cfg, tile):
     if cfg.selection_cuts == 'galaxy_zoo':
         logging.info('Applying Galaxy Zoo cuts')
         # at least 1200px in area OR ( vis mag < 20.5 (expressed as flux) and at least 200px in area)
-        query_str += """
-        AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
+        query_str += """AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
         """
     elif cfg.selection_cuts == 'lens_candidates':
         logging.info('Applying lens candidate cuts')
-        query_str += """
-        AND segmentation_area > 100
+        query_str += """AND segmentation_area > 100
         AND flux_r_ext_decam_aper < 3.630780547701008
         AND flux_r_ext_decam_aper > 229.08676527677702
         AND flux_g_ext_decam_aper > 36.307805477010085
@@ -179,8 +176,7 @@ def find_relevant_sources_in_tile(cfg, tile):
         """
 
     # within the tile via segmentation map id
-    closing_str = """
-    AND CAST(segmentation_map_id as varchar) LIKE '{tile['tile_index']}%'
+    closing_str = f"""AND CAST(segmentation_map_id as varchar) LIKE '{tile['tile_index']}%'
     ORDER BY object_id ASC
     """
     query_str += closing_str
