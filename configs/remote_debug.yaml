@@ -4,9 +4,12 @@ refresh_catalogs: True
 seed: 1
 delete_tiles: True
 debug: True
+run_async: False
+max_retries: 1
+selection_cuts: lens_candidates  # or galaxy_zoo
 
 base_dir: '/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/pipeline_runs'
-name: 'remote_debug'
+name: 'remote_debug_lens'
 download_dir: !
 tile_dir: !
 catalog_dir: !

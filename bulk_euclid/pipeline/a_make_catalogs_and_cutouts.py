@@ -138,7 +138,7 @@ def save_tile_catalog(cfg, vis_loc, nisp_loc, vis_tile):
     tile_index = vis_tile['tile_index']
     tile_catalog_loc = cfg.catalog_dir + f'/{tile_index}_mer_catalog.csv'
     if (not os.path.isfile(tile_catalog_loc)) or cfg.refresh_catalogs:
-        tile_galaxies = pipeline_utils.find_zoobot_sources_in_tile(vis_tile)
+        tile_galaxies = pipeline_utils.find_relevant_sources_in_tile(cfg, vis_tile)
         assert not tile_galaxies.empty
   
         tile_galaxies['tile_index_from_segmentation_map_id'] = tile_galaxies['segmentation_map_id'].apply(lambda x: int( str(x)[:9] ))  # first 9 digits are tile index

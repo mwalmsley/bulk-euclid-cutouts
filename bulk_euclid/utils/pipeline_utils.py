@@ -131,14 +131,8 @@ def get_tiles_in_survey(survey: Survey, bands=None, release_name=None, ra_limits
 #     tiles['dec_max'] = np.max(decs, axis=1)
 #     return tiles
 
-def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
-    # apply our final selection criteria:
-    # non-negative vis flux
-    # no cross-match to gaia stars
-    # detected in vis
-    # not "spurious" (very similar to detected in vis)
-    # at least 1200px in area OR ( vis mag < 20.5 (expressed as flux) and at least 200px in area)
-    # within the tile via segmentation map id
+def find_relevant_sources_in_tile(cfg, tile):
+    # apply our final selection criteria
 
     """
     segmentation map id query is like:
@@ -146,23 +140,58 @@ def find_zoobot_sources_in_tile(tile, run_async=False, max_retries=1):
     FROM catalogue.mer_catalogue
     WHERE CAST(segmentation_map_id as varchar) LIKE '102020107%'
     """
-        
-    query_str = f"""SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_vis_aper, ellipticity, kron_radius, segmentation_map_id
-                FROM catalogue.mer_catalogue
-                WHERE flux_vis_aper > 0
-                AND gaia_id IS NULL
-                AND vis_det=1
-                AND spurious_prob < 0.2
-                AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
-                AND CAST(segmentation_map_id as varchar) LIKE '{tile['tile_index']}%'
-                ORDER BY object_id ASC
-                """
+
+    query_str = f"""
+    SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_vis_aper, ellipticity, kron_radius, segmentation_map_id, flux_g_ext_decam_aper, flux_i_ext_decam_aper, flux_r_ext_decam_aper
+    FROM catalogue.mer_catalogue
+    """
+
+    # non-negative vis flux
+    # no cross-match to gaia stars
+    # detected in vis
+    # not "spurious" (very similar to detected in vis)
+    standard_quality_cuts = """
+    WHERE flux_vis_aper > 0
+    AND gaia_id IS NULL
+    AND vis_det=1
+    AND spurious_prob < 0.2
+    """
+    query_str += standard_quality_cuts
+
+    if cfg.selection_cuts == 'galaxy_zoo':
+        logging.info('Applying Galaxy Zoo cuts')
+        # at least 1200px in area OR ( vis mag < 20.5 (expressed as flux) and at least 200px in area)
+        query_str += """
+        AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
+        """
+    elif cfg.selection_cuts == 'lens_candidates':
+        logging.info('Applying lens candidate cuts')
+        query_str += """
+        AND segmentation_area > 100
+        AND flux_r_ext_decam_aper < 3.630780547701008
+        AND flux_r_ext_decam_aper > 229.08676527677702
+        AND flux_g_ext_decam_aper > 36.307805477010085
+        AND flux_i_ext_decam_aper < 1.4454397707459257
+        AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) < 5
+        AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) > 1.8
+        AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) < 3
+        AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) > 0.6
+        """
+
+    # within the tile via segmentation map id
+    closing_str = """
+    AND CAST(segmentation_map_id as varchar) LIKE '{tile['tile_index']}%'
+    ORDER BY object_id ASC
+    """
+    query_str += closing_str
+    logging.debug(query_str)
+
     # added min segmentation area to remove tiny bright artifacts
     # TODO copy to mer cuts/pipeline
     retries = 0
-    while retries < max_retries:
+    while retries < cfg.max_retries:
         try:
-            if run_async:
+            if cfg.run_async:
                 output_tmpfile = f'tmpfile_{np.random.rand(int(1e8))}.csv'
                 job = Euclid.launch_job_async(query_str, background=False, output_file=output_tmpfile, output_format='csv')
                 df = pd.read_csv(output_tmpfile)
