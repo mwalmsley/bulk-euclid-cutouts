@@ -1,17 +1,9 @@
 # bulk-euclid-cutouts
-Pipeline to download tiles and make images on ESA Datalabs
 
+Pipeline to make 1M+ Euclid cutouts on ESA Datalabs.
 
-## Install
+Documentation on [this Google doc](https://docs.google.com/document/d/10KrelkVQgckFmqHIqVzZ-22oPIKe-uIE_0laMHSl3Rs/edit?usp=sharing).
 
-From this root repo folder:
-    pip install -e .
+Currently used for [Galaxy Zoo Euclid](https://www.esa.int/Science_Exploration/Space_Science/Euclid/Euclid_Galaxy_Zoo_help_us_classify_the_shapes_of_galaxies).
 
-Also manually install:
-    https://github.com/mwalmsley/shared-astro-utilities/
-
-
-## Usage
-
-Download a set of zipped cutouts/catalogs to pipeline/folder e.g. pipeline/v2_challenge_launch. Unzip.
-
+Help wanted. Let's build a pipeline that works for many projects. Contact Mike Walmsley ([m.walmsley@utoronto.ca](emailto:m.walmsley@utoronto.ca))
