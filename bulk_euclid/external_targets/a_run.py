@@ -45,10 +45,13 @@ def get_matching_tiles(cfg: OmegaConf):  # simplified from a_make_catalogs_and_c
     vis_tiles = pipeline_utils.get_tile_extents_fov(vis_tiles)  # ra_min, ra_max, dec_min, dec_max, approximate
 
     # use KDTree to quickly find closest tile to each target
-    print(vis_tiles.columns.values)
+    # print(vis_tiles.columns.values)
     tile_kdtree = KDTree(vis_tiles[['ra', 'dec']].values)  # coordinates of the tile centers
     target_coords = external_targets[['right_ascension', 'declination']].values
-    _, tile_indices = tile_kdtree.query(target_coords)
+    tile_indices = tile_kdtree.query(target_coords, k=1, return_distance=False)
+    print(tile_indices.shape)
+    tile_indices = tile_indices[:, 0]
+    print(tile_indices.shape)
 
     # pick out the closest matching tile for each target
     target_tiles = vis_tiles.iloc[tile_indices]
