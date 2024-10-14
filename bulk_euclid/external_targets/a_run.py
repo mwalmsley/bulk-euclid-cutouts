@@ -65,15 +65,15 @@ def get_matching_tiles(cfg: OmegaConf):  # simplified from a_make_catalogs_and_c
     print(tile_indices.shape)
 
     # pick out the closest matching tile for each target
-    target_tiles = vis_tiles.iloc[tile_indices]
+    target_tiles = vis_tiles.iloc[tile_indices].copy()
     # target_tiles['tile_index'] = target_tiles.index
     # target_tiles['tile_index'] = target_tiles['tile_index'].astype(int)
 
     # copy over target info (a bit lazy here)
-    target_tiles['id_str'] = external_targets['id_str']
-    target_tiles['target_ra'] = external_targets['right_ascension']
-    target_tiles['target_dec'] = external_targets['declination']
-    target_tiles['target_field_of_view'] = external_targets['field_of_view']
+    target_tiles['id_str'] = external_targets['id_str'].values
+    target_tiles['target_ra'] = external_targets['right_ascension'].values
+    target_tiles['target_dec'] = external_targets['declination'].values
+    target_tiles['target_field_of_view'] = external_targets['field_of_view'].values
 
     # check if target is within tile FoV
     within_ra = (target_tiles['ra_min'] < target_tiles['target_ra']) & (target_tiles['target_ra'] < target_tiles['ra_max'])
