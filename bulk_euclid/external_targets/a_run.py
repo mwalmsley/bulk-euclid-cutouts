@@ -113,7 +113,7 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
 
         # Also extract PSF
         # just VIS at the moment
-        psf_loc = pipeline_utils.get_psf_auxillary_tile(vis_tile, cfg.fits_dir)
+        psf_loc = pipeline_utils.get_psf_auxillary_tile(vis_tile, cfg.tiles_dir)
         """
         This fits file contains :
         - an image with PSF cutouts of selected objects arranged next to each other. The stamp pixel size can be found in the header keyword STMPSIZE (e.g. 19 for VIS, 33 for NIR).
@@ -153,11 +153,15 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
             vis_hdu = fits.ImageHDU(data=cutout.data, name="VIS_FLUX_MICROJANSKY", header=hdr)
             psf_hdu = fits.ImageHDU(data=cutout_psf.data, name="MERPSF", header=psf_header)
             hdul = fits.HDUList([header_hdu, vis_hdu, psf_hdu])
+
+            save_loc = os.path.join(cfg.fits_dir, str(tile_index), str(target['id_str']) + '.fits')
+            if not os.path.isdir(os.path.dirname(save_loc)):
+                os.mkdir(os.path.dirname(save_loc))
             
             with warnings.catch_warnings():
                 # it rewrites my columns to fit the FITS standard by adding HEIRARCH
                 warnings.simplefilter('ignore', VerifyWarning)
-                hdul.writeto(os.path.join(cfg.fits_dir, str(tile_index), str(target['id_str']) + '.fits'), overwrite=True)
+                hdul.writeto(save_loc, overwrite=True)
 
 
 
