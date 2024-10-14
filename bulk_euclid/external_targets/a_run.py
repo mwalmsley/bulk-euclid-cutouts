@@ -140,7 +140,7 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
             # it has pixel coordinates in the original MER tile (not useful, already handled with sky coordinates) and pixel coordinates in the PSF tile 
 
             # cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
-            cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['x_center']*u.pix, closest_psf['y_center']*u.pix), size=stamp_size*u.pix)
+            cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['x_center'], closest_psf['y_center']), size=stamp_size)  # no WCS so these are in pixels
             # TODO save PSF
 
 
