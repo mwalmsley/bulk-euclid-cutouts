@@ -113,7 +113,7 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
 
         # Also extract PSF
         # just VIS at the moment
-        psf_loc = pipeline_utils.get_psf_auxillary_tile(vis_tile, cfg.tiles_dir)
+        psf_loc = pipeline_utils.get_psf_auxillary_tile(vis_tile, cfg.tile_dir)
         """
         This fits file contains :
         - an image with PSF cutouts of selected objects arranged next to each other. The stamp pixel size can be found in the header keyword STMPSIZE (e.g. 19 for VIS, 33 for NIR).
