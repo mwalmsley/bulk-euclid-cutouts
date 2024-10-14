@@ -130,12 +130,17 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
 
             # find closest matching PSF to target
             _, psf_index = psf_tree.query(target[['target_ra','target_dec']].values.reshape(1, -1), k=1)  # single sample reshape
-            print(psf_index.shape)
+            # print(psf_index.shape)
             # TODO add warning if distance is large (the underscore)
             # fix shapes
-            psf_index = psf_index[0, 0] # scalar: 1 search, with 1 neighbour result
+            # psf_index = psf_index[0, 0] # scalar: 1 search, with 1 neighbour result
+            psf_index = psf_index.squeeze()
             closest_psf = psf_table.iloc[psf_index]
-            cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
+            # this is the metadata row describing the PSF with the closest sky coordinates to the target
+            # it has pixel coordinates in the original MER tile (not useful, already handled with sky coordinates) and pixel coordinates in the PSF tile 
+
+            # cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
+            cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['x_center']*u.pix, closest_psf['y_center']*u.pix), size=stamp_size*u.pix)
             # TODO save PSF
 
 
