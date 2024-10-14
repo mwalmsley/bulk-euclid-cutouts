@@ -250,6 +250,7 @@ def download_mosaics(tile_index: int, tiles: pd.DataFrame, download_dir: str):
     # changed - now, just save all matching tiles, assuming the tiles catalog only includes relevant data already
 
     matching_tiles = tiles.query(f'tile_index == {tile_index}')
+    assert len(matching_tiles) > 0, f'No matching tiles found for tile index {tile_index}'
     
     matching_tiles = save_tiles_temporarily(matching_tiles, download_dir)  # adds file_loc to downloaded path
     return matching_tiles

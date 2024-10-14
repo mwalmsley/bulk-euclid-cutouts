@@ -38,6 +38,7 @@ def get_matching_tiles(cfg: OmegaConf):  # simplified from a_make_catalogs_and_c
     external_targets = pd.read_csv(cfg.external_targets_loc)  # must have fields right_ascension (degrees), declination (degrees), field_of_view (arcseconds)
 
     tiles = pipeline_utils.get_tiles_in_survey(bands=['VIS', 'NIR_Y'], release_name=cfg.release_name)
+    assert len(tiles) > 0
 
     vis_tiles = tiles.query('filter_name == "VIS"')
 
@@ -74,6 +75,7 @@ def get_matching_tiles(cfg: OmegaConf):  # simplified from a_make_catalogs_and_c
     assert len(target_tiles) > 0, 'No targets within FoV of any tiles, likely a bug'
     # simplify/explicit for export
     target_tiles  = target_tiles[['tile_index', 'target_ra', 'target_dec', 'target_field_of_view']]
+    assert len(target_tiles) > 0
 
     # tiles is all tiles valid for download (from all bands)
     # target tiles says which tile (index) to use for each target
@@ -86,6 +88,7 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
             downloaded_tiles = pipeline_utils.download_mosaics(tile_index, tiles, download_dir=cfg.tile_dir)
             vis_tile = downloaded_tiles.query('filter_name == "VIS"').squeeze()
             vis_loc = vis_tile['file_loc']
+            print(vis_loc)
         except AssertionError as e:
             logging.critical(e)
         targets_at_that_index = target_tiles.query(f'tile_index == {tile_index}')
