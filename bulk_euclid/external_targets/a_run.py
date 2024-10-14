@@ -62,8 +62,8 @@ def get_matching_tiles(cfg: OmegaConf):  # simplified from a_make_catalogs_and_c
 
     # pick out the closest matching tile for each target
     target_tiles = vis_tiles.iloc[tile_indices]
-    target_tiles['tile_index'] = target_tiles.index
-    target_tiles['tile_index'] = target_tiles['tile_index'].astype(int)
+    # target_tiles['tile_index'] = target_tiles.index
+    # target_tiles['tile_index'] = target_tiles['tile_index'].astype(int)
 
     # copy over target info (a bit lazy here)
     target_tiles['target_ra'] = external_targets['right_ascension'].values
