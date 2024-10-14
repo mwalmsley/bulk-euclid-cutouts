@@ -404,3 +404,14 @@ def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:s
                 hdul.writeto(galaxy['FITS_LOC'], overwrite=True)
         else:
             raise ValueError(f'{output_format} format not recognised')
+
+
+def login():
+
+    if os.path.isdir('/media/home/team_workspaces'):
+        from astroquery.esa.euclid.core import Euclid
+        # two line file, username and password
+        # do not commit or put in any team workspace, obviously...
+        Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
+    else:
+        raise ValueError('Not on DataLabs')

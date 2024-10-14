@@ -11,7 +11,7 @@ from bulk_euclid.utils import pipeline_utils
 
 
 def run(cfg):
-    login()
+    pipeline_utils.login()
     cfg = create_folders(cfg)
     tiles = get_tile_catalog(cfg)
     tiles = select_tiles(cfg, tiles)
@@ -33,17 +33,6 @@ def run(cfg):
 
     logging.info('Cutout creation complete')
     
-
-def login():
-
-    if os.path.isdir('/media/home/team_workspaces'):
-        from astroquery.esa.euclid.core import Euclid
-        # two line file, username and password
-        # do not commit or put in any team workspace, obviously...
-        Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
-    else:
-        raise ValueError('Not on DataLabs')
-
 
 def create_folders(cfg: OmegaConf):
     cfg.download_dir = cfg.base_dir + '/' + cfg.name
