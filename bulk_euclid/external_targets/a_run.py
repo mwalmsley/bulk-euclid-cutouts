@@ -25,7 +25,7 @@ def run(cfg: OmegaConf):
     logging.info('Starting external targets pipeline')
 
     create_folders(cfg)
-    pipeline_utils.login(cfg)
+    pipeline_utils.login()
 
     tiles, target_tiles = get_matching_tiles(cfg)
 
