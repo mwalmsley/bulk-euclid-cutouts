@@ -20,7 +20,8 @@ dependencies = [
     'astropy',
     'tqdm',
     'panoptes-client',
-    'omegaconf'  # for config
+    'omegaconf',  # for config
+    'pytest'  # for testing
 ]
 requires-python = ">= 3.9"
 authors = [

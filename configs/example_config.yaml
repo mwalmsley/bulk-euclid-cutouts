@@ -16,6 +16,7 @@ tile_dir: !
 catalog_dir: !
 cutout_dir: !
 jpg_dir: !
+fits_dir: !
 sanity_dir: !
 log_file: !
 

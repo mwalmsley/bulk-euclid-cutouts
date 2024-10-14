@@ -52,6 +52,7 @@ def create_folders(cfg: OmegaConf):
 
     cfg.cutout_dir = cfg.download_dir + '/cutouts'
     cfg.jpg_dir = cfg.cutout_dir + '/jpg'
+    cfg.fits_dir = cfg.cutout_dir + '/fits'
 
     cfg.sanity_dir = cfg.download_dir + '/sanity'
 
@@ -117,20 +118,16 @@ def select_tiles(cfg, tiles):
 
     return tiles_to_use
 
-# def download_tiles(cfg: OmegaConf, tiles_to_download):
-#     for tile_n, tile_index in enumerate(tiles_to_download['tile_index'].unique()): 
-#         logging.info(f'tile {tile_index}: {tile_n} of {len(tiles_to_download)}')
-#         try:
-#             download_tile_and_catalog(cfg, tiles_to_download, tile_index)
-#         except AssertionError as e:
-#             logging.critical(e)
-#     logging.info('All downloads complete, safe to time out from Euclid auth')
 
 def download_tile_and_catalog(cfg, tiles_to_download, tile_index):
-    vis_loc, nisp_loc = pipeline_utils.download_mosaics(tile_index, tiles_to_download, cfg.tile_dir)
-    vis_tile = tiles_to_download.query('filter_name == "VIS"').query(f'tile_index == {tile_index}').squeeze()
+    download_tiles = pipeline_utils.download_mosaics(tile_index, tiles_to_download, cfg.tile_dir)
+    vis_tile = download_tiles.query('filter_name == "VIS"')['file_loc'].squeeze()
+    nisp_tile = download_tiles.query('filter_name == "NIR_Y"')['file_loc'].squeeze()
+    vis_loc = vis_tile['file_loc']
+    nisp_loc = nisp_tile['file_loc']
     tile_catalog = save_tile_catalog(cfg, vis_loc, nisp_loc, vis_tile)
     return tile_catalog
+
 
 def save_tile_catalog(cfg, vis_loc, nisp_loc, vis_tile):
     tile_index = vis_tile['tile_index']

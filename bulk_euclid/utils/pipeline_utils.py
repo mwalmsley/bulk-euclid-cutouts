@@ -81,13 +81,17 @@ WIDE = Survey(
 
 
 
-def get_tiles_in_survey(survey: Survey, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
+def get_tiles_in_survey(survey: Survey=None, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
 
     # TODO move release name into survey property, once happy with what it means, if it is per survey?
     query_str = f"""
         SELECT * FROM sedm.mosaic_product 
-        WHERE (tile_index > {survey.min_tile_index}) AND (tile_index < {survey.max_tile_index})
-        AND (product_type='DpdMerBksMosaic')
+        WHERE (product_type='DpdMerBksMosaic')
+        """
+    
+    if survey is not None:
+        query_str += f"""
+        AND (tile_index > {survey.min_tile_index}) AND (tile_index < {survey.max_tile_index})
         """
     
     if bands is not None:
@@ -104,7 +108,7 @@ def get_tiles_in_survey(survey: Survey, bands=None, release_name=None, ra_limits
         
     if release_name:
         query_str += f" AND release_name='{release_name}'"
-    
+
     query_str += " ORDER BY tile_index ASC"
     
     # async to avoid 2k max, just note it saves results somewhere on server
@@ -117,19 +121,38 @@ def get_tiles_in_survey(survey: Survey, bands=None, release_name=None, ra_limits
     return df
 
 
-# def get_tile_extents_fov(tiles):
+# not used for GZ Euclid
+def get_tile_extents_fov(tiles):
     
-#     tiles = tiles.copy()
-#     float_fovs = tiles['fov'].apply(lambda x: np.array(x[1:-1].split(", ")).astype(np.float64)) # from one big string to arrays of floats
-#     array_fovs = np.array(float_fovs.values.tolist()) #from pandas series to numpy array
-#     ras = array_fovs[:, ::2]
-#     decs = array_fovs[:, 1::2]
+    tiles = tiles.copy()
+    float_fovs = tiles['fov'].apply(lambda x: np.array(x[1:-1].split(", ")).astype(np.float64)) # from one big string to arrays of floats
+    array_fovs = np.array(float_fovs.values.tolist()) #from pandas series to numpy array
+    ras = array_fovs[:, ::2]
+    decs = array_fovs[:, 1::2]
 
-#     tiles['ra_min'] = np.min(ras, axis=1)
-#     tiles['ra_max'] = np.max(ras, axis=1)
-#     tiles['dec_min'] = np.min(decs, axis=1)
-#     tiles['dec_max'] = np.max(decs, axis=1)
-#     return tiles
+    tiles['ra_min'] = np.min(ras, axis=1)
+    tiles['ra_max'] = np.max(ras, axis=1)
+    tiles['dec_min'] = np.min(decs, axis=1)
+    tiles['dec_max'] = np.max(decs, axis=1)
+    return tiles
+
+
+def get_psf_auxillary_tile(tile, download_dir):
+    query_str = f"""
+    SELECT * FROM sedm.aux_mosaic 
+    WHERE (product_type_sas='MERPSF')
+    AND (filter_name='{tile['filter_name']}')")
+    AND (mosaic_product_oid={tile['mosaic_product_oid']})
+    """
+    df = Euclid.launch_job(query_str).get_results().to_pandas()
+    # should be one per band
+    assert len(df) == 1, f'Expected one PSF tile, got {len(df)}'
+    psf_metadata = df.squeeze()
+
+    output_loc = os.path.join(download_dir, psf_metadata['file_name'])
+    Euclid.get_product(file_name=psf_metadata['file_name'], output_file=output_loc)
+    return output_loc
+
 
 def find_relevant_sources_in_tile(cfg, tile):
     # apply our final selection criteria
@@ -215,30 +238,35 @@ def find_relevant_sources_in_tile(cfg, tile):
     return df.reset_index(drop=True)
 
 
-def download_mosaics(tile_index, tiles, download_dir):
+def download_mosaics(tile_index: int, tiles: pd.DataFrame, download_dir: str):
     
-    vis_tile = tiles.query(f'tile_index == {tile_index}').query('filter_name == "VIS"').squeeze()
-    assert isinstance(vis_tile, pd.Series), f'No or multiple VIS tiles ({len(vis_tile)}) found for tile index {tile_index}'
+    # vis_tile = tiles.query(f'tile_index == {tile_index}').query('filter_name == "VIS"').squeeze()
+    # assert isinstance(vis_tile, pd.Series), f'No or multiple VIS tiles ({len(vis_tile)}) found for tile index {tile_index}'
     
-    nisp_tile = tiles.query(f'tile_index == {tile_index}').query('filter_name == "NIR_Y"').squeeze()
-    assert isinstance(nisp_tile, pd.Series), nisp_tile
+    # nisp_tile = tiles.query(f'tile_index == {tile_index}').query('filter_name == "NIR_Y"').squeeze()
+    # assert isinstance(nisp_tile, pd.Series), nisp_tile
+
+    # TODO based on config, choose which tiles to download
+    # changed - now, just save all matching tiles, assuming the tiles catalog only includes relevant data already
+
+    matching_tiles = tiles.query(f'tile_index == {tile_index}')
     
-    vis_loc, nisp_loc = save_tiles_temporarily([vis_tile, nisp_tile], download_dir)
-    return vis_loc, nisp_loc
+    matching_tiles = save_tiles_temporarily(matching_tiles, download_dir)  # adds file_loc to downloaded path
+    return matching_tiles
+
+
+def save_tiles_temporarily(tiles: pd.DataFrame, download_dir: str):
+    # adds file_loc to downloaded path
+    tiles['file_loc'] = tiles['file_name'].apply(lambda x: save_tile_temporarily(x, download_dir))
+    return tiles
 
 
 def save_tile_temporarily(tile_filename, download_dir):
-    # TODO place in tmpdir of some kind
     output_loc = os.path.join(download_dir, tile_filename)
     if not os.path.isfile(output_loc):
         downloaded_path = Euclid.get_product(file_name=tile_filename, output_file=output_loc)[0]  # 0 as one product
-        # abs_path = downloaded_path.replace('./', '/media/user/')  # gives a path relative to this notebook, not great
         print("File saved at:", downloaded_path)
     return output_loc
-
-
-def save_tiles_temporarily(tiles, download_dir):
-    return [save_tile_temporarily(tile['file_name'], download_dir) for tile in tiles]
 
 
 def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, oneway_hash=False):

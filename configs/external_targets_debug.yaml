@@ -1,0 +1,11 @@
+base_dir: '/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/pipeline_runs'
+name: 'external_targets_debug'
+
+external_targets_loc: !
+release_name: 'F-006'
+
+download_dir: !
+tile_dir: !
+cutout_dir: !
+fits_dir: !
+sanity_dir: !
