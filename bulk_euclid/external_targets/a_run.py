@@ -17,6 +17,7 @@ from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 from astropy.nddata import Cutout2D
 import astropy.units as u
+from astropy.table import Table
 
 from bulk_euclid.utils import pipeline_utils
 
@@ -118,7 +119,7 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
         """
         psf_tile, header = fits.getdata(psf_loc, ext=1, header=True)
         stamp_size = header['STMPSIZE']
-        psf_table = fits.open(psf_loc)[2].data.to_pandas()
+        psf_table = Table.read(fits.open(psf_loc)[2]).to_pandas()
         psf_tree = KDTree(psf_table[['RA', 'Dec']])  # capitals...
 
         for target_n, target in targets_at_that_index.iterrows():
