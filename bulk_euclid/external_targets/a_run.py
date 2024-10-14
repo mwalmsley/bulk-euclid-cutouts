@@ -64,9 +64,10 @@ def get_matching_tiles(cfg: OmegaConf):  # simplified from a_make_catalogs_and_c
     target_tiles['target_field_of_view'] = external_targets['field_of_view'].values
 
     # check if target is within tile FoV
-    within_ra = target_tiles['ra_min'] < target_tiles['target_ra'] < target_tiles['ra_max']
-    within_dec = target_tiles['dec_min'] < target_tiles['target_dec'] < target_tiles['dec_max']
+    within_ra = (target_tiles['ra_min'] < target_tiles['target_ra']) & (target_tiles['target_ra'] < target_tiles['ra_max'])
+    within_dec = (target_tiles['dec_min'] < target_tiles['target_dec']) & (target_tiles['target_dec'] < target_tiles['dec_max'])
     target_tiles['within_tile'] = within_ra & within_dec
+    logging.info(f'Targets within tile FoV: {target_tiles["within_tile"].sum()} of {len(target_tiles)}')
 
     # filter to only those tiles
     target_tiles = target_tiles[target_tiles['within_tile']]
