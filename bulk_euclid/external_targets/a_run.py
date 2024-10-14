@@ -7,6 +7,7 @@ Create unique tile subset
 For each tile, download that tile, and use cutout2d to slice out the relevant fits/PSF
 """
 import logging
+import warnings
 import os
 
 from omegaconf import OmegaConf
@@ -18,6 +19,7 @@ from astropy.wcs import WCS
 from astropy.nddata import Cutout2D
 import astropy.units as u
 from astropy.table import Table
+from astropy.io.fits.verify import VerifyWarning
 
 from bulk_euclid.utils import pipeline_utils
 
@@ -68,9 +70,10 @@ def get_matching_tiles(cfg: OmegaConf):  # simplified from a_make_catalogs_and_c
     # target_tiles['tile_index'] = target_tiles['tile_index'].astype(int)
 
     # copy over target info (a bit lazy here)
-    target_tiles['target_ra'] = external_targets['right_ascension'].values
-    target_tiles['target_dec'] = external_targets['declination'].values
-    target_tiles['target_field_of_view'] = external_targets['field_of_view'].values
+    target_tiles['id_str'] = external_targets['id_str']
+    target_tiles['target_ra'] = external_targets['right_ascension']
+    target_tiles['target_dec'] = external_targets['declination']
+    target_tiles['target_field_of_view'] = external_targets['field_of_view']
 
     # check if target is within tile FoV
     within_ra = (target_tiles['ra_min'] < target_tiles['target_ra']) & (target_tiles['target_ra'] < target_tiles['ra_max'])
@@ -82,7 +85,7 @@ def get_matching_tiles(cfg: OmegaConf):  # simplified from a_make_catalogs_and_c
     target_tiles = target_tiles[target_tiles['within_tile']]
     assert len(target_tiles) > 0, 'No targets within FoV of any tiles, likely a bug'
     # simplify/explicit for export
-    target_tiles  = target_tiles[['tile_index', 'target_ra', 'target_dec', 'target_field_of_view']]
+    target_tiles  = target_tiles[['tile_index', 'id_str', 'target_ra', 'target_dec', 'target_field_of_view']]
     assert len(target_tiles) > 0
 
     # tiles is all tiles valid for download (from all bands)
@@ -103,9 +106,9 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
         targets_at_that_index = target_tiles.query(f'tile_index == {tile_index}')
 
         logging.info('loading tile')
-        vis_data, header = fits.getdata(vis_loc, header=True)
+        vis_data, vis_header = fits.getdata(vis_loc, header=True)
         # nisp_data = fits.getdata(nisp_y_loc, header=False)
-        tile_wcs = WCS(header)
+        tile_wcs = WCS(vis_header)
         logging.info('tile loaded')
 
         # Also extract PSF
@@ -117,8 +120,8 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
         - a table giving the match between the PSF cutout center position (columns x_center and y_center) on the PSF grid image and the coordinate in pixels (columns x and y) or on the sky (Ra, Dec) on the MER tile data.
         https://euclid.roe.ac.uk/issues/22495
         """
-        psf_tile, header = fits.getdata(psf_loc, ext=1, header=True)
-        stamp_size = header['STMPSIZE']
+        psf_tile, psf_header = fits.getdata(psf_loc, ext=1, header=True)
+        stamp_size = psf_header['STMPSIZE']
         psf_table = Table.read(fits.open(psf_loc)[2]).to_pandas()
         psf_tree = KDTree(psf_table[['RA', 'Dec']])  # capitals...
 
@@ -142,6 +145,21 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
             # cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
             cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['x_center'], closest_psf['y_center']), size=stamp_size)  # no WCS so these are in pixels
             # TODO save PSF
+
+            # save both to one FITS file
+            hdr = fits.Header()
+            hdr.update(cutout.wcs.to_header())  # adds WCS for cutout (vs whole tile)
+            header_hdu = fits.PrimaryHDU(header=hdr)
+            vis_hdu = fits.ImageHDU(data=cutout, name="VIS_FLUX_MICROJANSKY", header=hdr)
+            psf_hdu = fits.ImageHDU(data=cutout_psf, name="MERPSF", header=psf_header)
+            hdul = fits.HDUList([header_hdu, vis_hdu, psf_hdu])
+            
+            with warnings.catch_warnings():
+                # it rewrites my columns to fit the FITS standard by adding HEIRARCH
+                warnings.simplefilter('ignore', VerifyWarning)
+                hdul.writeto(os.path.join(cfg.fits_dir, str(tile_index), target['id_str'].astype(str) + '.fits'), overwrite=True)
+
+
 
 
 def create_folders(cfg: OmegaConf):
