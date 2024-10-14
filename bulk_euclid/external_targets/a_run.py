@@ -28,6 +28,10 @@ def run(cfg: OmegaConf):
 
     tiles, target_tiles = get_matching_tiles(cfg)
 
+    print(tiles.head())
+    print(target_tiles.head())
+    print(target_tiles['tile_index'].value_counts())
+
     make_cutouts(cfg, tiles, target_tiles)
 
     logging.info('External targets pipeline complete')
@@ -91,6 +95,7 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
             print(vis_loc)
         except AssertionError as e:
             logging.critical(e)
+            raise e
         targets_at_that_index = target_tiles.query(f'tile_index == {tile_index}')
 
         logging.info('loading tile')
