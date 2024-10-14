@@ -129,8 +129,11 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
             # TODO save vis cutout
 
             # find closest matching PSF to target
-            _, psf_index = psf_tree.query([target['target_ra'], target['target_dec']])
+            _, psf_index = psf_tree.query(target[['target_ra','target_dec']], k=1)
+            print(psf_index.shape)
             # TODO add warning if distance is large (the underscore)
+            # fix shapes
+            psf_index = psf_index[0, 0] # scalar: 1 search, with 1 neighbour result
             closest_psf = psf_table.iloc[psf_index]
             cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
             # TODO save PSF
