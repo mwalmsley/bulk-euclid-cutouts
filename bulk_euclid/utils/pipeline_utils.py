@@ -141,11 +141,10 @@ def get_psf_auxillary_tile(tile, download_dir):
     query_str = f"""
     SELECT * FROM sedm.aux_mosaic 
     WHERE (product_type_sas='MERPSF')
-    AND (filter_name='{tile['filter_name']}')")
     AND (mosaic_product_oid={tile['mosaic_product_oid']})
     """
+    # mosaic_product_oid is band-specific, so only one result
     df = Euclid.launch_job(query_str).get_results().to_pandas()
-    # should be one per band
     assert len(df) == 1, f'Expected one PSF tile, got {len(df)}'
     psf_metadata = df.squeeze()
 
