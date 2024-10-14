@@ -1,7 +1,7 @@
 base_dir: '/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/pipeline_runs'
 name: 'external_targets_debug'
 
-external_targets_loc: !
+external_targets_loc: '/media/user/repos/bulk-euclid-cutouts/tests/data/102021539_mer_catalog.csv
 release_name: 'F-006'
 
 download_dir: !
