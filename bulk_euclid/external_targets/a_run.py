@@ -125,7 +125,7 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
         for target_n, target in targets_at_that_index.iterrows():
             logging.info(f'target {target_n} of {len(targets_at_that_index)}')
             target_coord = SkyCoord(target['target_ra'], target['target_dec'], frame='icrs', unit="deg")
-            cutout = Cutout2D(data=vis_data, position=target_coord, size=target['target_field_of_view']*u.arsec, wcs=tile_wcs, mode='partial')
+            cutout = Cutout2D(data=vis_data, position=target_coord, size=target['target_field_of_view']*u.arcsec, wcs=tile_wcs, mode='partial')
             # TODO save vis cutout
 
             # find closest matching PSF to target
