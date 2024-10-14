@@ -157,7 +157,7 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
             with warnings.catch_warnings():
                 # it rewrites my columns to fit the FITS standard by adding HEIRARCH
                 warnings.simplefilter('ignore', VerifyWarning)
-                hdul.writeto(os.path.join(cfg.fits_dir, str(tile_index), target['id_str'].astype(str) + '.fits'), overwrite=True)
+                hdul.writeto(os.path.join(cfg.fits_dir, str(tile_index), str(target['id_str']) + '.fits'), overwrite=True)
 
 
 
