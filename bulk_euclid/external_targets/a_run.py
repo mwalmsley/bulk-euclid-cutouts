@@ -30,6 +30,8 @@ def run(cfg: OmegaConf):
 
     print(tiles.head())
     print(target_tiles.head())
+    print(tiles['tile_index'].value_counts())
+    print((tiles['tile_index'] == 929).sum())
     print(target_tiles['tile_index'].value_counts())
 
     make_cutouts(cfg, tiles, target_tiles)
