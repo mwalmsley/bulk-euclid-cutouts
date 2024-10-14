@@ -150,8 +150,8 @@ def make_cutouts(cfg: OmegaConf, tiles, target_tiles):
             hdr = fits.Header()
             hdr.update(cutout.wcs.to_header())  # adds WCS for cutout (vs whole tile)
             header_hdu = fits.PrimaryHDU(header=hdr)
-            vis_hdu = fits.ImageHDU(data=cutout, name="VIS_FLUX_MICROJANSKY", header=hdr)
-            psf_hdu = fits.ImageHDU(data=cutout_psf, name="MERPSF", header=psf_header)
+            vis_hdu = fits.ImageHDU(data=cutout.data, name="VIS_FLUX_MICROJANSKY", header=hdr)
+            psf_hdu = fits.ImageHDU(data=cutout_psf.data, name="MERPSF", header=psf_header)
             hdul = fits.HDUList([header_hdu, vis_hdu, psf_hdu])
             
             with warnings.catch_warnings():
