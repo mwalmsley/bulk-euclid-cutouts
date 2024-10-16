@@ -245,10 +245,11 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
     # ...but saving fits we want to iterate over targets first, and get the data across all bands
     for target_n, target in targets_at_that_index.iterrows():
         # this reshapes the data to be a list, with an element per target, where each element is itself a list of dicts
-        target_data = {
-            # {"band": band, "data": cutout_data[band][target_n]} for band in cfg.bands
-            {band: cutout_data[band][target_n]} for band in cfg.bands  # like { VIS: {FLUX: flux_cutout, MERPSF: psf_cutout, ...}, ...
-        }
+
+        # {"band": band, "data": cutout_data[band][target_n]} for band in cfg.bands
+
+        # like { VIS: {FLUX: flux_cutout, MERPSF: psf_cutout, ...}, ...
+        target_data = { band: cutout_data[band][target_n] for band in cfg.bands }
         # NO target_data is like [{'band': 'VIS', 'data': {'FLUX': flux_cutout, 'MERPSF': psf_cutout}}, ...]
         save_loc = os.path.join(
             cfg.fits_dir, str(target["tile_index"]), str(target["id_str"]) + ".fits"
