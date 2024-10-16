@@ -221,8 +221,8 @@ def save_multifits_cutout(cfg, target_data, save_loc: str):
         # band = band_data['band']  # TODO need to track which is which?
         cutout_flux = band_data['data']['FLUX']
         cutout_psf = band_data['data']['MERPSF']
-        flux_hdu = fits.ImageHDU(data=cutout_flux.data, name=f"{cutout_flux}_FLUX", header=cutout_flux.wcs.header)
-        psf_hdu = fits.ImageHDU(data=cutout_psf.data, name="MERPSF", header=cutout_psf.wcs.header)
+        flux_hdu = fits.ImageHDU(data=cutout_flux.data, name=f"{cutout_flux}_FLUX", header=cutout_flux.wcs.to_header())
+        psf_hdu = fits.ImageHDU(data=cutout_psf.data, name="MERPSF", header=cutout_psf.wcs.to_header())
         # TODO same for RMS and BKG
         hdu_list += [flux_hdu, psf_hdu]
 
