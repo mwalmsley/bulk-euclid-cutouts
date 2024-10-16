@@ -81,7 +81,7 @@ WIDE = Survey(
 
 
 
-def get_tiles_in_survey(survey: Survey=None, tile_index=None, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
+def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
 
     # TODO move release name into survey property, once happy with what it means, if it is per survey?
     query_str = f"""
@@ -89,26 +89,26 @@ def get_tiles_in_survey(survey: Survey=None, tile_index=None, bands=None, releas
         WHERE (product_type='DpdMerBksMosaic')
         """
     
-    if survey is not None:
-        assert tile_index is None, 'Cannot specify both survey and tile index'
-        query_str += f"""
-        AND (tile_index > {survey.min_tile_index}) AND (tile_index < {survey.max_tile_index})
-        """
+    # if survey is not None:
+    #     assert tile_index is None, 'Cannot specify both survey and tile index'
+    #     query_str += f"""
+    #     AND (tile_index > {survey.min_tile_index}) AND (tile_index < {survey.max_tile_index})
+    #     """
     
     if tile_index is not None:
         query_str += f"AND (tile_index={tile_index})"
-        assert survey is None, 'Cannot specify both survey and tile index'
+        # assert survey is None, 'Cannot specify both survey and tile index'
     
     if bands is not None:
         if isinstance(bands, str):
             query_str += f"AND (filter_name='{bands}')"
-        elif isinstance(bands, list):
+        else:  # assume listlike
             if len(bands) == 1:
-                query_str += f"AND (filter_name='{bands[0]}')"
+                band = bands[0]
+                assert isinstance(band, str), 'Found single band passed as listlike, single band must be a string'
+                query_str += f"AND (filter_name='{band}')"
             else:
                 query_str += f"AND (filter_name IN {tuple(bands)})"
-        else :
-            raise ValueError('bands must be str or list')
                 
     if ra_limits:
         query_str += f" AND (ra > {ra_limits[0]}) AND (ra < {ra_limits[1]})"
