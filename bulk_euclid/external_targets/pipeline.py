@@ -107,6 +107,9 @@ def get_matching_tiles(
     within_dec = (target_tiles["dec_min"] < target_tiles["target_dec"]) & (
         target_tiles["target_dec"] < target_tiles["dec_max"]
     )
+    logging.info(target_tiles['dec_min'])
+    logging.info(target_tiles['target_dec'])
+    logging.info(target_tiles['dec_max'])
     logging.info(f'Target within tile FoV: RA: {within_ra.sum()} of {len(target_tiles)}, Dec: {within_dec.sum()} of {len(target_tiles)}')
     target_tiles["within_tile"] = within_ra & within_dec
     logging.info(
