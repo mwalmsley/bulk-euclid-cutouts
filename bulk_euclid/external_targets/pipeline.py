@@ -54,7 +54,7 @@ def get_matching_tiles(cfg: OmegaConf, external_targets: pd.DataFrame=None):  # 
 
     # use KDTree to quickly find the closest tile to each target
     tile_kdtree = KDTree(tiles[['ra', 'dec']].values)  # coordinates of the tile centers
-    target_coords = external_targets[['right_ascension', 'declination']].values
+    target_coords = external_targets[['target_ra', 'target_dec']].values
     tile_indices = tile_kdtree.query(target_coords, k=1, return_distance=False)
     tile_indices = tile_indices[:, 0]  # the numeric index (0, 1, ...) of the closest tile to each target
 
