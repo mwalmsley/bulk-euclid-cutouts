@@ -113,7 +113,7 @@ def download_all_data_at_tile_index(cfg, tile_index):
     # download all auxillary data for that tile
     for _, flux_tile in flux_tile_metadata.iterrows():
         # could have used tile_index for this search, but we want to restrict to some bands only
-        auxillary_tile_metadata = pipeline_utils.get_auxillary_tiles(flux_tile['mosaic_product_oid']) 
+        auxillary_tile_metadata = pipeline_utils.get_auxillary_tiles(flux_tile['mosaic_product_oid'], auxillary_products=cfg.auxillary_products) 
         auxillary_tile_metadata = pipeline_utils.save_euclid_products(auxillary_tile_metadata, download_dir=cfg.tile_dir)
         these_aux_locs = dict(zip(auxillary_tile_metadata['product_type_sas'], auxillary_tile_metadata['file_loc']))
         # like {'MERPSF': 'path/to/MERPSF.fits', 'MERRMS': 'path/to/MERRMS.fits', ...}

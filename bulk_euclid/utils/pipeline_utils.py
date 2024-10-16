@@ -259,28 +259,29 @@ def save_euclid_product(product_filename, download_dir):
     return output_loc
 
 
-def get_auxillary_tiles(mosaic_product_oid, psf=True, rms=True, bkg=True, flag=False):
+def get_auxillary_tiles(mosaic_product_oid, auxillary_products=['MERPSF', 'MERRMS', 'MERBKG']):
+    # psf=True, rms=True, bkg=True, flag=False
     # tile['mosaic_product_oid']
 
-    allowed_product_types = []
-    if psf:
-        allowed_product_types.append('MERPSF')
-    if rms:
-        allowed_product_types.append('MERRMS')
-    if bkg:
-        allowed_product_types.append('MERBKG')
-    if flag:
-        allowed_product_types.append('MERFLG')
-    assert allowed_product_types, 'No auxillary products requested'
+    # allowed_product_types = []
+    # if psf:
+    #     allowed_product_types.append('MERPSF')
+    # if rms:
+    #     allowed_product_types.append('MERRMS')
+    # if bkg:
+    #     allowed_product_types.append('MERBKG')
+    # if flag:
+    #     allowed_product_types.append('MERFLG')
+    # assert allowed_product_types, 'No auxillary products requested'
 
     query_str = f"""
     SELECT * FROM sedm.aux_mosaic 
     WHERE (mosaic_product_oid={mosaic_product_oid})
     """
-    if len(allowed_product_types) > 1:
-        query_str += f"AND (product_type_sas IN {tuple(allowed_product_types)})"
-    elif len(allowed_product_types) == 1:
-        query_str += f"AND (product_type_sas='{allowed_product_types[0]}')"
+    if len(auxillary_products) > 1:
+        query_str += f"AND (product_type_sas IN {tuple(auxillary_products)})"
+    elif len(auxillary_products) == 1:
+        query_str += f"AND (product_type_sas='{auxillary_products[0]}')"
 
     df = Euclid.launch_job(query_str).get_results().to_pandas()
     return df
