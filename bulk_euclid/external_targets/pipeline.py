@@ -213,36 +213,50 @@ def get_cutout_data_for_band(cfg, dict_of_locs_for_band, targets_at_that_index):
 
 
 def save_multifits_cutout(cfg, target_data, save_loc: str):
-    # hdr = fits.Header()
+
     header_hdu = fits.PrimaryHDU()
 
     hdu_list = [header_hdu]
 
     for band_data in target_data:
         cutout_flux = band_data['data']['FLUX']
-        cutout_psf = band_data['data']['MERPSF']
-
         flux_header = cutout_flux.wcs.to_header()
         flux_header.append(('FILTER', band_data['band'], 'The Euclid filter used for this flux image'), end=True)
         flux_hdu = fits.ImageHDU(data=cutout_flux.data, name=f"{cutout_flux}_FLUX", header=flux_header)
+        hdu_list.append(flux_hdu)
 
-        psf_header = cutout_psf.wcs.to_header()
-        psf_header.append(('FILTER', band_data['band'], 'The Euclid filter used for this PSF image'), end=True)
-        psf_hdu = fits.ImageHDU(data=cutout_psf.data, name="MERPSF", header=psf_header)
-
-        # TODO same for RMS and BKG
+        # TODO this is a bit lazy/repetitive, could be refactored
         
-        hdu_list += [flux_hdu, psf_hdu]
+        if 'MERPSF' in cfg.auxillary_products:
+            cutout_psf = band_data['data']['MERPSF']
+            psf_header = cutout_psf.wcs.to_header()
+            psf_header.append(('FILTER', band_data['band'], 'The Euclid filter used for this PSF image'), end=True)
+            psf_hdu = fits.ImageHDU(data=cutout_psf.data, name="MERPSF", header=psf_header)
+            hdu_list.append(psf_hdu)
+
+        if 'MERRMS' in cfg.auxillary_products:
+            cutout_rms = band_data['data']['MERRMS']
+            rms_header = cutout_rms.wcs.to_header()
+            rms_header.append(('FILTER', band_data['band'], 'The Euclid filter used for this RMS image'), end=True)
+            rms_hdu = fits.ImageHDU(data=cutout_rms.data, name="MERRMS")
+            hdu_list.append(rms_hdu)
+
+        if 'MERBKG' in cfg.auxillary_products:
+            cutout_bkg = band_data['data']['MERBKG']
+            bkg_header = cutout_bkg.wcs.to_header()
+            bkg_header.append(('FILTER', band_data['band'], 'The Euclid filter used for this BKG image'), end=True)
+            bkg_hdu = fits.ImageHDU(data=bkg_hdu.data, name="MERBKG")
+            hdu_list.append(bkg_hdu)
 
     hdul = fits.HDUList(hdu_list)
 
     if not os.path.isdir(os.path.dirname(save_loc)):
         os.mkdir(os.path.dirname(save_loc))
             
-    with warnings.catch_warnings():
-            # it rewrites my columns to fit the FITS standard by adding HEIRARCH
-        warnings.simplefilter('ignore', VerifyWarning)
-        hdul.writeto(save_loc, overwrite=True)
+    # with warnings.catch_warnings():
+    #     # it rewrites my columns to fit the FITS standard by adding HEIRARCH
+    #     warnings.simplefilter('ignore', VerifyWarning)
+    hdul.writeto(save_loc, overwrite=True)
 
 
 def create_folders(cfg: OmegaConf):
