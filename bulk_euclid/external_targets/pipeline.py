@@ -10,6 +10,7 @@ import logging
 import warnings
 import os
 
+import numpy as np
 from omegaconf import OmegaConf
 import pandas as pd
 from sklearn.neighbors import KDTree
@@ -186,11 +187,11 @@ def get_cutout_data_for_band(cfg, dict_of_locs_for_band, targets_at_that_index):
         # find closest matching PSF to target
         
         # find pixel coordinates of target in PSF tile
-        target_pixels = psf_wcs.world_to_pixel(target_coord)
+        target_pixels = psf_wcs.world_to_pixel(target_coord)  # tuple
         # _, psf_index = psf_tree.query(target[['target_ra','target_dec']].values.reshape(1, -1), k=1)  # single sample reshape
         
         # find pixel coordinates of closest PSF to target  
-        _, psf_index = psf_tree.query(target_pixels.reshape(1, -1), k=1)  # single sample reshape
+        _, psf_index = psf_tree.query(np.array(target_pixels).reshape(1, -1), k=1)  # single sample reshape
         # TODO add warning if distance is large (the underscore)
         # scalar: 1 search, with 1 neighbour result
         psf_index = psf_index.squeeze()
