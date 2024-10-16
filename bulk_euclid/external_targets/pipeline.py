@@ -60,6 +60,7 @@ def get_matching_tiles(cfg: OmegaConf, external_targets: pd.DataFrame=None):  # 
 
     # pick out the closest matching tile for each target
     target_tiles = tiles.iloc[tile_indices].copy()
+    target_tiles = target_tiles.reset_index(drop=True)  # use the new numeric order
     # stick together
     target_tiles = pd.concat([target_tiles, external_targets], axis=1)
     
