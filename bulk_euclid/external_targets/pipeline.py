@@ -118,7 +118,7 @@ def download_all_data_at_tile_index(cfg, tile_index):
         # could have used tile_index for this search, but we want to restrict to some bands only
         auxillary_tile_metadata = pipeline_utils.get_auxillary_tiles(flux_tile['mosaic_product_oid'], auxillary_products=cfg.auxillary_products) 
         auxillary_tile_metadata = pipeline_utils.save_euclid_products(auxillary_tile_metadata, download_dir=cfg.tile_dir)
-        these_aux_locs = dict(zip(flux_tile['filter_name'] + '_' + auxillary_tile_metadata['product_type_sas'], auxillary_tile_metadata['file_loc']))
+        these_aux_locs = dict(zip(auxillary_tile_metadata['product_type_sas'], auxillary_tile_metadata['file_loc']))
         # like {'VIS_MERPSF': 'path/to/MERPSF.fits', 'VIS_MERRMS': 'path/to/MERRMS.fits', ...}
         # dict_of_locs.update(these_aux_locs)
         dict_of_locs[flux_tile['filter_name']] = {
