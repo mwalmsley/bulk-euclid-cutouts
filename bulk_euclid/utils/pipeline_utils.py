@@ -132,7 +132,18 @@ def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limit
 
 
 # not used for GZ Euclid
-def get_tile_extents_fov(tiles):
+def get_tile_extents_fov(tiles: pd.DataFrame) -> pd.DataFrame:
+    """
+    Adds cols ['ra_min', 'ra_max', 'dec_min', 'dec_max'] by unpacking the "fov" tile metadata column
+    fov = Field of View, the corners of the tile in RA and Dec
+    Thanks to Kristin Remmelgas
+
+    Args:
+        tiles (pd.DataFrame): table of MER mosaic products with an 'fov' column in ADQL format
+
+    Returns:
+        pd.DataFrame: same as input, but with ['ra_min', 'ra_max', 'dec_min', 'dec_max'] columns showing edges of tile FoV
+    """
     
     tiles = tiles.copy()
     float_fovs = tiles['fov'].apply(lambda x: np.array(x[1:-1].split(", ")).astype(np.float64)) # from one big string to arrays of floats
