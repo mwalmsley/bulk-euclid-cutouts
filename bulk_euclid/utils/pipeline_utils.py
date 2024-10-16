@@ -275,8 +275,7 @@ def get_auxillary_tiles(mosaic_product_oid, psf=True, rms=True, bkg=True, flag=F
 
     query_str = f"""
     SELECT * FROM sedm.aux_mosaic 
-    WHERE (product_type_sas='MERPSF')
-    AND (mosaic_product_oid={mosaic_product_oid})
+    WHERE (mosaic_product_oid={mosaic_product_oid})
     """
     if len(allowed_product_types) > 1:
         query_str += f"AND (product_type_sas IN {tuple(allowed_product_types)})"
