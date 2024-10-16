@@ -244,13 +244,9 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
         # so each cutout_data[band] is a list of dicts, one per target, like [{'FLUX': flux_cutout, 'MERPSF': psf_cutout, ...}, ...]
     # ...but saving fits we want to iterate over targets first, and get the data across all bands
     for target_n, target in targets_at_that_index.iterrows():
-        # this reshapes the data to be a list, with an element per target, where each element is itself a list of dicts
-
-        # {"band": band, "data": cutout_data[band][target_n]} for band in cfg.bands
-
-        # like { VIS: {FLUX: flux_cutout, MERPSF: psf_cutout, ...}, ...
+        # this reshapes the data to be a nested dict, with the top level keyed by band, and the inner level keyed by product type (exactly like dict_of_locs)
+        # e.g. { VIS: {FLUX: flux_cutout, MERPSF: psf_cutout, ...}, NIR_Y: {...}, ...}
         target_data = { band: cutout_data[band][target_n] for band in cfg.bands }
-        # NO target_data is like [{'band': 'VIS', 'data': {'FLUX': flux_cutout, 'MERPSF': psf_cutout}}, ...]
         save_loc = os.path.join(
             cfg.fits_dir, str(target["tile_index"]), str(target["id_str"]) + ".fits"
         )
@@ -399,6 +395,9 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
     8: MERBKG_NIR_Y
 
     Each extension has a WCS header, and a FILTER keyword to indicate the band.
+
+    target_data is a nested dict, with the top level keyed by band, and the inner level keyed by product type (exactly like dict_of_locs)
+    e.g. { VIS: {FLUX: flux_cutout, MERPSF: psf_cutout, ...}, NIR_Y: {...}, ...}
 
     Args:
         cfg (OmegaConf): cfg (OmegaConf): dictlike with configuration options (folders, bands, auxillary products, etc)
