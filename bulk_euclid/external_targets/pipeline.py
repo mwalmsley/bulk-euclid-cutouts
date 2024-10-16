@@ -265,7 +265,7 @@ def save_multifits_cutout(cfg, target_data, save_loc: str):
             cutout_bkg = band_data['data']['MERBKG']
             bkg_header = cutout_bkg.wcs.to_header()
             bkg_header.append(('FILTER', band_data['band'], 'The Euclid filter used for this BKG image'), end=True)
-            bkg_hdu = fits.ImageHDU(data=bkg_hdu.data, name="MERBKG")
+            bkg_hdu = fits.ImageHDU(data=cutout_bkg.data, name="MERBKG")
             hdu_list.append(bkg_hdu)
 
     hdul = fits.HDUList(hdu_list)
