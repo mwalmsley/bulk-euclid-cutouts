@@ -64,9 +64,9 @@ def get_tile_catalog(cfg: OmegaConf):
     # currently only south and wide have any data
 
     # see pipeline_utils
-    survey = pipeline_utils.WIDE
+    # survey = pipeline_utils.WIDE
 
-    tiles = pipeline_utils.get_tiles_in_survey(survey, bands=['VIS', 'NIR_Y'], release_name=cfg.release_name)  # F-003_240321 recently appeared
+    tiles = pipeline_utils.get_tiles_in_survey(bands=['VIS', 'NIR_Y'], release_name=cfg.release_name)  # F-003_240321 recently appeared
     
     logging.info(tiles['instrument_name'].value_counts())
     logging.info(tiles['release_name'].value_counts())
