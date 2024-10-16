@@ -223,11 +223,11 @@ def save_multifits_cutout(cfg, target_data, save_loc: str):
         cutout_psf = band_data['data']['MERPSF']
 
         flux_header = cutout_flux.wcs.to_header()
-        flux_header.append(('FILTER_NAME', band_data['band'], 'The Euclid filter used for this flux image'), end=True)
+        flux_header.append(('FILTER', band_data['band'], 'The Euclid filter used for this flux image'), end=True)
         flux_hdu = fits.ImageHDU(data=cutout_flux.data, name=f"{cutout_flux}_FLUX", header=flux_header)
 
         psf_header = cutout_psf.wcs.to_header()
-        psf_header.append(('FILTER_NAME', band_data['band'], 'The Euclid filter used for this PSF image'), end=True)
+        psf_header.append(('FILTER', band_data['band'], 'The Euclid filter used for this PSF image'), end=True)
         psf_hdu = fits.ImageHDU(data=cutout_psf.data, name="MERPSF", header=psf_header)
 
         # TODO same for RMS and BKG
