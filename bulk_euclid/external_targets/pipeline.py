@@ -213,18 +213,25 @@ def get_cutout_data_for_band(cfg, dict_of_locs_for_band, targets_at_that_index):
 
 
 def save_multifits_cutout(cfg, target_data, save_loc: str):
-    hdr = fits.Header()
+    # hdr = fits.Header()
     header_hdu = fits.PrimaryHDU()
 
     hdu_list = [header_hdu]
 
     for band_data in target_data:
-        # band = band_data['band']  # TODO need to track which is which?
         cutout_flux = band_data['data']['FLUX']
         cutout_psf = band_data['data']['MERPSF']
-        flux_hdu = fits.ImageHDU(data=cutout_flux.data, name=f"{cutout_flux}_FLUX", header=cutout_flux.wcs.to_header())
-        psf_hdu = fits.ImageHDU(data=cutout_psf.data, name="MERPSF", header=cutout_psf.wcs.to_header())
+
+        flux_header = cutout_flux.wcs.to_header()
+        flux_header.append(('FILTER_NAME', band_data['band'], 'The Euclid filter used for this flux image'), end=True)
+        flux_hdu = fits.ImageHDU(data=cutout_flux.data, name=f"{cutout_flux}_FLUX", header=flux_header)
+
+        psf_header = cutout_psf.wcs.to_header()
+        psf_header.append(('FILTER_NAME', band_data['band'], 'The Euclid filter used for this PSF image'), end=True)
+        psf_hdu = fits.ImageHDU(data=cutout_psf.data, name="MERPSF", header=psf_header)
+
         # TODO same for RMS and BKG
+        
         hdu_list += [flux_hdu, psf_hdu]
 
     hdul = fits.HDUList(hdu_list)
