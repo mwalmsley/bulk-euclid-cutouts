@@ -100,7 +100,7 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame):
         
         targets_at_that_index = targets_with_tiles.query(f'tile_index == {tile_index}')
 
-        save_cutouts_for_all_targets_in_that_tile(cfg, tile_index, dict_of_locs, targets_at_that_index)
+        save_cutouts_for_all_targets_in_that_tile(cfg, dict_of_locs, targets_at_that_index)
 
 
 def download_all_data_at_tile_index(cfg, tile_index):
@@ -140,16 +140,29 @@ def download_all_data_at_tile_index(cfg, tile_index):
     # }
 
 
-def save_cutouts_for_all_targets_in_that_tile(cfg, tile_index, dict_of_locs, targets_at_that_index):
-    logging.info('loading tile')
-    vis_data, vis_header = fits.getdata(dict_of_locs['VIS']['FLUX'], header=True)
-        # nisp_data = fits.getdata(nisp_y_loc, header=False)
-    tile_wcs = WCS(vis_header)
-    logging.info('tile loaded')
+def save_cutouts_for_all_targets_in_that_tile(cfg, dict_of_locs, targets_at_that_index):
+    cutout_data = {}
+    for band in cfg.bands:
+        # if band in dict_of_locs:
+        # this is easier to load once (per band) and then look up each target...
+        cutout_data[band] = get_cutout_data_for_band(cfg, dict_of_locs[band], targets_at_that_index)
+        # dict is like [band][target_n] = {'FLUX': flux_cutout, 'MERPSF': psf_cutout}
+        # else:
+            # logging.warning(f'No data for band {band} in tile {tile_index}')
+    # ...but saving fits we want to iterate over targets first, and get the data across all bands
+    for target_n, target in targets_at_that_index.iterrows():
+        target_data = [{'band': band, 'data': cutout_data[band][target_n]} for band in cfg.bands]
+        # like [{'band': 'VIS', 'data': {'FLUX': flux_cutout, 'MERPSF': psf_cutout}}, ...]
+        save_loc = os.path.join(cfg.fits_dir, str(target['tile_index']), str(target['id_str']) + '.fits')
+        save_multifits_cutout(cfg, target_data, save_loc)
 
-    # Also extract PSF
-    # just VIS at the moment
-    psf_loc = dict_of_locs['VIS']['MERPSF']
+
+def get_cutout_data_for_band(cfg, dict_of_locs_for_band, targets_at_that_index):
+    logging.info('loading tile')
+    flux_data, flux_header = fits.getdata(dict_of_locs_for_band['FLUX'], header=True)
+    flux_wcs = WCS(flux_header)
+
+    psf_loc = dict_of_locs_for_band['MERPSF']
     """
         This fits file contains :
         - an image with PSF cutouts of selected objects arranged next to each other. The stamp pixel size can be found in the header keyword STMPSIZE (e.g. 19 for VIS, 33 for NIR).
@@ -159,38 +172,61 @@ def save_cutouts_for_all_targets_in_that_tile(cfg, tile_index, dict_of_locs, tar
     psf_tile, psf_header = fits.getdata(psf_loc, ext=1, header=True)
     stamp_size = psf_header['STMPSIZE']
     psf_table = Table.read(fits.open(psf_loc)[2]).to_pandas()
-    psf_tree = KDTree(psf_table[['RA', 'Dec']])  # capitals...
+    psf_tree = KDTree(psf_table[['x_center', 'y_center']])
+    psf_wcs = WCS(psf_header)
 
+    cutout_data = []
     for target_n, target in targets_at_that_index.iterrows():
         logging.info(f'target {target_n} of {len(targets_at_that_index)}')
+
+        # cut out the flux data
         target_coord = SkyCoord(target['target_ra'], target['target_dec'], frame='icrs', unit="deg")
-        cutout = Cutout2D(data=vis_data, position=target_coord, size=target['target_field_of_view']*u.arcsec, wcs=tile_wcs, mode='partial')
+        flux_cutout = Cutout2D(data=flux_data, position=target_coord, size=target['target_field_of_view']*u.arcsec, wcs=flux_wcs, mode='partial')
 
         # find closest matching PSF to target
-        _, psf_index = psf_tree.query(target[['target_ra','target_dec']].values.reshape(1, -1), k=1)  # single sample reshape
+        
+        # find pixel coordinates of target in PSF tile
+        target_pixels = psf_wcs.world_to_pixel(target_coord)
+        # _, psf_index = psf_tree.query(target[['target_ra','target_dec']].values.reshape(1, -1), k=1)  # single sample reshape
+        
+        # find pixel coordinates of closest PSF to target  
+        _, psf_index = psf_tree.query(target_pixels.reshape(1, -1), k=1)  # single sample reshape
         # TODO add warning if distance is large (the underscore)
         # scalar: 1 search, with 1 neighbour result
         psf_index = psf_index.squeeze()
+        # get that PSF row
         closest_psf = psf_table.iloc[psf_index]
         # this is the metadata row describing the PSF with the closest sky coordinates to the target
-        # it has pixel coordinates in the original MER tile (not useful, already handled with sky coordinates) and pixel coordinates in the PSF tile 
 
+        # slice out that PSF
         # cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
-        cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['x_center'], closest_psf['y_center']), size=stamp_size)  # no WCS so these are in pixels
+        # ends up off center for some reason?
+        psf_cutout = Cutout2D(data=psf_tile, position=(closest_psf['x_center'], closest_psf['y_center']), size=stamp_size, mode='partial')
 
-        # save both to one FITS file
-        save_multifits_cutout(cfg, tile_index, psf_header, target, cutout, cutout_psf)
+        # TODO add RMS and BKG
+
+        cutout_data_for_target = {'FLUX': flux_cutout, 'MERPSF': psf_cutout}
+        cutout_data.append(cutout_data_for_target)
+    return cutout_data
 
 
-def save_multifits_cutout(cfg, tile_index, psf_header, target, cutout, cutout_psf):
+def save_multifits_cutout(cfg, target_data, save_loc: str):
     hdr = fits.Header()
-    hdr.update(cutout.wcs.to_header())  # adds WCS for cutout (vs whole tile)
-    header_hdu = fits.PrimaryHDU(header=hdr)
-    vis_hdu = fits.ImageHDU(data=cutout.data, name="VIS_FLUX_MICROJANSKY", header=hdr)
-    psf_hdu = fits.ImageHDU(data=cutout_psf.data, name="MERPSF", header=psf_header)
-    hdul = fits.HDUList([header_hdu, vis_hdu, psf_hdu])
+    header_hdu = fits.PrimaryHDU()
 
-    save_loc = os.path.join(cfg.fits_dir, str(tile_index), str(target['id_str']) + '.fits')
+    hdu_list = [header_hdu]
+
+    for band_data in target_data:
+        # band = band_data['band']  # TODO need to track which is which?
+        cutout_flux = band_data['data']['FLUX']
+        cutout_psf = band_data['data']['MERPSF']
+        flux_hdu = fits.ImageHDU(data=cutout_flux.data, name=f"{cutout_flux}_FLUX", header=cutout_flux.wcs.header)
+        psf_hdu = fits.ImageHDU(data=cutout_psf.data, name="MERPSF", header=cutout_psf.wcs.header)
+        # TODO same for RMS and BKG
+        hdu_list += [flux_hdu, psf_hdu]
+
+    hdul = fits.HDUList(hdu_list)
+
     if not os.path.isdir(os.path.dirname(save_loc)):
         os.mkdir(os.path.dirname(save_loc))
             
@@ -198,8 +234,6 @@ def save_multifits_cutout(cfg, tile_index, psf_header, target, cutout, cutout_ps
             # it rewrites my columns to fit the FITS standard by adding HEIRARCH
         warnings.simplefilter('ignore', VerifyWarning)
         hdul.writeto(save_loc, overwrite=True)
-
-
 
 
 def create_folders(cfg: OmegaConf):
