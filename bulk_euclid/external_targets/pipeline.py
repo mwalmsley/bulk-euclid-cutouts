@@ -107,41 +107,49 @@ def download_all_data_at_tile_index(cfg, tile_index):
     flux_tile_metadata = pipeline_utils.get_tiles_in_survey(tile_index=tile_index, bands=cfg.bands, release_name=cfg.release_name)
     # download all the flux tiles with that index
     flux_tile_metadata = pipeline_utils.save_euclid_products(flux_tile_metadata, download_dir=cfg.tile_dir)
-    dict_of_locs = dict(zip(flux_tile_metadata['filter_name'], flux_tile_metadata['file_loc']))
-    logging.debug(f'Downloaded flux tiles: {dict_of_locs}')
+    # dict_of_locs = dict(zip(flux_tile_metadata['filter_name'], flux_tile_metadata['file_loc']))
+    # logging.debug(f'Downloaded flux tiles: {dict_of_locs}')
     # like {'VIS': 'path/to/VIS.fits','NIR_Y': 'path/to/NIR_Y.fits', ...}
+
+    dict_of_locs = {}
 
     # download all auxillary data for that tile
     for _, flux_tile in flux_tile_metadata.iterrows():
         # could have used tile_index for this search, but we want to restrict to some bands only
         auxillary_tile_metadata = pipeline_utils.get_auxillary_tiles(flux_tile['mosaic_product_oid'], auxillary_products=cfg.auxillary_products) 
         auxillary_tile_metadata = pipeline_utils.save_euclid_products(auxillary_tile_metadata, download_dir=cfg.tile_dir)
-        these_aux_locs = dict(zip(auxillary_tile_metadata['product_type_sas'], auxillary_tile_metadata['file_loc']))
-        # like {'MERPSF': 'path/to/MERPSF.fits', 'MERRMS': 'path/to/MERRMS.fits', ...}
-        dict_of_locs.update(these_aux_locs)
+        these_aux_locs = dict(zip(flux_tile['filter_name'] + '_' + auxillary_tile_metadata['product_type_sas'], auxillary_tile_metadata['file_loc']))
+        # like {'VIS_MERPSF': 'path/to/MERPSF.fits', 'VIS_MERRMS': 'path/to/MERRMS.fits', ...}
+        # dict_of_locs.update(these_aux_locs)
+        dict_of_locs[flux_tile['filter_name']] = {
+            'FLUX': flux_tile['file_loc'],
+            **these_aux_locs
+        }
     
     logging.info(f'Downloaded flux+auxillary tiles: {dict_of_locs}')
     return dict_of_locs  # dict of filter_name for bands or product_type_sas of aux tile: file_loc
     # e.g. {
-    # 'VIS': 'path/to/VIS.fits',
-    # 'NIR_Y': 'path/to/NIR_Y.fits',
-    # 'MERPSF': 'path/to/MERPSF.fits',
-    # 'MERRMS': 'path/to/MERRMS.fits',
-    # 'MERBKG': 'path/to/MERBKG.fits',
-    # 'MERFLG': 'path/to/MERFLG.fits'
+    # 'VIS': 
+    # {
+        # 'FLUX': 'path/to/VIS.fits',
+        # 'MERPSF': 'path/to/MERPSF.fits',
+        # 'MERRMS': 'path/to/MERRMS.fits',
+        # 'MERBKG': 'path/to/MERBKG.fits',
+    # },
+    # 'NIR_Y': ...
     # }
 
 
-def save_cutouts_for_all_targets_in_that_tile(cfg, tile_index, mosaic_product_oid, vis_loc, targets_at_that_index):
+def save_cutouts_for_all_targets_in_that_tile(cfg, tile_index, dict_of_locs, targets_at_that_index):
     logging.info('loading tile')
-    vis_data, vis_header = fits.getdata(vis_loc, header=True)
+    vis_data, vis_header = fits.getdata(dict_of_locs['VIS']['FLUX'], header=True)
         # nisp_data = fits.getdata(nisp_y_loc, header=False)
     tile_wcs = WCS(vis_header)
     logging.info('tile loaded')
 
     # Also extract PSF
     # just VIS at the moment
-    psf_loc = pipeline_utils.get_psf_auxillary_tile(mosaic_product_oid, cfg.tile_dir)
+    psf_loc = dict_of_locs['VIS']['MERPSF']
     """
         This fits file contains :
         - an image with PSF cutouts of selected objects arranged next to each other. The stamp pixel size can be found in the header keyword STMPSIZE (e.g. 19 for VIS, 33 for NIR).
