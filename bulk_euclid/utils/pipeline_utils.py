@@ -99,13 +99,17 @@ def get_tiles_in_survey(survey: Survey=None, tile_index=None, bands=None, releas
         query_str += f"AND (tile_index={tile_index})"
         assert survey is None, 'Cannot specify both survey and tile index'
     
-    
     if bands is not None:
-        if len(bands) == 1 or isinstance(bands, str):
+        if isinstance(bands, str):
             query_str += f"AND (filter_name='{bands}')"
-        else:
-            query_str += f"AND (filter_name IN {tuple(bands)})"
-            
+        elif isinstance(bands, list):
+            if len(bands) == 1:
+                query_str += f"AND (filter_name='{bands[0]}')"
+            else:
+                query_str += f"AND (filter_name IN {tuple(bands)})"
+        else :
+            raise ValueError('bands must be str or list')
+                
     if ra_limits:
         query_str += f" AND (ra > {ra_limits[0]}) AND (ra < {ra_limits[1]})"
         
