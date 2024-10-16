@@ -202,7 +202,8 @@ def get_cutout_data_for_band(cfg, dict_of_locs_for_band, targets_at_that_index):
         # slice out that PSF
         # cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
         # ends up off center for some reason?
-        psf_cutout = Cutout2D(data=psf_tile, position=(closest_psf['x_center'], closest_psf['y_center']), size=stamp_size, mode='partial')
+        # WCS used only to have a convenient header for the output file
+        psf_cutout = Cutout2D(data=psf_tile, position=(closest_psf['x_center'], closest_psf['y_center']), size=stamp_size, wcs=psf_wcs, mode='partial')
 
         # TODO add RMS and BKG
 
