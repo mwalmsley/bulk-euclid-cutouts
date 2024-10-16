@@ -160,54 +160,74 @@ def save_cutouts_for_all_targets_in_that_tile(cfg, dict_of_locs, targets_at_that
 
 def get_cutout_data_for_band(cfg, dict_of_locs_for_band, targets_at_that_index):
     logging.info('loading tile')
+
+    # load the tile once, from each mosaic according to the products requested, before iterating through
+
     flux_data, flux_header = fits.getdata(dict_of_locs_for_band['FLUX'], header=True)
     flux_wcs = WCS(flux_header)
 
-    psf_loc = dict_of_locs_for_band['MERPSF']
-    """
+    if 'MERRMS' in cfg.auxillary_products:
+        rms_loc = dict_of_locs_for_band['MERRMS']
+        rms_data, rms_header = fits.getdata(rms_loc, header=True)
+        rms_wcs = WCS(rms_header)
+
+    if 'MERBKG' in cfg.auxillary_products:
+        bkg_loc = dict_of_locs_for_band['MERBKG']
+        bkg_data, bkg_header = fits.getdata(bkg_loc, header=True)
+        bkg_wcs = WCS(bkg_header)
+
+    if 'MERPSF' in cfg.auxillary_products:
+        psf_loc = dict_of_locs_for_band['MERPSF']
+        """
         This fits file contains :
         - an image with PSF cutouts of selected objects arranged next to each other. The stamp pixel size can be found in the header keyword STMPSIZE (e.g. 19 for VIS, 33 for NIR).
         - a table giving the match between the PSF cutout center position (columns x_center and y_center) on the PSF grid image and the coordinate in pixels (columns x and y) or on the sky (Ra, Dec) on the MER tile data.
         https://euclid.roe.ac.uk/issues/22495
         """
-    psf_tile, psf_header = fits.getdata(psf_loc, ext=1, header=True)
-    stamp_size = psf_header['STMPSIZE']
-    psf_table = Table.read(fits.open(psf_loc)[2]).to_pandas()
-    psf_tree = KDTree(psf_table[['x_center', 'y_center']])
-    psf_wcs = WCS(psf_header)
-
+        psf_tile, psf_header = fits.getdata(psf_loc, ext=1, header=True)
+        stamp_size = psf_header['STMPSIZE']
+        psf_table = Table.read(fits.open(psf_loc)[2]).to_pandas()
+        psf_tree = KDTree(psf_table[['x_center', 'y_center']])
+        psf_wcs = WCS(psf_header)
+    
     cutout_data = []
     for target_n, target in targets_at_that_index.iterrows():
         logging.info(f'target {target_n} of {len(targets_at_that_index)}')
 
+        cutout_data_for_target = {}
+
         # cut out the flux data
         target_coord = SkyCoord(target['target_ra'], target['target_dec'], frame='icrs', unit="deg")
         flux_cutout = Cutout2D(data=flux_data, position=target_coord, size=target['target_field_of_view']*u.arcsec, wcs=flux_wcs, mode='partial')
+        cutout_data_for_target['FLUX'] = flux_cutout
 
-        # find closest matching PSF to target
+        if 'MERRMS' in cfg.auxillary_products:
+            rms_cutout = Cutout2D(data=rms_data, position=target_coord, size=target['target_field_of_view']*u.arcsec, wcs=rms_wcs, mode='partial')
+            cutout_data_for_target['MERRMS'] = rms_cutout
         
-        # find pixel coordinates of target in PSF tile
-        target_pixels = psf_wcs.world_to_pixel(target_coord)  # tuple
-        # _, psf_index = psf_tree.query(target[['target_ra','target_dec']].values.reshape(1, -1), k=1)  # single sample reshape
-        
-        # find pixel coordinates of closest PSF to target  
-        _, psf_index = psf_tree.query(np.array(target_pixels).reshape(1, -1), k=1)  # single sample reshape
-        # TODO add warning if distance is large (the underscore)
-        # scalar: 1 search, with 1 neighbour result
-        psf_index = psf_index.squeeze()
-        # get that PSF row
-        closest_psf = psf_table.iloc[psf_index]
-        # this is the metadata row describing the PSF with the closest sky coordinates to the target
+        if 'MERBKG' in cfg.auxillary_products:
+            bkg_cutout = Cutout2D(data=bkg_data, position=target_coord, size=target['target_field_of_view']*u.arcsec, wcs=bkg_wcs, mode='partial')
+            cutout_data_for_target['MERBKG'] = bkg_cutout
 
-        # slice out that PSF
-        # cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
-        # ends up off center for some reason?
-        # WCS used only to have a convenient header for the output file
-        psf_cutout = Cutout2D(data=psf_tile, position=(closest_psf['x_center'], closest_psf['y_center']), size=stamp_size, wcs=psf_wcs, mode='partial')
+        if 'MERPSF' in cfg.auxillary_products:
+            # find pixel coordinates of target in PSF tile
+            target_pixels = psf_wcs.world_to_pixel(target_coord)
+            # find pixel coordinates of closest PSF to target  
+            _, psf_index = psf_tree.query(np.array(target_pixels).reshape(1, -1), k=1)  # single sample reshape
+            # TODO add warning if distance is large (the underscore)
+            # scalar: 1 search, with 1 neighbour result
+            psf_index = psf_index.squeeze()
+            # get that PSF row
+            closest_psf = psf_table.iloc[psf_index]
+            # this is the metadata row describing the PSF with the closest sky coordinates to the target
 
-        # TODO add RMS and BKG
+            # slice out that PSF
+            # cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
+            # ends up off center for some reason?
+            # WCS used only to have a convenient header for the output file
+            psf_cutout = Cutout2D(data=psf_tile, position=(closest_psf['x_center'], closest_psf['y_center']), size=stamp_size, wcs=psf_wcs, mode='partial')
+            cutout_data_for_target['MERPSF'] = psf_cutout
 
-        cutout_data_for_target = {'FLUX': flux_cutout, 'MERPSF': psf_cutout}
         cutout_data.append(cutout_data_for_target)
     return cutout_data
 
