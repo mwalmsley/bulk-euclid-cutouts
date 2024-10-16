@@ -88,6 +88,7 @@ def get_matching_tiles(
     target_coords = external_targets[["target_ra", "target_dec"]].values
     tile_indices = tile_kdtree.query(target_coords, k=1, return_distance=False)
     tile_indices = tile_indices[:, 0]
+    assert len(tile_indices) == len(external_targets)
     # the numeric index (0, 1, ...) of the closest tile to each target
     # (not related to the tile_index column, confusingly)
 
@@ -96,14 +97,17 @@ def get_matching_tiles(
     target_tiles = target_tiles.reset_index(drop=True)  # use the new numeric order
     # stick together
     target_tiles = pd.concat([target_tiles, external_targets], axis=1)
+    assert len(target_tiles) == len(external_targets)
 
     # check if target is within tile FoV
+    # this will fail for tiles on the RA flip boundary, but none yet TODO
     within_ra = (target_tiles["ra_min"] < target_tiles["target_ra"]) & (
         target_tiles["target_ra"] < target_tiles["ra_max"]
     )
     within_dec = (target_tiles["dec_min"] < target_tiles["target_dec"]) & (
         target_tiles["target_dec"] < target_tiles["dec_max"]
     )
+    logging.info(f'Target within tile FoV: RA: {within_ra.sum()} of {len(target_tiles)}, Dec: {within_dec.sum()} of {len(target_tiles)}')
     target_tiles["within_tile"] = within_ra & within_dec
     logging.info(
         f'Targets within tile FoV: {target_tiles["within_tile"].sum()} of {len(target_tiles)}'
