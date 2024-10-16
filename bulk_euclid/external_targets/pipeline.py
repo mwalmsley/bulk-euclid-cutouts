@@ -415,7 +415,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         cutout_flux = band_data["FLUX"]
         flux_header = cutout_flux.wcs.to_header()
         flux_header.append(
-            ("FILTER", target_data["band"], "The Euclid filter used for this flux image"),
+            ("FILTER", band, "The Euclid filter used for this flux image"),
             end=True,
         )
         flux_hdu = fits.ImageHDU(
@@ -431,7 +431,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
             psf_header.append(
                 (
                     "FILTER",
-                    target_data["band"],
+                    band,
                     "The Euclid filter used for this PSF image",
                 ),
                 end=True,
@@ -447,7 +447,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
             rms_header.append(
                 (
                     "FILTER",
-                    target_data["band"],
+                    band,
                     "The Euclid filter used for this RMS image",
                 ),
                 end=True,
@@ -461,7 +461,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
             bkg_header.append(
                 (
                     "FILTER",
-                    target_data["band"],
+                    band,
                     "The Euclid filter used for this BKG image",
                 ),
                 end=True,
