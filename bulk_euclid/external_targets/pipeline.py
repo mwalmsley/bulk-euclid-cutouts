@@ -61,7 +61,7 @@ def get_matching_tiles(cfg: OmegaConf, external_targets: pd.DataFrame=None):  # 
     # pick out the closest matching tile for each target
     target_tiles = tiles.iloc[tile_indices].copy()
     # stick together
-    target_tiles = pd.concat(target_tiles, external_targets)
+    target_tiles = pd.concat([target_tiles, external_targets], axis=1)
     
     # copy over target info (a bit lazy here)
     # target_tiles['id_str'] = external_targets['id_str'].values
