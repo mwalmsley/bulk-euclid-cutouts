@@ -106,14 +106,19 @@ def download_all_data_at_tile_index(cfg, tile_index):
     flux_tile_metadata = pipeline_utils.get_tiles_in_survey(tile_index=tile_index, bands=cfg.bands, release_name=cfg.release_name)
     # download all the flux tiles with that index
     flux_tile_metadata = pipeline_utils.save_euclid_products(flux_tile_metadata, download_dir=cfg.tile_dir)
-    dict_of_locs = flux_tile_metadata[['filter_name', 'file_loc']].set_index('filter_name').to_dict()
+    dict_of_locs = dict(zip(flux_tile_metadata['filter_name'], flux_tile_metadata['file_loc']))
+    logging.info(f'Downloaded flux tiles: {dict_of_locs}')
+    # like {'VIS': 'path/to/VIS.fits','NIR_Y': 'path/to/NIR_Y.fits', ...}
+
     # download all auxillary data for that tile
     for _, flux_tile in flux_tile_metadata.iterrows():
         # could have used tile_index for this search, but we want to restrict to some bands only
         auxillary_tile_metadata = pipeline_utils.get_auxillary_tiles(flux_tile['mosaic_product_oid']) 
         auxillary_tile_metadata = pipeline_utils.save_euclid_products(auxillary_tile_metadata, download_dir=cfg.tile_dir)
-        these_aux_locs = auxillary_tile_metadata[['product_type_sas', 'file_loc']].set_index('product_type_sas').to_dict()
+        these_aux_locs = dict(zip(auxillary_tile_metadata['product_type_sas'], auxillary_tile_metadata['file_loc']))
+        # like {'MERPSF': 'path/to/MERPSF.fits', 'MERRMS': 'path/to/MERRMS.fits', ...}
         dict_of_locs.update(these_aux_locs)
+    logging.info(f'Downloaded flux+auxillary tiles: {dict_of_locs}')
 
     return dict_of_locs  # dict of filter_name for bands or product_type_sas of aux tile: file_loc
     # e.g. {
