@@ -81,7 +81,7 @@ WIDE = Survey(
 
 
 
-def get_tiles_in_survey(survey: Survey=None, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
+def get_tiles_in_survey(survey: Survey=None, tile_index=None, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
 
     # TODO move release name into survey property, once happy with what it means, if it is per survey?
     query_str = f"""
@@ -90,9 +90,15 @@ def get_tiles_in_survey(survey: Survey=None, bands=None, release_name=None, ra_l
         """
     
     if survey is not None:
+        assert tile_index is None, 'Cannot specify both survey and tile index'
         query_str += f"""
         AND (tile_index > {survey.min_tile_index}) AND (tile_index < {survey.max_tile_index})
         """
+    
+    if tile_index is not None:
+        query_str += f"AND (tile_index={tile_index})"
+        assert survey is None, 'Cannot specify both survey and tile index'
+    
     
     if bands is not None:
         if len(bands) == 1 or isinstance(bands, str):
@@ -135,22 +141,6 @@ def get_tile_extents_fov(tiles):
     tiles['dec_min'] = np.min(decs, axis=1)
     tiles['dec_max'] = np.max(decs, axis=1)
     return tiles
-
-
-def get_psf_auxillary_tile(tile, download_dir):
-    query_str = f"""
-    SELECT * FROM sedm.aux_mosaic 
-    WHERE (product_type_sas='MERPSF')
-    AND (mosaic_product_oid={tile['mosaic_product_oid']})
-    """
-    # mosaic_product_oid is band-specific, so only one result
-    df = Euclid.launch_job(query_str).get_results().to_pandas()
-    assert len(df) == 1, f'Expected one PSF tile, got {len(df)}'
-    psf_metadata = df.squeeze()
-
-    output_loc = os.path.join(download_dir, psf_metadata['file_name'])
-    Euclid.get_product(file_name=psf_metadata['file_name'], output_file=output_loc)
-    return output_loc
 
 
 def find_relevant_sources_in_tile(cfg, tile):
@@ -251,22 +241,50 @@ def download_mosaics(tile_index: int, tiles: pd.DataFrame, download_dir: str):
     matching_tiles = tiles.query(f'tile_index == {tile_index}')
     assert len(matching_tiles) > 0, f'No matching tiles found for tile index {tile_index}'
     
-    matching_tiles = save_tiles_temporarily(matching_tiles, download_dir)  # adds file_loc to downloaded path
+    matching_tiles = save_euclid_products(matching_tiles, download_dir)  # adds file_loc to downloaded path
     return matching_tiles
 
 
-def save_tiles_temporarily(tiles: pd.DataFrame, download_dir: str):
+def save_euclid_products(df: pd.DataFrame, download_dir: str):
     # adds file_loc to downloaded path
-    tiles['file_loc'] = tiles['file_name'].apply(lambda x: save_tile_temporarily(x, download_dir))
-    return tiles
+    df['file_loc'] = df['file_name'].apply(lambda x: save_euclid_product(x, download_dir))
+    return df
 
 
-def save_tile_temporarily(tile_filename, download_dir):
-    output_loc = os.path.join(download_dir, tile_filename)
+def save_euclid_product(product_filename, download_dir):
+    output_loc = os.path.join(download_dir, product_filename)
     if not os.path.isfile(output_loc):
-        downloaded_path = Euclid.get_product(file_name=tile_filename, output_file=output_loc)[0]  # 0 as one product
-        print("File saved at:", downloaded_path)
+        downloaded_path = Euclid.get_product(file_name=product_filename, output_file=output_loc)[0]  # 0 as one product
+        logging.info(f'{product_filename} saved at {downloaded_path}')
     return output_loc
+
+
+def get_auxillary_tiles(mosaic_product_oid, download_dir, psf=True, rms=True, bkg=True, flag=False):
+    # tile['mosaic_product_oid']
+
+    allowed_product_types = []
+    if psf:
+        allowed_product_types.append('MERPSF')
+    if rms:
+        allowed_product_types.append('MERRMS')
+    if bkg:
+        allowed_product_types.append('MERBKG')
+    if flag:
+        allowed_product_types.append('MERFLG')
+    assert allowed_product_types, 'No auxillary products requested'
+
+    query_str = f"""
+    SELECT * FROM sedm.aux_mosaic 
+    WHERE (product_type_sas='MERPSF')
+    AND (mosaic_product_oid={mosaic_product_oid})
+    """
+    if len(allowed_product_types) > 1:
+        query_str += f"AND (product_type_sas IN {tuple(allowed_product_types)})"
+    elif len(allowed_product_types) == 1:
+        query_str += f"AND (product_type_sas='{allowed_product_types[0]}')"
+
+    df = Euclid.launch_job(query_str).get_results().to_pandas()
+    return df
 
 
 def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, oneway_hash=False):
