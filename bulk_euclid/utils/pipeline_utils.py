@@ -228,15 +228,7 @@ def find_relevant_sources_in_tile(cfg, tile):
 
 
 def download_mosaics(tile_index: int, tiles: pd.DataFrame, download_dir: str):
-    
-    # vis_tile = tiles.query(f'tile_index == {tile_index}').query('filter_name == "VIS"').squeeze()
-    # assert isinstance(vis_tile, pd.Series), f'No or multiple VIS tiles ({len(vis_tile)}) found for tile index {tile_index}'
-    
-    # nisp_tile = tiles.query(f'tile_index == {tile_index}').query('filter_name == "NIR_Y"').squeeze()
-    # assert isinstance(nisp_tile, pd.Series), nisp_tile
-
-    # TODO based on config, choose which tiles to download
-    # changed - now, just save all matching tiles, assuming the tiles catalog only includes relevant data already
+    # save all matching tiles, assuming the tiles catalog only includes relevant data already
 
     matching_tiles = tiles.query(f'tile_index == {tile_index}')
     assert len(matching_tiles) > 0, f'No matching tiles found for tile index {tile_index}'
@@ -260,19 +252,9 @@ def save_euclid_product(product_filename, download_dir):
 
 
 def get_auxillary_tiles(mosaic_product_oid, auxillary_products=['MERPSF', 'MERRMS', 'MERBKG']):
-    # psf=True, rms=True, bkg=True, flag=False
-    # tile['mosaic_product_oid']
 
-    # allowed_product_types = []
-    # if psf:
-    #     allowed_product_types.append('MERPSF')
-    # if rms:
-    #     allowed_product_types.append('MERRMS')
-    # if bkg:
-    #     allowed_product_types.append('MERBKG')
-    # if flag:
-    #     allowed_product_types.append('MERFLG')
-    # assert allowed_product_types, 'No auxillary products requested'
+    for aux in auxillary_products:
+        assert aux in ['MERPSF', 'MERRMS', 'MERBKG', 'MERFLG'], f'Unknown or unsupported auxillary product {aux}'
 
     query_str = f"""
     SELECT * FROM sedm.aux_mosaic 
@@ -344,11 +326,8 @@ def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:s
     
                 
                 if np.all([os.path.isfile(loc) for loc in cutout_locs]) and not overwrite:
-                    # print('skipping', cutout_locs[0])
                     continue
-                # print(cutout_locs[0])
-                    
-                # print('getting slice')
+
                 galaxy.index = galaxy.index.str.upper()
                 vis_cutout = m_utils.extract_cutout_from_array(vis_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
                 nisp_cutout = m_utils.extract_cutout_from_array(nisp_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
@@ -356,23 +335,12 @@ def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:s
                 # extremely lazy coding, I should make a class or smth
                 # print(f'got slice {vis_cutout.shape}, {nisp_cutout.shape}')
 
-                # version_suffix = 'composite'
-                # cutout_loc = get_cutout_loc(base_dir, galaxy, output_format, version_suffix, oneway_hash)
                 cutout = cutout_utils.make_composite_cutout(vis_cutout, nisp_cutout)
-                # print('composite ready')
                 Image.fromarray(cutout).save(galaxy['jpg_loc_composite'])
-                # print('composite saved')
 
-
-                # version_suffix = 'vis_only'
-                # cutout_loc = get_cutout_loc(base_dir, galaxy, output_format, version_suffix, oneway_hash)
                 cutout = m_utils.make_vis_only_cutout(vis_cutout)
-                # print('vis only ready')
                 Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only'])
-                # print('vis only saved')
 
-                # version_suffix = 'vis_lsb'
-                # cutout_loc = get_cutout_loc(base_dir, galaxy, output_format, version_suffix, oneway_hash)
                 # magic params from tinkering
                 cutout = cutout_utils.make_lsb_cutout(vis_cutout, stretch=20, power=0.5)
                 # print('vis lsb ready')

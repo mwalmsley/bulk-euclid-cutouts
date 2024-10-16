@@ -107,7 +107,7 @@ def download_all_data_at_tile_index(cfg, tile_index):
     # download all the flux tiles with that index
     flux_tile_metadata = pipeline_utils.save_euclid_products(flux_tile_metadata, download_dir=cfg.tile_dir)
     dict_of_locs = dict(zip(flux_tile_metadata['filter_name'], flux_tile_metadata['file_loc']))
-    logging.info(f'Downloaded flux tiles: {dict_of_locs}')
+    logging.debug(f'Downloaded flux tiles: {dict_of_locs}')
     # like {'VIS': 'path/to/VIS.fits','NIR_Y': 'path/to/NIR_Y.fits', ...}
 
     # download all auxillary data for that tile
@@ -118,8 +118,8 @@ def download_all_data_at_tile_index(cfg, tile_index):
         these_aux_locs = dict(zip(auxillary_tile_metadata['product_type_sas'], auxillary_tile_metadata['file_loc']))
         # like {'MERPSF': 'path/to/MERPSF.fits', 'MERRMS': 'path/to/MERRMS.fits', ...}
         dict_of_locs.update(these_aux_locs)
+    
     logging.info(f'Downloaded flux+auxillary tiles: {dict_of_locs}')
-
     return dict_of_locs  # dict of filter_name for bands or product_type_sas of aux tile: file_loc
     # e.g. {
     # 'VIS': 'path/to/VIS.fits',
