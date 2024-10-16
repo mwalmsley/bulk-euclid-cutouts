@@ -259,7 +259,7 @@ def save_euclid_product(product_filename, download_dir):
     return output_loc
 
 
-def get_auxillary_tiles(mosaic_product_oid, download_dir, psf=True, rms=True, bkg=True, flag=False):
+def get_auxillary_tiles(mosaic_product_oid, psf=True, rms=True, bkg=True, flag=False):
     # tile['mosaic_product_oid']
 
     allowed_product_types = []
