@@ -88,8 +88,8 @@ def get_matching_tiles(
 
     logging.info('Begin target/tile cross-match')
     for target_n, target in external_targets.iterrows():
-        # query for all tiles within half a degree of target
-        close_tile_indices = tile_kdtree.query_radius(target[['target_ra', 'target_dec']].values.reshape(1, -1), r=0.5)[0]  # 0 for first row, all results
+        # query for all tiles within one degree of target
+        close_tile_indices = tile_kdtree.query_radius(target[['target_ra', 'target_dec']].values.reshape(1, -1), r=1)[0]  # 0 for first row, all results
         close_tiles = tiles.iloc[close_tile_indices]
 
         if len(close_tiles) > 0:
@@ -102,7 +102,6 @@ def get_matching_tiles(
             within_dec = (close_tiles["dec_min"] < target["target_dec"]) & (
                 target["target_dec"] < close_tiles["dec_max"]
             )
-            # logging.debug(f'Target within tile FoV: RA: {within_ra.sum()} of {len(close_tiles)}, Dec: {within_dec.sum()} of {len(close_tiles)}')
             close_tiles = close_tiles[within_ra & within_dec]
 
             # pick the first tile that's within the FoV
@@ -110,45 +109,14 @@ def get_matching_tiles(
 
             if len(close_tiles) > 0:
                 chosen_tile_index = close_tiles.iloc[0]['tile_index']
-                # logging.debug(f"Target {target_n} matched to tile {chosen_tile_index}")
                 external_targets.loc[target_n, "tile_index"] = chosen_tile_index
 
-        # logging.info(
-        #     f'Targets within tile FoV: {target_tiles["within_tile"].sum()} of {len(target_tiles)}'
-        # )
-
-    # target_coords = external_targets[["target_ra", "target_dec"]].values
-    # tile_indices = tile_kdtree.query(target_coords, k=1, return_distance=False)
-    # tile_indices = tile_indices[:, 0]
-    # assert len(tile_indices) == len(external_targets)
-    # the numeric index (0, 1, ...) of the closest tile to each target
-    # (not related to the tile_index column, confusingly)
-
-    # pick out the closest matching tile for each target
-    # target_tiles = tiles.iloc[tile_indices].copy()
-    # target_tiles = target_tiles.reset_index(drop=True)  # use the new numeric order
-    # # stick together
-    # target_tiles = pd.concat([target_tiles, external_targets], axis=1)
-    # assert len(target_tiles) == len(external_targets)
-
-
-    # logging.info(target_tiles['dec_min'])
-    # logging.info(target_tiles['target_dec'])
-    # logging.info(target_tiles['dec_max'])
-
-
-    # filter to only those tiles
-    # target_tiles = target_tiles[target_tiles["within_tile"]]
 
     logging.info(f'Matched {len(external_targets)} targets to {len(external_targets["tile_index"].unique())} tiles')
     targets_with_tiles = external_targets.dropna(subset=['tile_index'])
     logging.info(f'Targets with tile matches: {len(targets_with_tiles)}')
     
     assert len(targets_with_tiles) > 0, "No targets within FoV of any tiles, likely a bug"
-    # simplify/explicit for export
-    # targets_with_tiles = targets_with_tiles[
-    #     ["tile_index", "id_str", "target_ra", "target_dec", "target_field_of_view"]
-    # ]
     assert len(targets_with_tiles) > 0
 
     # avoid annoying type conversion
@@ -156,7 +124,6 @@ def get_matching_tiles(
     # clean up index
     targets_with_tiles = targets_with_tiles.reset_index(drop=True)
 
-    # target tiles says which tile (index) to use for each target
     return targets_with_tiles
 
 
@@ -174,7 +141,9 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
     Raises:
         e: Download error (e.g. when SAS is temporarily down)
     """
-    for tile_index in targets_with_tiles["tile_index"].unique():
+    unique_tiles = targets_with_tiles["tile_index"].unique()
+    for tile_n, tile_index in enumerate(unique_tiles):
+        logging.info(f'Tile {tile_index}, {tile_n} of {len(unique_tiles)}')
         try:
             dict_of_locs = download_all_data_at_tile_index(cfg, tile_index)
             logging.info(f"Downloaded: {dict_of_locs}")
@@ -342,7 +311,7 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
     cutout_data = []
     for target_n, target in targets_at_that_index.iterrows():
-        logging.info(f"target {target_n} of {len(targets_at_that_index)}")
+        logging.debug(f"target {target_n} of {len(targets_at_that_index)}")
 
         cutout_data_for_target = {}
 
@@ -452,7 +421,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         cutout_flux = band_data["FLUX"]
         flux_header = cutout_flux.wcs.to_header()
         flux_header.append(
-            ("FILTER", band, "The Euclid filter used for this flux image"),
+            ("FILTER", band, "Euclid filter for flux image"),
             end=True,
         )
         flux_hdu = fits.ImageHDU(
@@ -469,7 +438,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 (
                     "FILTER",
                     band,
-                    "The Euclid filter used for this PSF image",
+                    "Euclid filter for PSF image",
                 ),
                 end=True,
             )
@@ -485,7 +454,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 (
                     "FILTER",
                     band,
-                    "The Euclid filter used for this RMS image",
+                    "Euclid filter for RMS image",
                 ),
                 end=True,
             )
@@ -499,7 +468,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 (
                     "FILTER",
                     band,
-                    "The Euclid filter used for this BKG image",
+                    "Euclid filter for BKG image",
                 ),
                 end=True,
             )
