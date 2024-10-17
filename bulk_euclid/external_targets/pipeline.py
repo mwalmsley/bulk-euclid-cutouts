@@ -88,30 +88,30 @@ def get_matching_tiles(
 
     logging.info('Begin target/tile cross-match')
     for target_n, target in external_targets.iterrows():
-        # query for all tiles within 30 arcminutes of the target
+        # query for all tiles within half a degree of target
         close_tile_indices = tile_kdtree.query_radius(target[['target_ra', 'target_dec']].values.reshape(1, -1), r=0.5)[0]  # 0 for first row, all results
-        logging.info(close_tile_indices)
-
         close_tiles = tiles.iloc[close_tile_indices]
 
-        # check which close tiles are actually within the FoV
-        # this will fail for tiles on the RA flip boundary, but none yet TODO
-        within_ra = (close_tiles["ra_min"] < target["target_ra"]) & (
-            target["target_ra"] < close_tiles["ra_max"]
-        )
-        within_dec = (close_tiles["dec_min"] < target["target_dec"]) & (
-            target["target_dec"] < close_tiles["dec_max"]
-        )
-        logging.info(f'Target within tile FoV: RA: {within_ra.sum()} of {len(close_tiles)}, Dec: {within_dec.sum()} of {len(close_tiles)}')
-        close_tiles = close_tiles[within_ra & within_dec]
-
-        # pick the first tile that's within the FoV
-        # TODO here we could apply a rule to pick according to release name priority
-
         if len(close_tiles) > 0:
-            chosen_tile_index = close_tiles.iloc[0]['tile_index']
-            logging.info(f"Target {target_n} matched to tile {chosen_tile_index}")
-            external_targets.loc[target_n, "tile_index"] = chosen_tile_index
+
+            # check which close tiles are actually within the FoV
+            # this will fail for tiles on the RA flip boundary, but none yet TODO
+            within_ra = (close_tiles["ra_min"] < target["target_ra"]) & (
+                target["target_ra"] < close_tiles["ra_max"]
+            )
+            within_dec = (close_tiles["dec_min"] < target["target_dec"]) & (
+                target["target_dec"] < close_tiles["dec_max"]
+            )
+            # logging.debug(f'Target within tile FoV: RA: {within_ra.sum()} of {len(close_tiles)}, Dec: {within_dec.sum()} of {len(close_tiles)}')
+            close_tiles = close_tiles[within_ra & within_dec]
+
+            # pick the first tile that's within the FoV
+            # TODO here we could apply a rule to pick according to release name priority
+
+            if len(close_tiles) > 0:
+                chosen_tile_index = close_tiles.iloc[0]['tile_index']
+                # logging.debug(f"Target {target_n} matched to tile {chosen_tile_index}")
+                external_targets.loc[target_n, "tile_index"] = chosen_tile_index
 
         # logging.info(
         #     f'Targets within tile FoV: {target_tiles["within_tile"].sum()} of {len(target_tiles)}'
@@ -153,6 +153,8 @@ def get_matching_tiles(
 
     # avoid annoying type conversion
     targets_with_tiles["tile_index"] = targets_with_tiles["tile_index"].astype(int)
+    # clean up index
+    targets_with_tiles = targets_with_tiles.reset_index(drop=True)
 
     # target tiles says which tile (index) to use for each target
     return targets_with_tiles
