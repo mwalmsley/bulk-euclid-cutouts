@@ -183,7 +183,7 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
             logging.critical(e)
             raise e
 
-        targets_at_that_index = targets_with_tiles.query(f"tile_index == {tile_index}")
+        targets_at_that_index = targets_with_tiles.query(f"tile_index == {tile_index}").reset_index(drop=True)
 
         save_cutouts_for_all_targets_in_that_tile(
             cfg, dict_of_locs, targets_at_that_index
