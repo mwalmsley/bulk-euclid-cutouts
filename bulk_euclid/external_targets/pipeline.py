@@ -126,7 +126,8 @@ def get_matching_tiles(
                     # if the release is not recognised, it gets a priority of -1 (lowest)
                     # higher priority is a higher number (higher index in cfg.release_priority)
                     # after sorting (ascending) by release priority, pick the last one for tile with the highest priority
-                    chosen_tile_index = close_tiles.sort_values(by='release_name', key=lambda x: release_priority_key.get(x, -1))['tile_index'].iloc[-1]
+                    close_tiles['priority'] = close_tiles['release_name'].apply(lambda x: release_priority_key.get(x, -1))
+                    chosen_tile_index = close_tiles.sort_values(by='priority')['tile_index'].iloc[-1]
                 external_targets.loc[target_n, "tile_index"] = chosen_tile_index
 
 
