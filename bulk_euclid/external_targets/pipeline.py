@@ -120,15 +120,17 @@ def get_matching_tiles(
                 if release_priority_key is None:  
                     # user did not set a priority order for the tiles in cfg.release_priority
                     # just pick the first tile that's within the FoV
-                    chosen_tile_index = close_tiles.iloc[0]['tile_index']
+                    chosen_tile = close_tiles.iloc[0]
                 else:
                     # pick in order of release priority
                     # if the release is not recognised, it gets a priority of -1 (lowest)
                     # higher priority is a higher number (higher index in cfg.release_priority)
                     # after sorting (ascending) by release priority, pick the last one for tile with the highest priority
                     close_tiles['priority'] = close_tiles['release_name'].apply(lambda x: release_priority_key.get(x, -1))
-                    chosen_tile_index = close_tiles.sort_values(by='priority')['tile_index'].iloc[-1]
-                external_targets.loc[target_n, "tile_index"] = chosen_tile_index
+                    chosen_tile = close_tiles.sort_values(by='priority').iloc[-1]
+                external_targets.loc[target_n, "tile_index"] = chosen_tile["tile_index"]
+                # useful for debugging
+                external_targets.loc[target_n, "release_name"] = chosen_tile['release_name']
 
 
     logging.info(f'Matched {len(external_targets)} targets to {len(external_targets["tile_index"].unique())} tiles')
