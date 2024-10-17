@@ -151,6 +151,9 @@ def get_matching_tiles(
     # ]
     assert len(targets_with_tiles) > 0
 
+    # avoid annoying type conversion
+    targets_with_tiles["tile_index"] = targets_with_tiles["tile_index"].astype(int)
+
     # target tiles says which tile (index) to use for each target
     return targets_with_tiles
 
