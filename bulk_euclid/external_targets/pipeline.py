@@ -88,7 +88,7 @@ def get_matching_tiles(
 
     # e.g. ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', 'F-003_240612' , 'F-006']
     if cfg.release_priority is None:
-        release_priority_key is None
+        release_priority_key = None
     else:
         release_priority_key = dict(zip(cfg.release_priority, range(len(cfg.release_priority))))
         # e.g. {'CALBLOCK_PV-005_R2': 0, 'CALBLOCK_PV-005_R3': 1, ...}
@@ -453,7 +453,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         # and update the primary header
         header_hdu.header.append(
             (
-                f"EXTNAME{which_extension}",
+                f"EXT_{which_extension}",
                 f"{band}_FLUX",
                 f"Extension name for {band} flux",
             ),
@@ -480,7 +480,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
             hdu_list.append(psf_hdu)
             header_hdu.header.append(
             (
-                f"EXTNAME{which_extension}",
+                f"EXT_{which_extension}",
                 f"{band}_PSF",
                 f"Extension name for {band} PSF",
             ),
@@ -503,7 +503,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
             hdu_list.append(rms_hdu)
             header_hdu.header.append(
             (
-                f"EXTNAME{which_extension}",
+                f"EXT_{which_extension}",
                 f"{band}_RMS",
                 f"Extension name for {band} RMS",
             ),
@@ -526,7 +526,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
             hdu_list.append(bkg_hdu)
             header_hdu.header.append(
             (
-                f"EXTNAME{which_extension}",
+                f"EXT_{which_extension}",
                 f"{band}_BKG",
                 f"Extension name for {band} BKG",
             ),
