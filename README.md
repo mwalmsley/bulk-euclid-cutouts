@@ -12,3 +12,27 @@ There are actually two pipelines, with many utils shared by both:
 These were developed for [Galaxy Zoo Euclid](https://www.esa.int/Science_Exploration/Space_Science/Euclid/Euclid_Galaxy_Zoo_help_us_classify_the_shapes_of_galaxies) and strong lensing, respectively.
 
 Help wanted. Let's build a pipeline that works for many projects. Contact Mike Walmsley ([m.walmsley@utoronto.ca](emailto:m.walmsley@utoronto.ca))
+
+## Quick Install Instructions on Datalabs
+
+Create a GitHub personal access token and save it somewhere. You will need it to clone this private repo.
+
+Create a Datalab with jl-euclid environment
+
+Open a terminal via Jupyter (NOT within a notebook). Navigate to the folder into which you want to clone this repo
+
+    git clone git@github.com:mwalmsley/bulk-euclid-cutouts.git
+    cd bulk-euclid-cutouts
+    git checkout external-targets
+
+Install a few missing dependencies (omegaconf, sklearn)
+
+    conda activate euclid-tools
+    pip install -e .
+
+Now you can open the notebook (`bulk_euclid/external_targets/notebook_version.ipynb`) and it should run with no further setup. 
+
+You might want to change the configuration options (`cfg_dict`, near the top of the notebook), for example
+
+- `base_dir` (the location where all data is saved from all pipeline runs)
+- `name` (the subdirectory within `base_dir` where the data from this pipeline run is saved).
