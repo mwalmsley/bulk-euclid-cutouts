@@ -102,16 +102,16 @@ def get_matching_tiles(
         within_dec = (close_tiles["dec_min"] < target["target_dec"]) & (
             target["target_dec"] < close_tiles["dec_max"]
         )
-        logging.info(f'Target within tile FoV: RA: {within_ra.sum()} of {len(target_tiles)}, Dec: {within_dec.sum()} of {len(target_tiles)}')
+        logging.info(f'Target within tile FoV: RA: {within_ra.sum()} of {len(close_tiles)}, Dec: {within_dec.sum()} of {len(close_tiles)}')
         close_tiles = close_tiles[within_ra & within_dec]
 
         # pick the first tile that's within the FoV
         # TODO here we could apply a rule to pick according to release name priority
 
         if len(close_tiles) > 0:
-            target_tile = close_tiles.iloc[0]
-            logging.info(f"Target {target_n} matched to tile {target_tile['tile_index']}")
-            external_targets.loc[target_n, "tile_index"] = target_tile["tile_index"]
+            chosen_tile_index = close_tiles.iloc[0]['tile_index']
+            logging.info(f"Target {target_n} matched to tile {chosen_tile_index}")
+            external_targets.loc[target_n, "tile_index"] = chosen_tile_index
 
         # logging.info(
         #     f'Targets within tile FoV: {target_tiles["within_tile"].sum()} of {len(target_tiles)}'
