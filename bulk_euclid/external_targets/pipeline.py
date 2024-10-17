@@ -85,39 +85,65 @@ def get_matching_tiles(
 
     # use KDTree to quickly find the closest tile to each target
     tile_kdtree = KDTree(tiles[["ra", "dec"]].values)  # coordinates of the tile centers
-    target_coords = external_targets[["target_ra", "target_dec"]].values
-    tile_indices = tile_kdtree.query(target_coords, k=1, return_distance=False)
-    tile_indices = tile_indices[:, 0]
-    assert len(tile_indices) == len(external_targets)
+
+    logging.info('Begin target/tile cross-match')
+    for target_n, target in external_targets.iterrows():
+        # query for all tiles within 30 arcminutes of the target
+        close_tile_indices = tile_kdtree.query_radius(target[['target_ra', 'target_dec']].values.reshape(1, -1), r=0.5)[0]  # 0 for first row, all results
+        logging.info(close_tile_indices)
+
+        close_tiles = tiles.iloc[close_tile_indices]
+
+        # check which close tiles are actually within the FoV
+        # this will fail for tiles on the RA flip boundary, but none yet TODO
+        within_ra = (close_tiles["ra_min"] < target["target_ra"]) & (
+            target["target_ra"] < close_tiles["ra_max"]
+        )
+        within_dec = (close_tiles["dec_min"] < target["target_dec"]) & (
+            target["target_dec"] < close_tiles["dec_max"]
+        )
+        logging.info(f'Target within tile FoV: RA: {within_ra.sum()} of {len(target_tiles)}, Dec: {within_dec.sum()} of {len(target_tiles)}')
+        close_tiles = close_tiles[within_ra & within_dec]
+
+        # pick the first tile that's within the FoV
+        # TODO here we could apply a rule to pick according to release name priority
+
+        if len(close_tiles) > 0:
+            target_tile = close_tiles.iloc[0]
+            logging.info(f"Target {target_n} matched to tile {target_tile['tile_index']}")
+            external_targets.loc[target_n, "tile_index"] = target_tile["tile_index"]
+
+        # logging.info(
+        #     f'Targets within tile FoV: {target_tiles["within_tile"].sum()} of {len(target_tiles)}'
+        # )
+
+    # target_coords = external_targets[["target_ra", "target_dec"]].values
+    # tile_indices = tile_kdtree.query(target_coords, k=1, return_distance=False)
+    # tile_indices = tile_indices[:, 0]
+    # assert len(tile_indices) == len(external_targets)
     # the numeric index (0, 1, ...) of the closest tile to each target
     # (not related to the tile_index column, confusingly)
 
     # pick out the closest matching tile for each target
-    target_tiles = tiles.iloc[tile_indices].copy()
-    target_tiles = target_tiles.reset_index(drop=True)  # use the new numeric order
-    # stick together
-    target_tiles = pd.concat([target_tiles, external_targets], axis=1)
-    assert len(target_tiles) == len(external_targets)
+    # target_tiles = tiles.iloc[tile_indices].copy()
+    # target_tiles = target_tiles.reset_index(drop=True)  # use the new numeric order
+    # # stick together
+    # target_tiles = pd.concat([target_tiles, external_targets], axis=1)
+    # assert len(target_tiles) == len(external_targets)
 
-    # check if target is within tile FoV
-    # this will fail for tiles on the RA flip boundary, but none yet TODO
-    within_ra = (target_tiles["ra_min"] < target_tiles["target_ra"]) & (
-        target_tiles["target_ra"] < target_tiles["ra_max"]
-    )
-    within_dec = (target_tiles["dec_min"] < target_tiles["target_dec"]) & (
-        target_tiles["target_dec"] < target_tiles["dec_max"]
-    )
-    logging.info(target_tiles['dec_min'])
-    logging.info(target_tiles['target_dec'])
-    logging.info(target_tiles['dec_max'])
-    logging.info(f'Target within tile FoV: RA: {within_ra.sum()} of {len(target_tiles)}, Dec: {within_dec.sum()} of {len(target_tiles)}')
-    target_tiles["within_tile"] = within_ra & within_dec
-    logging.info(
-        f'Targets within tile FoV: {target_tiles["within_tile"].sum()} of {len(target_tiles)}'
-    )
+
+    # logging.info(target_tiles['dec_min'])
+    # logging.info(target_tiles['target_dec'])
+    # logging.info(target_tiles['dec_max'])
+
 
     # filter to only those tiles
-    target_tiles = target_tiles[target_tiles["within_tile"]]
+    # target_tiles = target_tiles[target_tiles["within_tile"]]
+
+    logging.info(f'Matched {len(external_targets)} targets to {len(external_targets["tile_index"].unique())} tiles')
+    external_targets = external_targets.dropna('tile_index')
+    logging.info(f'Targets with tile matches: {len(external_targets)}')
+    
     assert len(target_tiles) > 0, "No targets within FoV of any tiles, likely a bug"
     # simplify/explicit for export
     target_tiles = target_tiles[
