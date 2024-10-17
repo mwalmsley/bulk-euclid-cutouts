@@ -86,6 +86,13 @@ def get_matching_tiles(
     # use KDTree to quickly find the closest tile to each target
     tile_kdtree = KDTree(tiles[["ra", "dec"]].values)  # coordinates of the tile centers
 
+    # e.g. ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', 'F-003_240612' , 'F-006']
+    if cfg.release_priority is None:
+        release_priority_key is None
+    else:
+        release_priority_key = dict(zip(cfg.release_priority, range(len(cfg.release_priority))))
+        # e.g. {'CALBLOCK_PV-005_R2': 0, 'CALBLOCK_PV-005_R3': 1, ...}
+
     logging.info('Begin target/tile cross-match')
     for target_n, target in external_targets.iterrows():
         # query for all tiles within one degree of target
@@ -104,11 +111,22 @@ def get_matching_tiles(
             )
             close_tiles = close_tiles[within_ra & within_dec]
 
-            # pick the first tile that's within the FoV
+            # 
             # TODO here we could apply a rule to pick according to release name priority
 
             if len(close_tiles) > 0:
-                chosen_tile_index = close_tiles.iloc[0]['tile_index']
+                # we have at least one tile within the FoV, which should we use?
+
+                if release_priority_key is None:  
+                    # user did not set a priority order for the tiles in cfg.release_priority
+                    # just pick the first tile that's within the FoV
+                    chosen_tile_index = close_tiles.iloc[0]['tile_index']
+                else:
+                    # pick in order of release priority
+                    # if the release is not recognised, it gets a priority of -1 (lowest)
+                    # higher priority is a higher number (higher index in cfg.release_priority)
+                    # after sorting (ascending) by release priority, pick the last one for tile with the highest priority
+                    chosen_tile_index = close_tiles.sort_values(by='release_name', key=lambda x: release_priority_key.get(x, -1))['tile_index'].iloc[-1]
                 external_targets.loc[target_n, "tile_index"] = chosen_tile_index
 
 
@@ -413,6 +431,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
     """
 
     header_hdu = fits.PrimaryHDU()
+    which_extension = 1
 
     hdu_list = [header_hdu]
 
@@ -428,6 +447,16 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
             data=cutout_flux.data, name=f"{cutout_flux}_FLUX", header=flux_header
         )
         hdu_list.append(flux_hdu)
+        # and update the primary header
+        header_hdu.header.append(
+            (
+                f"EXTNAME{which_extension}",
+                f"{band}_FLUX",
+                f"Extension name for {band} flux",
+            ),
+            end=True,
+        )
+        which_extension +=1
 
         # TODO this is a bit lazy/repetitive, could be refactored
 
@@ -446,6 +475,15 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 data=cutout_psf.data, name="MERPSF", header=psf_header
             )
             hdu_list.append(psf_hdu)
+            header_hdu.header.append(
+            (
+                f"EXTNAME{which_extension}",
+                f"{band}_PSF",
+                f"Extension name for {band} PSF",
+            ),
+            end=True,
+        )
+        which_extension +=1
 
         if "MERRMS" in cfg.auxillary_products:
             cutout_rms = band_data["MERRMS"]
@@ -460,6 +498,15 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
             )
             rms_hdu = fits.ImageHDU(data=cutout_rms.data, name="MERRMS")
             hdu_list.append(rms_hdu)
+            header_hdu.header.append(
+            (
+                f"EXTNAME{which_extension}",
+                f"{band}_RMS",
+                f"Extension name for {band} RMS",
+            ),
+            end=True,
+        )
+        which_extension +=1
 
         if "MERBKG" in cfg.auxillary_products:
             cutout_bkg = band_data["MERBKG"]
@@ -474,6 +521,15 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
             )
             bkg_hdu = fits.ImageHDU(data=cutout_bkg.data, name="MERBKG")
             hdu_list.append(bkg_hdu)
+            header_hdu.header.append(
+            (
+                f"EXTNAME{which_extension}",
+                f"{band}_BKG",
+                f"Extension name for {band} BKG",
+            ),
+            end=True,
+        )
+        which_extension +=1
 
     hdul = fits.HDUList(hdu_list)
 
