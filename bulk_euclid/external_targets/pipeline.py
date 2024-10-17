@@ -141,7 +141,7 @@ def get_matching_tiles(
     # target_tiles = target_tiles[target_tiles["within_tile"]]
 
     logging.info(f'Matched {len(external_targets)} targets to {len(external_targets["tile_index"].unique())} tiles')
-    targets_with_tiles = targets_with_tiles.dropna(subset=['tile_index'])
+    targets_with_tiles = external_targets.dropna(subset=['tile_index'])
     logging.info(f'Targets with tile matches: {len(targets_with_tiles)}')
     
     assert len(targets_with_tiles) > 0, "No targets within FoV of any tiles, likely a bug"
