@@ -141,18 +141,18 @@ def get_matching_tiles(
     # target_tiles = target_tiles[target_tiles["within_tile"]]
 
     logging.info(f'Matched {len(external_targets)} targets to {len(external_targets["tile_index"].unique())} tiles')
-    external_targets = external_targets.dropna(subset=['tile_index'])
-    logging.info(f'Targets with tile matches: {len(external_targets)}')
+    targets_with_tiles = targets_with_tiles.dropna(subset=['tile_index'])
+    logging.info(f'Targets with tile matches: {len(targets_with_tiles)}')
     
-    assert len(target_tiles) > 0, "No targets within FoV of any tiles, likely a bug"
+    assert len(targets_with_tiles) > 0, "No targets within FoV of any tiles, likely a bug"
     # simplify/explicit for export
-    target_tiles = target_tiles[
-        ["tile_index", "id_str", "target_ra", "target_dec", "target_field_of_view"]
-    ]
-    assert len(target_tiles) > 0
+    # targets_with_tiles = targets_with_tiles[
+    #     ["tile_index", "id_str", "target_ra", "target_dec", "target_field_of_view"]
+    # ]
+    assert len(targets_with_tiles) > 0
 
     # target tiles says which tile (index) to use for each target
-    return target_tiles
+    return targets_with_tiles
 
 
 def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
