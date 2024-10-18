@@ -390,18 +390,21 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
             # ends up off center for some reason?
             # WCS used only to have a convenient header for the output file
-            psf_cutout = Cutout2D(
-                data=psf_tile,
-                position=(closest_psf["x_center"], closest_psf["y_center"]),
-                size=stamp_size,
-                wcs=psf_wcs,
-                mode="partial",
-            ).data
+
+            # psf_cutout = Cutout2D(
+            #     data=psf_tile,
+            #     position=(closest_psf["x_center"], closest_psf["y_center"]),
+            #     size=stamp_size,
+            #     wcs=psf_wcs,
+            #     mode="partial",
+            # ).data
+
             # could alternatively use the RA/DEC
             # psf_cutout = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
 
             # unlike the others, this is a pure array, not a Cutout2D
-            # psf_cutout = cutout_psf_manually(psf_tile, closest_psf["x_center"], closest_psf["y_center"], cutout_size=stamp_size)
+            psf_cutout = cutout_psf_manually(psf_tile, closest_psf["x_center"], closest_psf["y_center"], cutout_size=stamp_size)
+            
 
             cutout_data_for_target["MERPSF"] = psf_cutout
 
