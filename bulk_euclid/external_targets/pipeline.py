@@ -243,7 +243,7 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
             **these_aux_locs,
         }
 
-    logging.info(f"Downloaded flux+auxillary tiles: {dict_of_locs}")
+    logging.debug(f"Downloaded flux+auxillary tiles: {dict_of_locs}")
     return dict_of_locs
 
 
