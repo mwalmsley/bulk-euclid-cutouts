@@ -396,12 +396,12 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
                 size=stamp_size,
                 wcs=psf_wcs,
                 mode="partial",
-            )
+            ).data
             # could alternatively use the RA/DEC
-            # cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
+            # psf_cutout = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
 
             # unlike the others, this is a pure array, not a Cutout2D
-            psf_cutout = cutout_psf_manually(psf_tile, closest_psf["x_center"], closest_psf["y_center"], cutout_size=stamp_size)
+            # psf_cutout = cutout_psf_manually(psf_tile, closest_psf["x_center"], closest_psf["y_center"], cutout_size=stamp_size)
 
             cutout_data_for_target["MERPSF"] = psf_cutout
 
