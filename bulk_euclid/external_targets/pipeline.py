@@ -404,7 +404,7 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
             # unlike the others, this is a pure array, not a Cutout2D
             psf_cutout = cutout_psf_manually(psf_tile, closest_psf["x_center"], closest_psf["y_center"], cutout_size=stamp_size)
-            
+
 
             cutout_data_for_target["MERPSF"] = psf_cutout
 
@@ -600,11 +600,11 @@ def cutout_psf_manually(psf_grid, x_center, y_center, cutout_size):
         y_start = 0
     if y_end > psf_grid.shape[0]:
         y_end = psf_grid.shape[0]
-    logging.info(f'before edge: {y_start} {y_end}, {x_start} {x_end}')
+    # logging.debug(f'before edge: {y_start} {y_end}, {x_start} {x_end}')
 
     # make the slice
 
-    logging.info(f'first: {y_start} {y_end}, {x_start} {x_end}')
+    # logging.debug(f'first: {y_start} {y_end}, {x_start} {x_end}')
     cutout = psf_grid[y_start:y_end, x_start:x_end]
 
     # find the maxima
@@ -622,7 +622,7 @@ def cutout_psf_manually(psf_grid, x_center, y_center, cutout_size):
     x_end = int(x_center + cutout_size / 2)
     y_start = int(y_center - cutout_size / 2)
     y_end = int(y_center + cutout_size / 2)
-    logging.info(f'second: {y_start} {y_end}, {x_start} {x_end}')
+    # logging.debug(f'second: {y_start} {y_end}, {x_start} {x_end}')
     cutout = psf_grid[y_start:y_end, x_start:x_end]
 
     return cutout
