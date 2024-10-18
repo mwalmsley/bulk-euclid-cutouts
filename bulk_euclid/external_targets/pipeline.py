@@ -245,7 +245,7 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
         }
 
     logging.debug(f"Downloaded flux+auxillary tiles: {dict_of_locs}")
-    assert len(dict_of_locs.keys()) == cfg.bands, f"Missing bands in downloaded data: {dict_of_locs.keys()}"
+    assert len(dict_of_locs.keys()) == cfg.bands, f"Missing bands in downloaded data: {len(dict_of_locs.keys())} of {len(cfg.bands)} keys, {dict_of_locs.keys()} vs {cfg.bands}"
     return dict_of_locs
 
 
