@@ -442,6 +442,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         band_data = target_data[band]
         cutout_flux = band_data["FLUX"]
         flux_header = cutout_flux.wcs.to_header()
+        flux_header['EXTNAME'] = 'FLUX'
         flux_header.append(
             ("FILTER", band, "Euclid filter for flux image"),
             end=True,
@@ -466,6 +467,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         if "MERPSF" in cfg.auxillary_products:
             cutout_psf = band_data["MERPSF"]
             psf_header = cutout_psf.wcs.to_header()
+            psf_header['EXTNAME'] = 'MERPSF'
             psf_header.append(
                 (
                     "FILTER",
@@ -491,6 +493,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         if "MERRMS" in cfg.auxillary_products:
             cutout_rms = band_data["MERRMS"]
             rms_header = cutout_rms.wcs.to_header()
+            rms_header['EXTNAME'] = 'MERPSF'
             rms_header.append(
                 (
                     "FILTER",
@@ -499,7 +502,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 ),
                 end=True,
             )
-            rms_hdu = fits.ImageHDU(data=cutout_rms.data, name="MERRMS")
+            rms_hdu = fits.ImageHDU(data=cutout_rms.data, name=band+"_RMS") # TODO changed
             hdu_list.append(rms_hdu)
             header_hdu.header.append(
             (
@@ -514,6 +517,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         if "MERBKG" in cfg.auxillary_products:
             cutout_bkg = band_data["MERBKG"]
             bkg_header = cutout_bkg.wcs.to_header()
+            bkg_header['EXTNAME'] = 'MERBKG'
             bkg_header.append(
                 (
                     "FILTER",
@@ -564,3 +568,45 @@ def create_folders(cfg: OmegaConf):
             os.makedirs(d)
 
     return cfg
+
+
+
+def cutout_psf_manually(psf_grid, x_center, y_center, cutout_size):
+    #cutout is the size of the image cutout to search for the PSFs in that space
+    x_start = int(round(x_center - psf_grid / 2))
+    x_end = x_start + psf_grid
+    y_start = int(round(y_center - psf_grid / 2))
+    y_end = y_start + psf_grid
+
+    # avoid edge effects (possibly not needed)
+    if x_start < 0:
+        x_start = 0
+    if x_end > psf_grid.shape[1]:
+        x_end = psf_grid.shape[1]
+    if y_start < 0:
+        y_start = 0
+    if y_end > psf_grid.shape[0]:
+        y_end = psf_grid.shape[0]
+
+    # make the slice
+
+    cutout = psf_grid[y_start:y_end, x_start:x_end]
+
+    # find the maxima
+    max_y_local, max_x_local = np.unravel_index(np.argmax(cutout), cutout.shape)
+    max_x_global = x_start + max_x_local
+    max_y_global = y_start + max_y_local
+    brightest_pixels = [max_x_global, max_y_global]
+
+    # update x_center and y_center to the actual brightest pixels
+    x_center = brightest_pixels[0]
+    y_center = brightest_pixels[1]
+
+    # make the slice AGAIN
+    x_start = int(x_center - cutout_size / 2)
+    x_end = int(x_center + cutout_size / 2)
+    y_start = int(y_center - cutout_size / 2)
+    y_end = int(y_center + cutout_size / 2)
+    cutout = psf_grid[y_start:y_end, x_start:x_end]
+
+    return cutout
