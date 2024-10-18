@@ -597,9 +597,11 @@ def cutout_psf_manually(psf_grid, x_center, y_center, cutout_size):
         y_start = 0
     if y_end > psf_grid.shape[0]:
         y_end = psf_grid.shape[0]
+    logging.info(f'before edge: {y_start} {y_end}, {x_start} {x_end}')
 
     # make the slice
 
+    logging.info(f'first: {y_start} {y_end}, {x_start} {x_end}')
     cutout = psf_grid[y_start:y_end, x_start:x_end]
 
     # find the maxima
@@ -617,6 +619,7 @@ def cutout_psf_manually(psf_grid, x_center, y_center, cutout_size):
     x_end = int(x_center + cutout_size / 2)
     y_start = int(y_center - cutout_size / 2)
     y_end = int(y_center + cutout_size / 2)
+    logging.info(f'second: {y_start} {y_end}, {x_start} {x_end}')
     cutout = psf_grid[y_start:y_end, x_start:x_end]
 
     return cutout
