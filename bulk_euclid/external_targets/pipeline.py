@@ -398,6 +398,10 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
             )
             # could alternatively use the RA/DEC
             # cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
+
+            # unlike the others, this is a pure array, not a Cutout2D
+            psf_cutout = cutout_psf_manually(psf_tile, closest_psf["x_center"], closest_psf["y_center"], cutout_size=2*stamp_size)
+
             cutout_data_for_target["MERPSF"] = psf_cutout
 
         cutout_data.append(cutout_data_for_target)
@@ -470,8 +474,9 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
 
         if "MERPSF" in cfg.auxillary_products:
             cutout_psf = band_data["MERPSF"]
-            psf_header = cutout_psf.wcs.to_header()
+            # psf_header = cutout_psf.wcs.to_header()
             # psf_header['EXTNAME'] = 'MERPSF'
+            psf_header = fits.Header()  # blank
             psf_header.append(
                 (
                     "FILTER",
@@ -481,7 +486,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 end=True,
             )
             psf_hdu = fits.ImageHDU(
-                data=cutout_psf.data, name=band+"_PSF", header=psf_header
+                data=cutout_psf, name=band+"_PSF", header=psf_header  # NOT .data any more
             )
             hdu_list.append(psf_hdu)
             header_hdu.header.append(

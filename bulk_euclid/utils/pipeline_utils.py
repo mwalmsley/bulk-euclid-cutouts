@@ -129,7 +129,7 @@ def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limit
     df = job.get_results().to_pandas()
     
     assert len(df) > 0, 'No results for query with: \n' + query_str
-    logging.info("Found", len(df), " query results")
+    logging.info(f"Found {len(df)} query results")
     return df
 
 
