@@ -443,6 +443,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         cutout_flux = band_data["FLUX"]
         flux_header = cutout_flux.wcs.to_header()
         flux_header['EXTNAME'] = 'FLUX'
+        flux_header.set('EXTNAME', 'FLUX')
         flux_header.append(
             ("FILTER", band, "Euclid filter for flux image"),
             end=True,
