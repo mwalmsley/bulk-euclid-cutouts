@@ -583,10 +583,10 @@ def create_folders(cfg: OmegaConf):
 
 def cutout_psf_manually(psf_grid, x_center, y_center, cutout_size):
     #cutout is the size of the image cutout to search for the PSFs in that space
-    x_start = int(round(x_center - psf_grid / 2))
-    x_end = x_start + psf_grid
-    y_start = int(round(y_center - psf_grid / 2))
-    y_end = y_start + psf_grid
+    x_start = int(round(x_center - cutout_size / 2))
+    x_end = x_start + cutout_size
+    y_start = int(round(y_center - cutout_size / 2))
+    y_end = y_start + cutout_size
 
     # avoid edge effects (possibly not needed)
     if x_start < 0:
