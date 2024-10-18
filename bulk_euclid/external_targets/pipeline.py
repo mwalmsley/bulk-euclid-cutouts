@@ -168,16 +168,17 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
         try:
             dict_of_locs = download_all_data_at_tile_index(cfg, tile_index)
             logging.info(f"Downloaded: {dict_of_locs}")
+
+            targets_at_that_index = targets_with_tiles.query(f"tile_index == {tile_index}").reset_index(drop=True)
+
+            save_cutouts_for_all_targets_in_that_tile(
+                cfg, dict_of_locs, targets_at_that_index
+            )
+
         except AssertionError as e:
-            logging.critical(f"Error downloading tile data for {tile_index}")
+            logging.critical(f"Error downloading tile data and making cutouts for {tile_index}")
             logging.critical(e)
-            raise e
 
-        targets_at_that_index = targets_with_tiles.query(f"tile_index == {tile_index}").reset_index(drop=True)
-
-        save_cutouts_for_all_targets_in_that_tile(
-            cfg, dict_of_locs, targets_at_that_index
-        )
 
 
 def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
@@ -244,6 +245,7 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
         }
 
     logging.debug(f"Downloaded flux+auxillary tiles: {dict_of_locs}")
+    assert len(dict_of_locs.keys()) == cfg.bands, f"Missing bands in downloaded data: {dict_of_locs.keys()}"
     return dict_of_locs
 
 
