@@ -442,14 +442,15 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         band_data = target_data[band]
         cutout_flux = band_data["FLUX"]
         flux_header = cutout_flux.wcs.to_header()
-        flux_header['EXTNAME'] = 'FLUX'
-        flux_header.set('EXTNAME', 'FLUX')
+        # flux_header['EXTNAME'] = 'FLUX'
+        # flux_header.set('EXTNAME', 'FLUX')
         flux_header.append(
             ("FILTER", band, "Euclid filter for flux image"),
             end=True,
         )
+        # print(repr(flux_header)) 
         flux_hdu = fits.ImageHDU(
-            data=cutout_flux.data, name=f"{cutout_flux}_FLUX", header=flux_header
+            data=cutout_flux.data, name=f"{band}_FLUX", header=flux_header
         )
         hdu_list.append(flux_hdu)
         # and update the primary header
@@ -468,7 +469,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         if "MERPSF" in cfg.auxillary_products:
             cutout_psf = band_data["MERPSF"]
             psf_header = cutout_psf.wcs.to_header()
-            psf_header['EXTNAME'] = 'MERPSF'
+            # psf_header['EXTNAME'] = 'MERPSF'
             psf_header.append(
                 (
                     "FILTER",
@@ -478,7 +479,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 end=True,
             )
             psf_hdu = fits.ImageHDU(
-                data=cutout_psf.data, name="MERPSF", header=psf_header
+                data=cutout_psf.data, name=band+"_PSF", header=psf_header
             )
             hdu_list.append(psf_hdu)
             header_hdu.header.append(
@@ -494,7 +495,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         if "MERRMS" in cfg.auxillary_products:
             cutout_rms = band_data["MERRMS"]
             rms_header = cutout_rms.wcs.to_header()
-            rms_header['EXTNAME'] = 'MERPSF'
+            # rms_header['EXTNAME'] = 'MERPSF'
             rms_header.append(
                 (
                     "FILTER",
@@ -518,7 +519,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         if "MERBKG" in cfg.auxillary_products:
             cutout_bkg = band_data["MERBKG"]
             bkg_header = cutout_bkg.wcs.to_header()
-            bkg_header['EXTNAME'] = 'MERBKG'
+            # bkg_header['EXTNAME'] = 'MERBKG'
             bkg_header.append(
                 (
                     "FILTER",
@@ -527,7 +528,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 ),
                 end=True,
             )
-            bkg_hdu = fits.ImageHDU(data=cutout_bkg.data, name="MERBKG")
+            bkg_hdu = fits.ImageHDU(data=cutout_bkg.data, name=band+"_BKG")
             hdu_list.append(bkg_hdu)
             header_hdu.header.append(
             (
