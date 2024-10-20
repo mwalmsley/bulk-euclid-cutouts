@@ -281,7 +281,11 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
         save_loc = os.path.join(
             cfg.fits_dir, str(target["tile_index"]), str(target["id_str"]) + ".fits"
         )
-        save_multifits_cutout(cfg, target_data, save_loc)
+        try:
+            save_multifits_cutout(cfg, target_data, save_loc)
+        except AssertionError as e:
+            logging.critical(f"Error saving cutout for target {target['id_str']}")
+            logging.critical(e)
 
 
 def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, targets_at_that_index: pd.DataFrame) -> dict:
@@ -459,6 +463,9 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
             end=True,
         )
         # print(repr(flux_header)) 
+
+        # sanity check
+        assert cutout_flux.data.min() < cutout_flux.data.max(), f"{os.path.basename(save_loc)}: Flux in {band} data is empty, likely a SAS error"
         flux_hdu = fits.ImageHDU(
             data=cutout_flux.data, name=f"{band}_FLUX", header=flux_header
         )
@@ -489,6 +496,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 ),
                 end=True,
             )
+            assert cutout_psf.data.min() < cutout_psf.data.max(), f"{os.path.basename(save_loc)}: PSF in {band} data is empty, likely a SAS error"
             psf_hdu = fits.ImageHDU(
                 data=cutout_psf, name=band+"_PSF", header=psf_header  # NOT .data any more
             )
@@ -515,6 +523,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 ),
                 end=True,
             )
+            assert cutout_rms.data.min() < cutout_rms.data.max(), f"{os.path.basename(save_loc)}: RMS in {band} data is empty, likely a SAS error"
             rms_hdu = fits.ImageHDU(data=cutout_rms.data, name=band+"_RMS") # TODO changed
             hdu_list.append(rms_hdu)
             header_hdu.header.append(
@@ -539,6 +548,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 ),
                 end=True,
             )
+            assert cutout_bkg.data.min() < cutout_bkg.data.max(), f"{os.path.basename(save_loc)}: BKG in {band} data is empty, likely a SAS error"
             bkg_hdu = fits.ImageHDU(data=cutout_bkg.data, name=band+"_BKG")
             hdu_list.append(bkg_hdu)
             header_hdu.header.append(
