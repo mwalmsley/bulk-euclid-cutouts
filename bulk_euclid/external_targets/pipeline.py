@@ -465,7 +465,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         # print(repr(flux_header)) 
 
         # sanity check
-        assert cutout_flux.data.min() < cutout_flux.data.max(), f"{os.path.basename(save_loc)}: Flux in {band} data is empty, likely a SAS error"
+        assert cutout_flux.data.nanmin() < cutout_flux.data.nanmax(), f"{os.path.basename(save_loc)}: Flux in {band} data is empty, likely a SAS error"
         flux_hdu = fits.ImageHDU(
             data=cutout_flux.data, name=f"{band}_FLUX", header=flux_header
         )
