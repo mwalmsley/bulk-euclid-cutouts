@@ -496,7 +496,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 ),
                 end=True,
             )
-            assert cutout_psf.data.min() < cutout_psf.data.max(), f"{os.path.basename(save_loc)}: PSF in {band} data is empty, likely a SAS error"
+            assert cutout_psf.min() < cutout_psf.max(), f"{os.path.basename(save_loc)}: PSF in {band} data is empty, likely a SAS error"
             psf_hdu = fits.ImageHDU(
                 data=cutout_psf, name=band+"_PSF", header=psf_header  # NOT .data any more
             )
