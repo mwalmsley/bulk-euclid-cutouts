@@ -168,16 +168,17 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
         try:
             dict_of_locs = download_all_data_at_tile_index(cfg, tile_index)
             logging.debug(f"Downloaded: {dict_of_locs}")
+
+            targets_at_that_index = targets_with_tiles.query(f"tile_index == {tile_index}").reset_index(drop=True)
+
+            save_cutouts_for_all_targets_in_that_tile(
+                cfg, dict_of_locs, targets_at_that_index
+            )
+
         except AssertionError as e:
-            logging.critical(f"Error downloading tile data for {tile_index}")
+            logging.critical(f"Error downloading tile data and making cutouts for {tile_index}")
             logging.critical(e)
-            raise e
 
-        targets_at_that_index = targets_with_tiles.query(f"tile_index == {tile_index}").reset_index(drop=True)
-
-        save_cutouts_for_all_targets_in_that_tile(
-            cfg, dict_of_locs, targets_at_that_index
-        )
 
 
 def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
@@ -243,7 +244,9 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
             **these_aux_locs,
         }
 
-    logging.info(f"Downloaded flux+auxillary tiles: {dict_of_locs}")
+    logging.debug(f"Downloaded flux+auxillary tiles: {dict_of_locs}")
+    # assert len(dict_of_locs.keys()) == cfg.bands, f"Missing bands in downloaded data: {len(dict_of_locs.keys())} of {len(cfg.bands)} keys, {dict_of_locs.keys()} vs {cfg.bands}"
+    assert set(cfg.bands) == set(dict_of_locs.keys()), f'Downloaded bands dont match expected bands: downloaded {set(dict_of_locs.keys())}, expected {set(cfg.bands)}'
     return dict_of_locs
 
 
@@ -278,7 +281,11 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
         save_loc = os.path.join(
             cfg.fits_dir, str(target["tile_index"]), str(target["id_str"]) + ".fits"
         )
-        save_multifits_cutout(cfg, target_data, save_loc)
+        try:
+            save_multifits_cutout(cfg, target_data, save_loc)
+        except AssertionError as e:
+            logging.critical(f"Error saving cutout for target {target['id_str']}")
+            logging.critical(e)
 
 
 def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, targets_at_that_index: pd.DataFrame) -> dict:
@@ -387,15 +394,22 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
             # ends up off center for some reason?
             # WCS used only to have a convenient header for the output file
-            psf_cutout = Cutout2D(
-                data=psf_tile,
-                position=(closest_psf["x_center"], closest_psf["y_center"]),
-                size=stamp_size,
-                wcs=psf_wcs,
-                mode="partial",
-            )
+
+            # psf_cutout = Cutout2D(
+            #     data=psf_tile,
+            #     position=(closest_psf["x_center"], closest_psf["y_center"]),
+            #     size=stamp_size,
+            #     wcs=psf_wcs,
+            #     mode="partial",
+            # ).data
+
             # could alternatively use the RA/DEC
-            # cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
+            # psf_cutout = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
+
+            # unlike the others, this is a pure array, not a Cutout2D
+            psf_cutout = cutout_psf_manually(psf_tile, closest_psf["x_center"], closest_psf["y_center"], cutout_size=stamp_size)
+
+
             cutout_data_for_target["MERPSF"] = psf_cutout
 
         cutout_data.append(cutout_data_for_target)
@@ -442,12 +456,18 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         band_data = target_data[band]
         cutout_flux = band_data["FLUX"]
         flux_header = cutout_flux.wcs.to_header()
+        # flux_header['EXTNAME'] = 'FLUX'
+        # flux_header.set('EXTNAME', 'FLUX')
         flux_header.append(
             ("FILTER", band, "Euclid filter for flux image"),
             end=True,
         )
+        # print(repr(flux_header)) 
+
+        # sanity check
+        assert np.nanmin(cutout_flux.data) < np.nanmax(cutout_flux.data), f"{os.path.basename(save_loc)}: Flux in {band} data is empty, likely a SAS error"
         flux_hdu = fits.ImageHDU(
-            data=cutout_flux.data, name=f"{cutout_flux}_FLUX", header=flux_header
+            data=cutout_flux.data, name=f"{band}_FLUX", header=flux_header
         )
         hdu_list.append(flux_hdu)
         # and update the primary header
@@ -465,7 +485,9 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
 
         if "MERPSF" in cfg.auxillary_products:
             cutout_psf = band_data["MERPSF"]
-            psf_header = cutout_psf.wcs.to_header()
+            # psf_header = cutout_psf.wcs.to_header()
+            # psf_header['EXTNAME'] = 'MERPSF'
+            psf_header = fits.Header()  # blank
             psf_header.append(
                 (
                     "FILTER",
@@ -474,8 +496,9 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 ),
                 end=True,
             )
+            assert cutout_psf.min() < cutout_psf.max(), f"{os.path.basename(save_loc)}: PSF in {band} data is empty, likely a SAS error"
             psf_hdu = fits.ImageHDU(
-                data=cutout_psf.data, name="MERPSF", header=psf_header
+                data=cutout_psf, name=band+"_PSF", header=psf_header  # NOT .data any more
             )
             hdu_list.append(psf_hdu)
             header_hdu.header.append(
@@ -485,12 +508,13 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 f"Extension name for {band} PSF",
             ),
             end=True,
-        )
-        which_extension +=1
+            )
+            which_extension +=1
 
         if "MERRMS" in cfg.auxillary_products:
             cutout_rms = band_data["MERRMS"]
             rms_header = cutout_rms.wcs.to_header()
+            # rms_header['EXTNAME'] = 'MERPSF'
             rms_header.append(
                 (
                     "FILTER",
@@ -499,7 +523,8 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 ),
                 end=True,
             )
-            rms_hdu = fits.ImageHDU(data=cutout_rms.data, name="MERRMS")
+            assert cutout_rms.data.min() < cutout_rms.data.max(), f"{os.path.basename(save_loc)}: RMS in {band} data is empty, likely a SAS error"
+            rms_hdu = fits.ImageHDU(data=cutout_rms.data, name=band+"_RMS") # TODO changed
             hdu_list.append(rms_hdu)
             header_hdu.header.append(
             (
@@ -508,12 +533,13 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 f"Extension name for {band} RMS",
             ),
             end=True,
-        )
-        which_extension +=1
+            )
+            which_extension +=1
 
         if "MERBKG" in cfg.auxillary_products:
             cutout_bkg = band_data["MERBKG"]
             bkg_header = cutout_bkg.wcs.to_header()
+            # bkg_header['EXTNAME'] = 'MERBKG'
             bkg_header.append(
                 (
                     "FILTER",
@@ -522,7 +548,8 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 ),
                 end=True,
             )
-            bkg_hdu = fits.ImageHDU(data=cutout_bkg.data, name="MERBKG")
+            assert cutout_bkg.data.min() < cutout_bkg.data.max(), f"{os.path.basename(save_loc)}: BKG in {band} data is empty, likely a SAS error"
+            bkg_hdu = fits.ImageHDU(data=cutout_bkg.data, name=band+"_BKG")
             hdu_list.append(bkg_hdu)
             header_hdu.header.append(
             (
@@ -531,8 +558,8 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 f"Extension name for {band} BKG",
             ),
             end=True,
-        )
-        which_extension +=1
+            )
+            which_extension +=1
 
     hdul = fits.HDUList(hdu_list)
 
@@ -564,3 +591,48 @@ def create_folders(cfg: OmegaConf):
             os.makedirs(d)
 
     return cfg
+
+
+
+def cutout_psf_manually(psf_grid, x_center, y_center, cutout_size):
+    #cutout is the size of the image cutout to search for the PSFs in that space
+    x_start = int(round(x_center - cutout_size / 2))
+    x_end = x_start + cutout_size
+    y_start = int(round(y_center - cutout_size / 2))
+    y_end = y_start + cutout_size
+
+    # avoid edge effects (possibly not needed)
+    if x_start < 0:
+        x_start = 0
+    if x_end > psf_grid.shape[1]:
+        x_end = psf_grid.shape[1]
+    if y_start < 0:
+        y_start = 0
+    if y_end > psf_grid.shape[0]:
+        y_end = psf_grid.shape[0]
+    # logging.debug(f'before edge: {y_start} {y_end}, {x_start} {x_end}')
+
+    # make the slice
+
+    # logging.debug(f'first: {y_start} {y_end}, {x_start} {x_end}')
+    cutout = psf_grid[y_start:y_end, x_start:x_end]
+
+    # find the maxima
+    max_y_local, max_x_local = np.unravel_index(np.argmax(cutout), cutout.shape)
+    max_x_global = x_start + max_x_local
+    max_y_global = y_start + max_y_local
+    brightest_pixels = [max_x_global, max_y_global]
+
+    # update x_center and y_center to the actual brightest pixels
+    x_center = brightest_pixels[0]
+    y_center = brightest_pixels[1]
+
+    # make the slice AGAIN
+    x_start = int(x_center - cutout_size / 2)
+    x_end = int(x_center + cutout_size / 2)
+    y_start = int(y_center - cutout_size / 2)
+    y_end = int(y_center + cutout_size / 2)
+    # logging.debug(f'second: {y_start} {y_end}, {x_start} {x_end}')
+    cutout = psf_grid[y_start:y_end, x_start:x_end]
+
+    return cutout
