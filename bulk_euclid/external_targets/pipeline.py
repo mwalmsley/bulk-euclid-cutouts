@@ -167,7 +167,7 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
         logging.info(f'Tile {tile_index}, {tile_n} of {len(unique_tiles)}')
         try:
             dict_of_locs = download_all_data_at_tile_index(cfg, tile_index)
-            logging.info(f"Downloaded: {dict_of_locs}")
+            logging.debug(f"Downloaded: {dict_of_locs}")
         except AssertionError as e:
             logging.critical(f"Error downloading tile data for {tile_index}")
             logging.critical(e)
