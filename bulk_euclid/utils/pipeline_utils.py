@@ -291,10 +291,11 @@ def get_auxillary_tiles(mosaic_product_oid, auxillary_products=['MERPSF', 'MERRM
     EUC_MER_BGSUB-MOSAIC-VIS_TILE102159774-FE2962_20240806T043542.352405Z_00.00.fits
     For now, take the most recent one
     """
-    df['creation_date'] = df['filename'].apply(lambda x: x.split('_')[-2])
-    df['tile_index'] = df['filename'].apply(lambda x: int(x.split('TILE')[1].split('-')[-1]))
+    df['creation_date'] = df['file_name'].apply(lambda x: x.split('_')[-2])
+    df['tile_index'] = df['file_name'].apply(lambda x: int(x.split('TILE')[1].split('-')[-1]))
     df = df.sort_values(by='creation_date', ascending=False)  # per tile, newest first
-    df = df.drop_duplicates(subset='tile_index', keep='first')
+    df = df.drop_duplicates(subset='tile_index', keep='first').reset_index(drop=True)
+    logging.info(df.iloc[0])
     return df
 
 
