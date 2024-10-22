@@ -5,7 +5,8 @@ bands: ['VIS', 'NIR_Y', 'NIR_J']
 auxillary_products: ['MERPSF', 'MERRMS']
 release_priority: ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', 'F-003_240612' , 'F-006']
 
-external_targets_loc: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline/external_targets_latest.csv'
+# external_targets_loc: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline/external_targets_latest.csv'
+external_targets_loc: '/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/LRGs_4sims_all.csv'
 
 # ignore these
 
