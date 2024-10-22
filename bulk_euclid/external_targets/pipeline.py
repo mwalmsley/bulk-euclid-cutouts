@@ -40,9 +40,18 @@ def run(cfg: OmegaConf):
     create_folders(cfg)
     pipeline_utils.login()
 
-    # with columns ['id_str', 'target_ra' (deg), 'target_dec' (deg), 'target_field_of_view' (arcsec)].
-    external_targets = pd.read_csv(cfg.external_targets_loc)
 
+    # external_targets should have columns
+    # ['id_str', 'target_ra' (deg), 'target_dec' (deg), 'target_field_of_view' (arcsec)].
+    # but it doesn't, and it has duplicates, so here's some ad hoc setup
+    external_targets = pd.read_csv(cfg.external_targets_loc)
+    external_targets = external_targets.rename(columns={'ra': 'target_ra', 'dec': 'target_dec', 'ID': 'id_str'})
+    del external_targets['Unnamed: 0']
+    external_targets['target_field_of_view'] = 20  # arcseconds
+    # TODO Karina to remove these duplicates
+    external_targets = external_targets.drop_duplicates(subset=['id_str'], keep='first')
+
+    # NOW we go!
     # matching each target with the best tile
     targets_with_tiles = get_matching_tiles(
         cfg, external_targets

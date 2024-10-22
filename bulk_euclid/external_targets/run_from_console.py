@@ -20,15 +20,6 @@ def run(cfg):
     from bulk_euclid.external_targets import pipeline
     logging.info('Import successful')
 
-    # some ad hoc setup
-
-    external_targets = pd.read_csv(cfg.external_targets_loc)
-    external_targets = external_targets.rename(columns={'ra': 'target_ra', 'dec': 'target_dec', 'ID': 'id_str'})
-    del external_targets['Unnamed: 0']
-    external_targets['target_field_of_view'] = 20  # arcseconds
-    # TODO Karina to remove these duplicates
-    external_targets = external_targets.drop_duplicates(subset=['id_str'], keep='first')
-
     pipeline.run(cfg)
 
     logging.info('Done :)')
