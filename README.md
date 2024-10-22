@@ -37,6 +37,10 @@ You might want to change the configuration options (`cfg_dict`, near the top of 
 - `base_dir` (the location where all data is saved from all pipeline runs)
 - `name` (the subdirectory within `base_dir` where the data from this pipeline run is saved).
 
+For long (hour plus) downloads, we've noticed Datalabs sometimes silently kills notebooks. Use the terminal instead. See `bulk_euclid/external_targets/run_from_console.py`.
+
+    python /media/user/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/run_from_console.py
+
 
 ## Installing locally
 

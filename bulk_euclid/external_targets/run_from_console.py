@@ -17,7 +17,7 @@ def run(cfg):
     os.path.isdir(repo_dir)
     sys.path.insert(0,repo_dir)
 
-    from bulk_euclid.external_targets import a_run
+    from bulk_euclid.external_targets import pipeline
     logging.info('Import successful')
 
     # some ad hoc setup
@@ -29,7 +29,7 @@ def run(cfg):
     # TODO Karina to remove these duplicates
     external_targets = external_targets.drop_duplicates(subset=['id_str'], keep='first')
 
-    a_run.run(cfg)
+    pipeline.run(cfg)
 
     logging.info('Done :)')
 
