@@ -283,6 +283,18 @@ def get_auxillary_tiles(mosaic_product_oid, auxillary_products=['MERPSF', 'MERRM
         query_str += f"AND (product_type_sas='{auxillary_products[0]}')"
 
     df = Euclid.launch_job(query_str).get_results().to_pandas()
+
+
+    """
+    Can sometimes have multiple auxillary tiles with the same mosaic_product_oid
+    EUC_MER_BGSUB-MOSAIC-VIS_TILE102159774-3EAE6B_20240707T183311.123620Z_00.00.fits
+    EUC_MER_BGSUB-MOSAIC-VIS_TILE102159774-FE2962_20240806T043542.352405Z_00.00.fits
+    For now, take the most recent one
+    """
+    df['creation_date'] = df['filename'].apply(lambda x: x.split('_')[-2])
+    df['tile_index'] = df['filename'].apply(lambda x: int(x.split('TILE')[1].split('-')[-1]))
+    df = df.sort_values(by='creation_date', ascending=False)  # per tile, newest first
+    df = df.drop_duplicates(subset='tile_index', keep='first')
     return df
 
 

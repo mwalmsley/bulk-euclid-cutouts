@@ -48,7 +48,7 @@ def run(cfg: OmegaConf):
     external_targets = external_targets.rename(columns={'ra': 'target_ra', 'dec': 'target_dec', 'ID': 'id_str'})
     del external_targets['Unnamed: 0']
     external_targets['target_field_of_view'] = 20  # arcseconds
-    # TODO Karina to remove these duplicates
+    # TODO Karina to remove these duplicates in a more sensible way
     external_targets = external_targets.drop_duplicates(subset=['id_str'], keep='first')
 
     # NOW we go!
