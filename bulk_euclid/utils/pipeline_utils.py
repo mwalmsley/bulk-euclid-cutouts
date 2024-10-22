@@ -292,7 +292,7 @@ def get_auxillary_tiles(mosaic_product_oid, auxillary_products=['MERPSF', 'MERRM
     For now, take the most recent one
     """
     df['creation_date'] = df['file_name'].apply(lambda x: x.split('_')[-2])
-    df['tile_index'] = df['file_name'].apply(lambda x: int(x.split('TILE')[1].split('-')[-1]))
+    df['tile_index'] = df['file_name'].apply(lambda x: int(x.split('TILE')[1].split('_')[-1]))
     df = df.sort_values(by='creation_date', ascending=False)  # per tile, newest first
     df = df.drop_duplicates(subset='tile_index', keep='first').reset_index(drop=True)
     logging.info(df.iloc[0])
