@@ -1,0 +1,16 @@
+base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
+name: 'latest'
+release_name: None  # allow tiles from any release
+bands: ['VIS', 'NIR_Y', 'NIR_J']
+auxillary_products: ['MERPSF', 'MERRMS']
+release_priority: ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', 'F-003_240612' , 'F-006']
+
+external_targets_loc: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline/external_targets_latest.csv'
+
+# ignore these
+
+download_dir: !
+tile_dir: !
+cutout_dir: !
+fits_dir: !
+sanity_dir: !

@@ -43,9 +43,12 @@ def run(cfg: OmegaConf):
     # with columns ['id_str', 'target_ra' (deg), 'target_dec' (deg), 'target_field_of_view' (arcsec)].
     external_targets = pd.read_csv(cfg.external_targets_loc)
 
+    # matching each target with the best tile
     targets_with_tiles = get_matching_tiles(
         cfg, external_targets
-    )  # matching each target with the best tile
+    )  
+    logging.info('Targets per release: \n{}'.format(targets_with_tiles['release_name'].value_counts()))
+    logging.info('{} unqiue tiles for {} targets'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles)))
 
     make_cutouts(cfg, targets_with_tiles)
 

@@ -15,6 +15,7 @@ version = "0.0.2"
 dependencies = [
     'numpy',
     'pandas',
+    'jupyterlab',
     'matplotlib',
     'scikit-learn',
     'astropy',

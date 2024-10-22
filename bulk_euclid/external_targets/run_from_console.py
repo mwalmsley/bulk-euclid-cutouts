@@ -1,6 +1,8 @@
 import time
 import logging
 import os
+
+import pandas as pd
 from omegaconf import OmegaConf
 
 
@@ -18,6 +20,15 @@ def run(cfg):
     from bulk_euclid.external_targets import a_run
     logging.info('Import successful')
 
+    # some ad hoc setup
+
+    external_targets = pd.read_csv(cfg.external_targets_loc)
+    external_targets = external_targets.rename(columns={'ra': 'target_ra', 'dec': 'target_dec', 'ID': 'id_str'})
+    del external_targets['Unnamed: 0']
+    external_targets['target_field_of_view'] = 20  # arcseconds
+    # TODO Karina to remove these duplicates
+    external_targets = external_targets.drop_duplicates(subset=['id_str'], keep='first')
+
     a_run.run(cfg)
 
     logging.info('Done :)')
@@ -26,7 +37,7 @@ def run(cfg):
 
 if __name__ == "__main__":
 
-    cfg = OmegaConf.load('configs/external_targets_debug.yaml')
+    cfg = OmegaConf.load('configs/external_targets_latest.yaml')
 
     cfg.log_file = cfg.base_dir + f'/external_targets_{cfg.name}_{time.time()}.log'
 

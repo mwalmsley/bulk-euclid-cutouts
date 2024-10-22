@@ -15,31 +15,39 @@ def make_composite_cutout_from_tiles(source, vis_im, nir_im, allow_radius_estima
     
     return make_composite_cutout(vis_cutout, nisp_cutout)
     
-def make_composite_cutout(vis_cutout, nisp_cutout):
-    # print('starting composite')
 
+def make_composite_cutout(vis_cutout, nisp_cutout, vis_q=100, vis_clip=99.85, nisp_q=.2, nisp_clip=99.85):
     assert vis_cutout.shape == nisp_cutout.shape, f'vis shape {vis_cutout.shape}, nisp shape {nisp_cutout.shape}'
     assert vis_cutout.size < 19200**2, f'accidentally passed a whole tile, vis size {vis_cutout.size}'
     assert vis_cutout.shape != (19200, 19200), f'accidentally passed a whole tile, vis size {vis_cutout.size}'
-    # print(vis_cutout.shape)
-    # print(vis_cutout.min(), vis_cutout.max())
 
-
-    # print('test complete')
-    vis_flux_adjusted = m_utils.adjust_dynamic_range(vis_cutout, q=100, clip=99.85)
-    # print('vis_flux_adjusted ready')
-    nisp_flux_adjusted = m_utils.adjust_dynamic_range(nisp_cutout, q=.2, clip=99.85)
+    vis_flux_adjusted = m_utils.adjust_dynamic_range(vis_cutout, q=vis_q, clip=vis_clip)
+    nisp_flux_adjusted = m_utils.adjust_dynamic_range(nisp_cutout, q=nisp_q, clip=nisp_clip)
 
     mean_flux = np.mean([vis_flux_adjusted, nisp_flux_adjusted], axis=0)
-    # print('mean ready')
     
     vis_uint8 = m_utils.to_uint8(vis_flux_adjusted)
     nisp_uint8 = m_utils.to_uint8(nisp_flux_adjusted)
     mean_flux_uint8 = m_utils.to_uint8(mean_flux)
-    # print('uint8 ready')
 
     im = np.stack([nisp_uint8, mean_flux_uint8, vis_uint8], axis=2)
-    # print('stack ready')
+    return im
+
+def make_triple_cutout(short_wav_cutout, mid_wav_cutout, long_wav_cutout, short_q=100, mid_q=.2, long_q=.1, short_clip=99.85, mid_clip=99.85, long_clip=99.85):
+    assert short_wav_cutout.shape == mid_wav_cutout.shape == long_wav_cutout.shape , f'short shape {short_wav_cutout.shape}, mid shape {mid_wav_cutout.shape}, long shape {long_wav_cutout.shape}'
+    assert short_wav_cutout.size < 19200**2, f'accidentally passed a whole tile, short wavelength size {short_wav_cutout.size}'
+    assert short_wav_cutout.shape != (19200, 19200), f'accidentally passed a whole tile, short wavelength size {short_wav_cutout.size}'
+
+    short_flux_adjusted = m_utils.adjust_dynamic_range(short_wav_cutout, q=short_q, clip=short_clip)
+    mid_flux_adjusted = m_utils.adjust_dynamic_range(mid_wav_cutout, q=mid_q, clip=mid_clip)
+    long_flux_adjusted = m_utils.adjust_dynamic_range(long_wav_cutout, q=long_q, clip=long_clip)
+    
+    short_uint8 = m_utils.to_uint8(short_flux_adjusted)
+    mid_uint8 = m_utils.to_uint8(mid_flux_adjusted)
+    long_uint8 = m_utils.to_uint8(long_flux_adjusted)
+
+    # RGB order is long, mid, short
+    im = np.stack([long_uint8, mid_uint8, short_uint8], axis=2)
     return im
 
 
