@@ -123,9 +123,6 @@ def get_matching_tiles(
             )
             close_tiles = close_tiles[within_ra & within_dec]
 
-            # 
-            # TODO here we could apply a rule to pick according to release name priority
-
             if len(close_tiles) > 0:
                 # we have at least one tile within the FoV, which should we use?
 
@@ -143,6 +140,12 @@ def get_matching_tiles(
                 external_targets.loc[target_n, "tile_index"] = chosen_tile["tile_index"]
                 # useful for debugging
                 external_targets.loc[target_n, "release_name"] = chosen_tile['release_name']
+                external_targets.loc[target_n, "tile_ra"] = chosen_tile['ra']
+                external_targets.loc[target_n, "tile_ra_min"] = chosen_tile['ra_min']
+                external_targets.loc[target_n, "tile_ra_max"] = chosen_tile['ra_max']
+                external_targets.loc[target_n, "tile_dec_min"] = chosen_tile['dec_min']
+                external_targets.loc[target_n, "tile_dec_max"] = chosen_tile['dec_max']
+                external_targets.loc[target_n, "tile_dec"] = chosen_tile['dec']
 
 
     logging.info(f'Matched {len(external_targets)} targets to {len(external_targets["tile_index"].unique())} tiles')
@@ -367,6 +370,7 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
         )
         target_pixels = flux_wcs.world_to_pixel(target_coord)
         logging.info(target)
+        logging.info('WCS: {}'.format(flux_wcs))
         logging.info(f"Flux center: {target_coord}")
         logging.info(f"Flux center pixels: {target_pixels}")
         flux_cutout = Cutout2D(
