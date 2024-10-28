@@ -417,9 +417,12 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
             # ends up off center for some reason?
             # WCS used only to have a convenient header for the output file
+            psf_center_pixels = (closest_psf["x_center"]-1, closest_psf["y_center"]-1)
+            logging.info(target)
+            logging.info(f"PSF center: {psf_center_pixels}")
             psf_cutout = Cutout2D(
                 data=psf_tile,
-                position=(closest_psf["x_center"]-1, closest_psf["y_center"]-1),  # slice using x_center, y_center, the pixel coordinates of the PSF center in the PSF tile
+                position=psf_center_pixels,  # slice using x_center, y_center, the pixel coordinates of the PSF center in the PSF tile
                 size=stamp_size,
                 wcs=psf_wcs,
                 mode="partial",
