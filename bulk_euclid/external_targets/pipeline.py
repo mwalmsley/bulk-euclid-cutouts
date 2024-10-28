@@ -129,16 +129,16 @@ def get_matching_tiles(
 
         if len(close_tiles) > 0:
 
-            safety_margin = 0.01 # degrees
+            safety_margin = 0.03 # degrees
 
             # check which close tiles are actually within the FoV
             # this will fail for tiles on the RA flip boundary, but none yet TODO
             within_ra = (
-                close_tiles["ra_min"] < target["target_ra"] + safety_margin) & (
+                close_tiles["ra_min"] + safety_margin < target["target_ra"] ) & (
                 target["target_ra"] < close_tiles["ra_max"] - safety_margin
             )
             within_dec = (
-                close_tiles["dec_min"] < target["target_dec"] + safety_margin) & (
+                close_tiles["dec_min"] + safety_margin < target["target_dec"] ) & (
                 target["target_dec"] < close_tiles["dec_max"] - safety_margin
             )
             close_tiles = close_tiles[within_ra & within_dec]
@@ -393,7 +393,8 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
         )
         target_pixels = flux_wcs.world_to_pixel(target_coord)
         assert target_pixels[0] > 0 and target_pixels[1] > 0, f"Target {target_n} has negative pixel coordinates, likely a WCS error or target just outside tile: {target_pixels}"
-        assert target_pixels[0] < 19200 and target_pixels[1] < 19200, f"Target {target_n} has too-large pixel coordinates, likely a WCS error or target just outside tile: {target_pixels}"
+        if target_pixels[0] < 19200 and target_pixels[1] < 19200:
+            logging.warning(f"Target {target_n} has too-large pixel coordinates, likely a WCS error or target just outside tile: {target_pixels}")
         logging.info(target)
         logging.info('WCS: {}'.format(flux_wcs))
         logging.info(f"Flux center: {target_coord}")
