@@ -260,6 +260,7 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
     dict_of_locs = {}
 
     # download all auxillary data for that tile
+    logging.info('Downloading all data for tile {}'.format(tile_index))
     for _, flux_tile in flux_tile_metadata.iterrows():
         # could have used tile_index for this search, but we want to restrict to some bands only
         auxillary_tile_metadata = pipeline_utils.get_auxillary_tiles(
@@ -311,8 +312,10 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
         )
         cutout_data[band] = cutout_data_for_band
         header_data[band] = header_data_for_band
+        logging.info('Cutout data sliced for band {}'.format(band))
         # so each cutout_data[band] is a list of dicts, one per target, like [{'FLUX': flux_cutout, 'MERPSF': psf_cutout, ...}, ...]
     # ...but saving fits we want to iterate over targets first, and get the data across all bands
+    logging.info('Cutout data sliced for all bands')
     for target_n, target in targets_at_that_index.iterrows():
         # this reshapes the data to be a nested dict, with the top level keyed by band, and the inner level keyed by product type (exactly like dict_of_locs)
         # e.g. { VIS: {FLUX: flux_cutout, MERPSF: psf_cutout, ...}, NIR_Y: {...}, ...}
@@ -326,6 +329,7 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
         except AssertionError as e:
             logging.critical(f"Error saving cutout for target {target['id_str']}")
             logging.critical(e)
+    logging.info('Saved cutouts for all targets in tile {}'.format(target["tile_index"]))
 
 
 def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, targets_at_that_index: pd.DataFrame) -> dict:
@@ -476,7 +480,7 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
         cutout_data.append(cutout_data_for_target)
         header_data.append(header_data_for_target)
 
-    logging.info('Cutouts made for all targets in this tile')
+    logging.debug(f'Cutouts made for all targets in band')
     return cutout_data, header_data
 
 
