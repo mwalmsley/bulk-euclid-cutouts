@@ -350,7 +350,7 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
         psf_tile, psf_header = fits.getdata(psf_loc, ext=1, header=True)
         stamp_size = psf_header["STMPSIZE"]
         psf_table = Table.read(fits.open(psf_loc)[2]).to_pandas()
-        psf_tree = KDTree(psf_table[["x_center", "y_center"]])
+        psf_tree = KDTree(psf_table[["x", "y"]]) # build tree using x, y, the pixel coordinates of the PSF in the MER tile
         psf_wcs = WCS(psf_header)
 
     cutout_data = []
@@ -400,7 +400,8 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
         if "MERPSF" in cfg.auxillary_products:
             # find pixel coordinates of target in PSF tile
-            target_pixels = psf_wcs.world_to_pixel(target_coord)
+            # now changed to flux WCS as PSF WCS is wrong according to MER
+            target_pixels = flux_wcs.world_to_pixel(target_coord)  # the pixel coordinates of the galaxy in MER tile
             # find pixel coordinates of closest PSF to target
             _, psf_index = psf_tree.query(
                 np.array(target_pixels).reshape(1, -1), k=1
@@ -416,20 +417,19 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
             # ends up off center for some reason?
             # WCS used only to have a convenient header for the output file
-
-            # psf_cutout = Cutout2D(
-            #     data=psf_tile,
-            #     position=(closest_psf["x_center"], closest_psf["y_center"]),
-            #     size=stamp_size,
-            #     wcs=psf_wcs,
-            #     mode="partial",
-            # ).data
+            psf_cutout = Cutout2D(
+                data=psf_tile,
+                position=(closest_psf["x_center"]-1, closest_psf["y_center"]-1),  # slice using x_center, y_center, the pixel coordinates of the PSF center in the PSF tile
+                size=stamp_size,
+                wcs=psf_wcs,
+                mode="partial",
+            ).data
 
             # could alternatively use the RA/DEC
             # psf_cutout = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
 
             # unlike the others, this is a pure array, not a Cutout2D
-            psf_cutout = cutout_psf_manually(psf_tile, closest_psf["x_center"], closest_psf["y_center"], cutout_size=stamp_size)
+            # psf_cutout = cutout_psf_manually(psf_tile, closest_psf["x_center"], closest_psf["y_center"], cutout_size=stamp_size)
 
 
             cutout_data_for_target["MERPSF"] = psf_cutout
