@@ -515,6 +515,10 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data:
         save_loc (str): path to save fits file (including .fits extension)
     """
 
+    if os.path.isfile(save_loc) and not cfg.overwrite_fits:
+        logging.debug(f"File already exists, skipping: {save_loc}")
+        return
+
     header_hdu = fits.PrimaryHDU()
     which_extension = 1
 
@@ -534,7 +538,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data:
         # print(repr(flux_header)) 
 
         # sanity check
-        logging.info(cutout_flux.data.shape)
+        # logging.info(cutout_flux.data.shape)
         assert np.nanmin(cutout_flux.data) < np.nanmax(cutout_flux.data), f"{os.path.basename(save_loc)}: Flux in {band} data is empty, likely a SAS error"
         flux_hdu = fits.ImageHDU(
             data=cutout_flux.data, name=f"{band}_FLUX", header=flux_header
@@ -594,7 +598,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data:
                 ),
                 end=True,
             )
-            logging.info(cutout_rms.data.shape)
+            # logging.info(cutout_rms.data.shape)
             assert cutout_rms.data.min() < cutout_rms.data.max(), f"{os.path.basename(save_loc)}: RMS in {band} data is empty, likely a SAS error"
             rms_hdu = fits.ImageHDU(data=cutout_rms.data, name=band+"_RMS") # TODO changed
             hdu_list.append(rms_hdu)
