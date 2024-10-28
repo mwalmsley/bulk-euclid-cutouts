@@ -260,6 +260,7 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
         }
 
     logging.debug(f"Downloaded flux+auxillary tiles: {dict_of_locs}")
+    logging.info('Downloaded all data for tile {}'.format(tile_index))
     # assert len(dict_of_locs.keys()) == cfg.bands, f"Missing bands in downloaded data: {len(dict_of_locs.keys())} of {len(cfg.bands)} keys, {dict_of_locs.keys()} vs {cfg.bands}"
     assert set(cfg.bands) == set(dict_of_locs.keys()), f'Downloaded bands dont match expected bands: downloaded {set(dict_of_locs.keys())}, expected {set(cfg.bands)}'
     return dict_of_locs
@@ -356,6 +357,8 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
         psf_tree = KDTree(psf_table[["x", "y"]]) # build tree using x, y, the pixel coordinates of the PSF in the MER tile
         psf_wcs = WCS(psf_header)
 
+    logging.info('Loaded tile, ready to slice')
+
     cutout_data = []
     header_data = []
     for target_n, target in targets_at_that_index.iterrows():
@@ -449,6 +452,8 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
         cutout_data.append(cutout_data_for_target)
         header_data.append(header_data_for_target)
+
+    logging.info('Cutouts made for all targets in this tile')
     return cutout_data, header_data
 
 
