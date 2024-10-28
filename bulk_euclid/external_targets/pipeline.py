@@ -279,22 +279,26 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
     assert targets_at_that_index["tile_index"].nunique() == 1
 
     cutout_data = {}
+    header_data = {}
     for band in cfg.bands:
         # this is easier to load once (per band) and then look up each target...
-        cutout_data[band] = get_cutout_data_for_band(
+        cutout_data_for_band, header_data_for_band = get_cutout_data_for_band(
             cfg, dict_of_locs[band], targets_at_that_index
         )
+        cutout_data[band] = cutout_data_for_band
+        header_data[band] = header_data_for_band
         # so each cutout_data[band] is a list of dicts, one per target, like [{'FLUX': flux_cutout, 'MERPSF': psf_cutout, ...}, ...]
     # ...but saving fits we want to iterate over targets first, and get the data across all bands
     for target_n, target in targets_at_that_index.iterrows():
         # this reshapes the data to be a nested dict, with the top level keyed by band, and the inner level keyed by product type (exactly like dict_of_locs)
         # e.g. { VIS: {FLUX: flux_cutout, MERPSF: psf_cutout, ...}, NIR_Y: {...}, ...}
         target_data = { band: cutout_data[band][target_n] for band in cfg.bands }
+        target_header_data = { band: header_data[band][target_n] for band in cfg.bands }
         save_loc = os.path.join(
             cfg.fits_dir, str(target["tile_index"]), str(target["id_str"]) + ".fits"
         )
         try:
-            save_multifits_cutout(cfg, target_data, save_loc)
+            save_multifits_cutout(cfg, target_data, target_header_data, save_loc)
         except AssertionError as e:
             logging.critical(f"Error saving cutout for target {target['id_str']}")
             logging.critical(e)
@@ -350,10 +354,12 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
         psf_wcs = WCS(psf_header)
 
     cutout_data = []
+    header_data = []
     for target_n, target in targets_at_that_index.iterrows():
         logging.debug(f"target {target_n} of {len(targets_at_that_index)}")
 
         cutout_data_for_target = {}
+        header_data_for_target = {}
 
         # cut out the flux data
         target_coord = SkyCoord(
@@ -367,6 +373,8 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
             mode="partial",
         )
         cutout_data_for_target["FLUX"] = flux_cutout
+        header_data_for_target["FLUX"] = flux_header
+        
 
         if "MERRMS" in cfg.auxillary_products:
             rms_cutout = Cutout2D(
@@ -377,6 +385,7 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
                 mode="partial",
             )
             cutout_data_for_target["MERRMS"] = rms_cutout
+            header_data_for_target["MERRMS"] = rms_header
 
         if "MERBKG" in cfg.auxillary_products:
             bkg_cutout = Cutout2D(
@@ -387,6 +396,7 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
                 mode="partial",
             )
             cutout_data_for_target["MERBKG"] = bkg_cutout
+            cutout_data_for_target["MERBKG"] = bkg_header
 
         if "MERPSF" in cfg.auxillary_products:
             # find pixel coordinates of target in PSF tile
@@ -423,12 +433,14 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
 
             cutout_data_for_target["MERPSF"] = psf_cutout
+            header_data_for_target["MERPSF"] = psf_header
 
         cutout_data.append(cutout_data_for_target)
-    return cutout_data
+        header_data.append(header_data_for_target)
+    return cutout_data, header_data
 
 
-def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
+def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data: dict, save_loc: str):
     """
     Save a list of Cutout2D instances as a FITS file.
 
@@ -467,7 +479,8 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
     for band in cfg.bands:
         band_data = target_data[band]
         cutout_flux = band_data["FLUX"]
-        flux_header = cutout_flux.wcs.to_header()
+        flux_header = target_header_data[band]["FLUX"]
+        flux_header.update(cutout_flux.wcs.to_header())
         # flux_header['EXTNAME'] = 'FLUX'
         # flux_header.set('EXTNAME', 'FLUX')
         flux_header.append(
@@ -499,7 +512,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
             cutout_psf = band_data["MERPSF"]
             # psf_header = cutout_psf.wcs.to_header()
             # psf_header['EXTNAME'] = 'MERPSF'
-            psf_header = fits.Header()  # blank
+            psf_header = fits.Header()  # blank, always ignored
             psf_header.append(
                 (
                     "FILTER",
@@ -525,7 +538,8 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
 
         if "MERRMS" in cfg.auxillary_products:
             cutout_rms = band_data["MERRMS"]
-            rms_header = cutout_rms.wcs.to_header()
+            rms_header = target_header_data[band]["MERRMS"]
+            rms_header.update(cutout_rms.wcs.to_header())
             # rms_header['EXTNAME'] = 'MERPSF'
             rms_header.append(
                 (
@@ -550,7 +564,8 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
 
         if "MERBKG" in cfg.auxillary_products:
             cutout_bkg = band_data["MERBKG"]
-            bkg_header = cutout_bkg.wcs.to_header()
+            bkg_header = target_header_data[band]["MERBKG"]
+            bkg_header.update(cutout_bkg.wcs.to_header())
             # bkg_header['EXTNAME'] = 'MERBKG'
             bkg_header.append(
                 (
