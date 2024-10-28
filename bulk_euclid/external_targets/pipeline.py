@@ -315,7 +315,7 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
         logging.info('Cutout data sliced for band {}'.format(band))
         # so each cutout_data[band] is a list of dicts, one per target, like [{'FLUX': flux_cutout, 'MERPSF': psf_cutout, ...}, ...]
     # ...but saving fits we want to iterate over targets first, and get the data across all bands
-    logging.info('Cutout data sliced for all bands')
+    logging.info('Cutout data sliced for all bands, begin saving to disk')
     for target_n, target in targets_at_that_index.iterrows():
         # this reshapes the data to be a nested dict, with the top level keyed by band, and the inner level keyed by product type (exactly like dict_of_locs)
         # e.g. { VIS: {FLUX: flux_cutout, MERPSF: psf_cutout, ...}, NIR_Y: {...}, ...}
@@ -534,6 +534,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data:
         # print(repr(flux_header)) 
 
         # sanity check
+        logging.info(cutout_flux.data.shape)
         assert np.nanmin(cutout_flux.data) < np.nanmax(cutout_flux.data), f"{os.path.basename(save_loc)}: Flux in {band} data is empty, likely a SAS error"
         flux_hdu = fits.ImageHDU(
             data=cutout_flux.data, name=f"{band}_FLUX", header=flux_header
@@ -593,6 +594,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data:
                 ),
                 end=True,
             )
+            logging.info(cutout_rms.data.shape)
             assert cutout_rms.data.min() < cutout_rms.data.max(), f"{os.path.basename(save_loc)}: RMS in {band} data is empty, likely a SAS error"
             rms_hdu = fits.ImageHDU(data=cutout_rms.data, name=band+"_RMS") # TODO changed
             hdu_list.append(rms_hdu)
