@@ -388,13 +388,14 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
             target["target_ra"], target["target_dec"], frame="icrs", unit="deg"
         )
         target_pixels = flux_wcs.world_to_pixel(target_coord)
+        assert target_pixels[0] > 0 and target_pixels[1] > 0, f"Target {target_n} has negative pixel coordinates, likely a WCS error or target just outside tile: {target_pixels}"
         logging.info(target)
         logging.info('WCS: {}'.format(flux_wcs))
         logging.info(f"Flux center: {target_coord}")
         logging.info(f"Flux center pixels: {target_pixels}")
         flux_cutout = Cutout2D(
             data=flux_data,
-            position=target_coord,
+            # position=target_coord,
             # position=target_pixels,
             size=target["target_field_of_view"] * u.arcsec,
             wcs=flux_wcs,
