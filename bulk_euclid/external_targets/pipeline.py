@@ -365,11 +365,14 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
         target_coord = SkyCoord(
             target["target_ra"], target["target_dec"], frame="icrs", unit="deg"
         )
+        target_pixels = flux_wcs.world_to_pixel(target_coord)
         logging.info(target)
         logging.info(f"Flux center: {target_coord}")
+        logging.info(f"Flux center pixels: {target_pixels}")
         flux_cutout = Cutout2D(
             data=flux_data,
-            position=target_coord,
+            # position=target_coord,
+            position=target_pixels,
             size=target["target_field_of_view"] * u.arcsec,
             wcs=flux_wcs,
             mode="partial",
