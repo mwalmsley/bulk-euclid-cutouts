@@ -44,10 +44,26 @@ def run(cfg: OmegaConf):
     # external_targets should have columns
     # ['id_str', 'target_ra' (deg), 'target_dec' (deg), 'target_field_of_view' (arcsec)].
     # but it doesn't, and it has duplicates, so here's some ad hoc setup
-    external_targets = pd.read_csv(cfg.external_targets_loc)
-    external_targets = external_targets.rename(columns={'ra': 'target_ra', 'dec': 'target_dec', 'ID': 'id_str'})
-    del external_targets['Unnamed: 0']
+    lrg = pd.read_csv(cfg.external_targets_loc)
+    lrg = lrg.rename(columns={'ra': 'target_ra', 'dec': 'target_dec', 'ID': 'id_str'})
+    del lrg['Unnamed: 0']
+    lrg['category'] = 'lrg_master_list'
+
+    # also add the false positives
+    false_positives_desi = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/False_Positives_DESI.csv')
+    false_positives_desi['category'] = 'desi_false_positive'
+
+    # also add the known candidates
+    known = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/strong_lens_for_pipeline.csv')
+    known = known[known['final_classification'].isin(['A', 'B'])]  # drop the Cs, not plausible
+    known['category'] = 'known_lens_candidate'
+
+    # external_targets = lrg
+    # external_targets = pd.concat([known, lrg], axis=0).reset_index(drop=True)
+    external_targets = pd.concat([known, lrg, false_positives_desi], axis=0).reset_index(drop=True)
+
     external_targets['target_field_of_view'] = 20  # arcseconds
+
     # TODO Karina to remove these duplicates in a more sensible way
     external_targets = external_targets.drop_duplicates(subset=['id_str'], keep='first')
 
@@ -372,10 +388,10 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
             target["target_ra"], target["target_dec"], frame="icrs", unit="deg"
         )
         target_pixels = flux_wcs.world_to_pixel(target_coord)
-        # logging.debug(target)
-        # logging.debug('WCS: {}'.format(flux_wcs))
-        # logging.debug(f"Flux center: {target_coord}")
-        # logging.debug(f"Flux center pixels: {target_pixels}")
+        logging.info(target)
+        logging.info('WCS: {}'.format(flux_wcs))
+        logging.info(f"Flux center: {target_coord}")
+        logging.info(f"Flux center pixels: {target_pixels}")
         flux_cutout = Cutout2D(
             data=flux_data,
             position=target_coord,
