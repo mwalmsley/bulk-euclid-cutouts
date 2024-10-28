@@ -129,7 +129,7 @@ def get_matching_tiles(
 
         if len(close_tiles) > 0:
 
-            safety_margin = 0.03 # degrees
+            safety_margin = 0.01 # degrees
 
             # check which close tiles are actually within the FoV
             # this will fail for tiles on the RA flip boundary, but none yet TODO
