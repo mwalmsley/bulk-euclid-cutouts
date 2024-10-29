@@ -44,7 +44,7 @@ def run(cfg: OmegaConf):
     # external_targets should have columns
     # ['id_str', 'target_ra' (deg), 'target_dec' (deg), 'target_field_of_view' (arcsec)].
     # but it doesn't, and it has duplicates, so here's some ad hoc setup
-    lrg = pd.read_csv(cfg.external_targets_loc)
+    lrg = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/LRGs_4sims_all.csv')
     lrg = lrg.rename(columns={'ra': 'target_ra', 'dec': 'target_dec', 'ID': 'id_str'})
     del lrg['Unnamed: 0']
     lrg['category'] = 'lrg_master_list'
