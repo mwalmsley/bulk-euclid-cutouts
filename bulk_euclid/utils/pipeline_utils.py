@@ -120,6 +120,8 @@ def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limit
         query_str += f" AND release_name='{release_name}'"
 
     query_str += " ORDER BY tile_index ASC"
+
+    logging.debug(query_str)
     
     # async to avoid 2k max, just note it saves results somewhere on server
     job = Euclid.launch_job_async(query_str, verbose=False, background=False) 
@@ -127,7 +129,7 @@ def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limit
     df = job.get_results().to_pandas()
     
     assert len(df) > 0, 'No results for query with: \n' + query_str
-    print("Found", len(df), " query results")
+    logging.info(f"Found {len(df)} query results")
     return df
 
 
@@ -281,6 +283,19 @@ def get_auxillary_tiles(mosaic_product_oid, auxillary_products=['MERPSF', 'MERRM
         query_str += f"AND (product_type_sas='{auxillary_products[0]}')"
 
     df = Euclid.launch_job(query_str).get_results().to_pandas()
+
+
+    """
+    Can sometimes have multiple auxillary tiles with the same mosaic_product_oid
+    EUC_MER_BGSUB-MOSAIC-VIS_TILE102159774-3EAE6B_20240707T183311.123620Z_00.00.fits
+    EUC_MER_BGSUB-MOSAIC-VIS_TILE102159774-FE2962_20240806T043542.352405Z_00.00.fits
+    For now, take the most recent one
+    """
+    df['creation_date'] = df['file_name'].apply(lambda x: x.split('_')[-2])  # str, lead by the datetime
+    df['tile_index'] = df['file_name'].apply(lambda x: x.split('TILE')[1].split('-')[0])  
+    df = df.sort_values(by='creation_date', ascending=False)  # per tile, newest first
+    df = df.drop_duplicates(subset=['tile_index', 'product_type_sas'], keep='first').reset_index(drop=True)
+    # logging.info(df.iloc[0])
     return df
 
 

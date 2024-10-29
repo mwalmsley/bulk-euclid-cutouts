@@ -1,6 +1,8 @@
 import time
 import logging
 import os
+
+import pandas as pd
 from omegaconf import OmegaConf
 
 
@@ -15,10 +17,10 @@ def run(cfg):
     os.path.isdir(repo_dir)
     sys.path.insert(0,repo_dir)
 
-    from bulk_euclid.external_targets import a_run
+    from bulk_euclid.external_targets import pipeline
     logging.info('Import successful')
 
-    a_run.run(cfg)
+    pipeline.run(cfg)
 
     logging.info('Done :)')
 
@@ -26,7 +28,7 @@ def run(cfg):
 
 if __name__ == "__main__":
 
-    cfg = OmegaConf.load('configs/external_targets_debug.yaml')
+    cfg = OmegaConf.load('configs/external_targets_latest.yaml')
 
     cfg.log_file = cfg.base_dir + f'/external_targets_{cfg.name}_{time.time()}.log'
 

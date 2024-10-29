@@ -40,12 +40,40 @@ def run(cfg: OmegaConf):
     create_folders(cfg)
     pipeline_utils.login()
 
-    # with columns ['id_str', 'target_ra' (deg), 'target_dec' (deg), 'target_field_of_view' (arcsec)].
-    external_targets = pd.read_csv(cfg.external_targets_loc)
 
+    # external_targets should have columns
+    # ['id_str', 'target_ra' (deg), 'target_dec' (deg), 'target_field_of_view' (arcsec)].
+    # but it doesn't, and it has duplicates, so here's some ad hoc setup
+    lrg = pd.read_csv(cfg.external_targets_loc)
+    lrg = lrg.rename(columns={'ra': 'target_ra', 'dec': 'target_dec', 'ID': 'id_str'})
+    del lrg['Unnamed: 0']
+    lrg['category'] = 'lrg_master_list'
+
+    # also add the false positives
+    false_positives_desi = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/False_Positives_DESI.csv')
+    false_positives_desi['category'] = 'desi_false_positive'
+
+    # also add the known candidates
+    known = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/strong_lens_for_pipeline.csv')
+    known = known[known['final_classification'].isin(['A', 'B'])]  # drop the Cs, not plausible
+    known['category'] = 'known_lens_candidate'
+
+    # external_targets = lrg
+    # external_targets = pd.concat([known, lrg], axis=0).reset_index(drop=True)
+    external_targets = pd.concat([known, lrg, false_positives_desi], axis=0).reset_index(drop=True)
+
+    external_targets['target_field_of_view'] = 20  # arcseconds
+
+    # TODO Karina to remove these duplicates in a more sensible way
+    external_targets = external_targets.drop_duplicates(subset=['id_str'], keep='first')
+
+    # NOW we go!
+    # matching each target with the best tile
     targets_with_tiles = get_matching_tiles(
         cfg, external_targets
-    )  # matching each target with the best tile
+    )  
+    logging.info('Targets per release: \n{}'.format(targets_with_tiles['release_name'].value_counts()))
+    logging.info('{} unqiue tiles for {} targets'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles)))
 
     make_cutouts(cfg, targets_with_tiles)
 
@@ -101,18 +129,19 @@ def get_matching_tiles(
 
         if len(close_tiles) > 0:
 
+            safety_margin = 0.01 # degrees
+
             # check which close tiles are actually within the FoV
             # this will fail for tiles on the RA flip boundary, but none yet TODO
-            within_ra = (close_tiles["ra_min"] < target["target_ra"]) & (
-                target["target_ra"] < close_tiles["ra_max"]
+            within_ra = (
+                close_tiles["ra_min"] + safety_margin < target["target_ra"] ) & (
+                target["target_ra"] < close_tiles["ra_max"] - safety_margin
             )
-            within_dec = (close_tiles["dec_min"] < target["target_dec"]) & (
-                target["target_dec"] < close_tiles["dec_max"]
+            within_dec = (
+                close_tiles["dec_min"] + safety_margin < target["target_dec"] ) & (
+                target["target_dec"] < close_tiles["dec_max"] - safety_margin
             )
             close_tiles = close_tiles[within_ra & within_dec]
-
-            # 
-            # TODO here we could apply a rule to pick according to release name priority
 
             if len(close_tiles) > 0:
                 # we have at least one tile within the FoV, which should we use?
@@ -131,6 +160,12 @@ def get_matching_tiles(
                 external_targets.loc[target_n, "tile_index"] = chosen_tile["tile_index"]
                 # useful for debugging
                 external_targets.loc[target_n, "release_name"] = chosen_tile['release_name']
+                external_targets.loc[target_n, "tile_ra"] = chosen_tile['ra']
+                external_targets.loc[target_n, "tile_ra_min"] = chosen_tile['ra_min']
+                external_targets.loc[target_n, "tile_ra_max"] = chosen_tile['ra_max']
+                external_targets.loc[target_n, "tile_dec_min"] = chosen_tile['dec_min']
+                external_targets.loc[target_n, "tile_dec_max"] = chosen_tile['dec_max']
+                external_targets.loc[target_n, "tile_dec"] = chosen_tile['dec']
 
 
     logging.info(f'Matched {len(external_targets)} targets to {len(external_targets["tile_index"].unique())} tiles')
@@ -167,17 +202,18 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
         logging.info(f'Tile {tile_index}, {tile_n} of {len(unique_tiles)}')
         try:
             dict_of_locs = download_all_data_at_tile_index(cfg, tile_index)
-            logging.info(f"Downloaded: {dict_of_locs}")
+            logging.debug(f"Downloaded: {dict_of_locs}")
+
+            targets_at_that_index = targets_with_tiles.query(f"tile_index == {tile_index}").reset_index(drop=True)
+
+            save_cutouts_for_all_targets_in_that_tile(
+                cfg, dict_of_locs, targets_at_that_index
+            )
+
         except AssertionError as e:
-            logging.critical(f"Error downloading tile data for {tile_index}")
+            logging.critical(f"Error downloading tile data and making cutouts for {tile_index}")
             logging.critical(e)
-            raise e
 
-        targets_at_that_index = targets_with_tiles.query(f"tile_index == {tile_index}").reset_index(drop=True)
-
-        save_cutouts_for_all_targets_in_that_tile(
-            cfg, dict_of_locs, targets_at_that_index
-        )
 
 
 def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
@@ -224,6 +260,7 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
     dict_of_locs = {}
 
     # download all auxillary data for that tile
+    logging.info('Downloading all data for tile {}'.format(tile_index))
     for _, flux_tile in flux_tile_metadata.iterrows():
         # could have used tile_index for this search, but we want to restrict to some bands only
         auxillary_tile_metadata = pipeline_utils.get_auxillary_tiles(
@@ -243,7 +280,10 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
             **these_aux_locs,
         }
 
-    logging.info(f"Downloaded flux+auxillary tiles: {dict_of_locs}")
+    logging.debug(f"Downloaded flux+auxillary tiles: {dict_of_locs}")
+    logging.info('Downloaded all data for tile {}'.format(tile_index))
+    # assert len(dict_of_locs.keys()) == cfg.bands, f"Missing bands in downloaded data: {len(dict_of_locs.keys())} of {len(cfg.bands)} keys, {dict_of_locs.keys()} vs {cfg.bands}"
+    assert set(cfg.bands) == set(dict_of_locs.keys()), f'Downloaded bands dont match expected bands: downloaded {set(dict_of_locs.keys())}, expected {set(cfg.bands)}'
     return dict_of_locs
 
 
@@ -264,21 +304,32 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
     assert targets_at_that_index["tile_index"].nunique() == 1
 
     cutout_data = {}
+    header_data = {}
     for band in cfg.bands:
         # this is easier to load once (per band) and then look up each target...
-        cutout_data[band] = get_cutout_data_for_band(
+        cutout_data_for_band, header_data_for_band = get_cutout_data_for_band(
             cfg, dict_of_locs[band], targets_at_that_index
         )
+        cutout_data[band] = cutout_data_for_band
+        header_data[band] = header_data_for_band
+        logging.info('Cutout data sliced for band {}'.format(band))
         # so each cutout_data[band] is a list of dicts, one per target, like [{'FLUX': flux_cutout, 'MERPSF': psf_cutout, ...}, ...]
     # ...but saving fits we want to iterate over targets first, and get the data across all bands
+    logging.info('Cutout data sliced for all bands, begin saving to disk')
     for target_n, target in targets_at_that_index.iterrows():
         # this reshapes the data to be a nested dict, with the top level keyed by band, and the inner level keyed by product type (exactly like dict_of_locs)
         # e.g. { VIS: {FLUX: flux_cutout, MERPSF: psf_cutout, ...}, NIR_Y: {...}, ...}
         target_data = { band: cutout_data[band][target_n] for band in cfg.bands }
+        target_header_data = { band: header_data[band][target_n] for band in cfg.bands }
         save_loc = os.path.join(
             cfg.fits_dir, str(target["tile_index"]), str(target["id_str"]) + ".fits"
         )
-        save_multifits_cutout(cfg, target_data, save_loc)
+        try:
+            save_multifits_cutout(cfg, target_data, target_header_data, save_loc)
+        except AssertionError as e:
+            logging.critical(f"Error saving cutout for target {target['id_str']}")
+            logging.critical(e)
+    logging.info('Saved cutouts for all targets in tile {}'.format(target["tile_index"]))
 
 
 def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, targets_at_that_index: pd.DataFrame) -> dict:
@@ -327,27 +378,42 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
         psf_tile, psf_header = fits.getdata(psf_loc, ext=1, header=True)
         stamp_size = psf_header["STMPSIZE"]
         psf_table = Table.read(fits.open(psf_loc)[2]).to_pandas()
-        psf_tree = KDTree(psf_table[["x_center", "y_center"]])
+        psf_tree = KDTree(psf_table[["x", "y"]]) # build tree using x, y, the pixel coordinates of the PSF in the MER tile
         psf_wcs = WCS(psf_header)
 
+    logging.info('Loaded tile, ready to slice')
+
     cutout_data = []
+    header_data = []
     for target_n, target in targets_at_that_index.iterrows():
         logging.debug(f"target {target_n} of {len(targets_at_that_index)}")
 
         cutout_data_for_target = {}
+        header_data_for_target = {}
 
         # cut out the flux data
         target_coord = SkyCoord(
             target["target_ra"], target["target_dec"], frame="icrs", unit="deg"
         )
+        target_pixels = flux_wcs.world_to_pixel(target_coord)
+        assert target_pixels[0] > 0 and target_pixels[1] > 0, f"Target {target_n} has negative pixel coordinates, likely a WCS error or target just outside tile: {target_pixels}"
+        if target_pixels[0] > 19200 and target_pixels[1] > 19200:
+            logging.warning(f"Target {target_n} has too-large pixel coordinates, likely a WCS error or target just outside tile: {target_pixels}")
+        # logging.info(target)
+        # logging.info('WCS: {}'.format(flux_wcs))
+        # logging.info(f"Flux center: {target_coord}")
+        # logging.info(f"Flux center pixels: {target_pixels}")
         flux_cutout = Cutout2D(
             data=flux_data,
             position=target_coord,
+            # position=target_pixels,
             size=target["target_field_of_view"] * u.arcsec,
             wcs=flux_wcs,
             mode="partial",
         )
         cutout_data_for_target["FLUX"] = flux_cutout
+        header_data_for_target["FLUX"] = flux_header
+        
 
         if "MERRMS" in cfg.auxillary_products:
             rms_cutout = Cutout2D(
@@ -358,6 +424,7 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
                 mode="partial",
             )
             cutout_data_for_target["MERRMS"] = rms_cutout
+            header_data_for_target["MERRMS"] = rms_header
 
         if "MERBKG" in cfg.auxillary_products:
             bkg_cutout = Cutout2D(
@@ -368,10 +435,12 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
                 mode="partial",
             )
             cutout_data_for_target["MERBKG"] = bkg_cutout
+            cutout_data_for_target["MERBKG"] = bkg_header
 
         if "MERPSF" in cfg.auxillary_products:
             # find pixel coordinates of target in PSF tile
-            target_pixels = psf_wcs.world_to_pixel(target_coord)
+            # now changed to flux WCS as PSF WCS is wrong according to MER
+            target_pixels = flux_wcs.world_to_pixel(target_coord)  # the pixel coordinates of the galaxy in MER tile
             # find pixel coordinates of closest PSF to target
             _, psf_index = psf_tree.query(
                 np.array(target_pixels).reshape(1, -1), k=1
@@ -387,22 +456,35 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
             # ends up off center for some reason?
             # WCS used only to have a convenient header for the output file
+            psf_center_pixels = (closest_psf["x_center"]-1, closest_psf["y_center"]-1)
+            # logging.info(target)
+            # logging.info(f"PSF center: {psf_center_pixels}")
             psf_cutout = Cutout2D(
                 data=psf_tile,
-                position=(closest_psf["x_center"], closest_psf["y_center"]),
+                position=psf_center_pixels,  # slice using x_center, y_center, the pixel coordinates of the PSF center in the PSF tile
                 size=stamp_size,
                 wcs=psf_wcs,
                 mode="partial",
-            )
+            ).data
+
             # could alternatively use the RA/DEC
-            # cutout_psf = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
+            # psf_cutout = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
+
+            # unlike the others, this is a pure array, not a Cutout2D
+            # psf_cutout = cutout_psf_manually(psf_tile, closest_psf["x_center"], closest_psf["y_center"], cutout_size=stamp_size)
+
+
             cutout_data_for_target["MERPSF"] = psf_cutout
+            header_data_for_target["MERPSF"] = psf_header
 
         cutout_data.append(cutout_data_for_target)
-    return cutout_data
+        header_data.append(header_data_for_target)
+
+    logging.debug(f'Cutouts made for all targets in band')
+    return cutout_data, header_data
 
 
-def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
+def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data: dict, save_loc: str):
     """
     Save a list of Cutout2D instances as a FITS file.
 
@@ -433,6 +515,10 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         save_loc (str): path to save fits file (including .fits extension)
     """
 
+    if os.path.isfile(save_loc) and not cfg.overwrite_fits:
+        logging.debug(f"File already exists, skipping: {save_loc}")
+        return
+
     header_hdu = fits.PrimaryHDU()
     which_extension = 1
 
@@ -441,13 +527,21 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
     for band in cfg.bands:
         band_data = target_data[band]
         cutout_flux = band_data["FLUX"]
-        flux_header = cutout_flux.wcs.to_header()
+        flux_header = target_header_data[band]["FLUX"]
+        flux_header.update(cutout_flux.wcs.to_header())
+        # flux_header['EXTNAME'] = 'FLUX'
+        # flux_header.set('EXTNAME', 'FLUX')
         flux_header.append(
             ("FILTER", band, "Euclid filter for flux image"),
             end=True,
         )
+        # print(repr(flux_header)) 
+
+        # sanity check
+        # logging.info(cutout_flux.data.shape)
+        assert np.nanmin(cutout_flux.data) < np.nanmax(cutout_flux.data), f"{os.path.basename(save_loc)}: Flux in {band} data is empty, likely a SAS error"
         flux_hdu = fits.ImageHDU(
-            data=cutout_flux.data, name=f"{cutout_flux}_FLUX", header=flux_header
+            data=cutout_flux.data, name=f"{band}_FLUX", header=flux_header
         )
         hdu_list.append(flux_hdu)
         # and update the primary header
@@ -465,7 +559,9 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
 
         if "MERPSF" in cfg.auxillary_products:
             cutout_psf = band_data["MERPSF"]
-            psf_header = cutout_psf.wcs.to_header()
+            # psf_header = cutout_psf.wcs.to_header()
+            # psf_header['EXTNAME'] = 'MERPSF'
+            psf_header = fits.Header()  # blank, always ignored
             psf_header.append(
                 (
                     "FILTER",
@@ -474,8 +570,9 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 ),
                 end=True,
             )
+            assert cutout_psf.min() < cutout_psf.max(), f"{os.path.basename(save_loc)}: PSF in {band} data is empty, likely a SAS error"
             psf_hdu = fits.ImageHDU(
-                data=cutout_psf.data, name="MERPSF", header=psf_header
+                data=cutout_psf, name=band+"_PSF", header=psf_header  # NOT .data any more
             )
             hdu_list.append(psf_hdu)
             header_hdu.header.append(
@@ -485,12 +582,14 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 f"Extension name for {band} PSF",
             ),
             end=True,
-        )
-        which_extension +=1
+            )
+            which_extension +=1
 
         if "MERRMS" in cfg.auxillary_products:
             cutout_rms = band_data["MERRMS"]
-            rms_header = cutout_rms.wcs.to_header()
+            rms_header = target_header_data[band]["MERRMS"]
+            rms_header.update(cutout_rms.wcs.to_header())
+            # rms_header['EXTNAME'] = 'MERPSF'
             rms_header.append(
                 (
                     "FILTER",
@@ -499,7 +598,9 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 ),
                 end=True,
             )
-            rms_hdu = fits.ImageHDU(data=cutout_rms.data, name="MERRMS")
+            # logging.info(cutout_rms.data.shape)
+            assert cutout_rms.data.min() < cutout_rms.data.max(), f"{os.path.basename(save_loc)}: RMS in {band} data is empty, likely a SAS error"
+            rms_hdu = fits.ImageHDU(data=cutout_rms.data, name=band+"_RMS") # TODO changed
             hdu_list.append(rms_hdu)
             header_hdu.header.append(
             (
@@ -508,12 +609,14 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 f"Extension name for {band} RMS",
             ),
             end=True,
-        )
-        which_extension +=1
+            )
+            which_extension +=1
 
         if "MERBKG" in cfg.auxillary_products:
             cutout_bkg = band_data["MERBKG"]
-            bkg_header = cutout_bkg.wcs.to_header()
+            bkg_header = target_header_data[band]["MERBKG"]
+            bkg_header.update(cutout_bkg.wcs.to_header())
+            # bkg_header['EXTNAME'] = 'MERBKG'
             bkg_header.append(
                 (
                     "FILTER",
@@ -522,7 +625,8 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 ),
                 end=True,
             )
-            bkg_hdu = fits.ImageHDU(data=cutout_bkg.data, name="MERBKG")
+            assert cutout_bkg.data.min() < cutout_bkg.data.max(), f"{os.path.basename(save_loc)}: BKG in {band} data is empty, likely a SAS error"
+            bkg_hdu = fits.ImageHDU(data=cutout_bkg.data, name=band+"_BKG")
             hdu_list.append(bkg_hdu)
             header_hdu.header.append(
             (
@@ -531,8 +635,8 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
                 f"Extension name for {band} BKG",
             ),
             end=True,
-        )
-        which_extension +=1
+            )
+            which_extension +=1
 
     hdul = fits.HDUList(hdu_list)
 
@@ -564,3 +668,48 @@ def create_folders(cfg: OmegaConf):
             os.makedirs(d)
 
     return cfg
+
+
+
+def cutout_psf_manually(psf_grid, x_center, y_center, cutout_size):
+    #cutout is the size of the image cutout to search for the PSFs in that space
+    x_start = int(round(x_center - cutout_size / 2))
+    x_end = x_start + cutout_size
+    y_start = int(round(y_center - cutout_size / 2))
+    y_end = y_start + cutout_size
+
+    # avoid edge effects (possibly not needed)
+    if x_start < 0:
+        x_start = 0
+    if x_end > psf_grid.shape[1]:
+        x_end = psf_grid.shape[1]
+    if y_start < 0:
+        y_start = 0
+    if y_end > psf_grid.shape[0]:
+        y_end = psf_grid.shape[0]
+    # logging.debug(f'before edge: {y_start} {y_end}, {x_start} {x_end}')
+
+    # make the slice
+
+    # logging.debug(f'first: {y_start} {y_end}, {x_start} {x_end}')
+    cutout = psf_grid[y_start:y_end, x_start:x_end]
+
+    # find the maxima
+    max_y_local, max_x_local = np.unravel_index(np.argmax(cutout), cutout.shape)
+    max_x_global = x_start + max_x_local
+    max_y_global = y_start + max_y_local
+    brightest_pixels = [max_x_global, max_y_global]
+
+    # update x_center and y_center to the actual brightest pixels
+    x_center = brightest_pixels[0]
+    y_center = brightest_pixels[1]
+
+    # make the slice AGAIN
+    x_start = int(x_center - cutout_size / 2)
+    x_end = int(x_center + cutout_size / 2)
+    y_start = int(y_center - cutout_size / 2)
+    y_end = int(y_center + cutout_size / 2)
+    # logging.debug(f'second: {y_start} {y_end}, {x_start} {x_end}')
+    cutout = psf_grid[y_start:y_end, x_start:x_end]
+
+    return cutout

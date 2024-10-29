@@ -212,8 +212,8 @@ def make_vis_only_cutout_from_tiles(source: dict, vis_im, allow_radius_estimate=
     vis_cutout = extract_cutout_from_array(vis_im, source, buff=0, allow_radius_estimate=allow_radius_estimate)
     return make_vis_only_cutout(vis_cutout)
 
-def make_vis_only_cutout(vis_cutout):
-    vis_flux_adjusted = adjust_dynamic_range(vis_cutout, q=100, clip=99.85)
+def make_vis_only_cutout(vis_cutout, q=100, clip=99.85):
+    vis_flux_adjusted = adjust_dynamic_range(vis_cutout, q=q, clip=clip)
     vis_uint8 = to_uint8(vis_flux_adjusted)
     return vis_uint8
 
