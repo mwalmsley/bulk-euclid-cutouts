@@ -326,6 +326,8 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
 
     # assumes the tile has been downloaded and catalogued
     # assumes tile_galaxies includes all/only the bands to load and potentially include
+
+    print(tile_galaxies.columns.values)
     
     logging.info('loading bands for tile')
     tile_data = {}
