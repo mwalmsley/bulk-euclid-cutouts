@@ -435,7 +435,7 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
 
                 # TODO this is a bit of a mess, but I can't use Cutout2D with a header yet
                 hdr = fits.Header()
-                hdr.update(galaxy[['OBJECT_ID', 'TILE_INDEX', 'RELEASE_NAME']].to_dict())
+                hdr.update(galaxy[['object_id', 'tile_index', 'release_name']].to_dict())
                 # hdr.update(cutout_wcs.to_header())  # adds WCS for cutout (vs whole tile)
                 header_hdu = fits.PrimaryHDU(header=hdr)
                 hdu_list = [header_hdu]
