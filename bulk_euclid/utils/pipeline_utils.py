@@ -389,34 +389,34 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
                 if 'composite' in cfg.jpg_outputs:
                     y_cutout = cutout_by_band['NISP_Y']
                     cutout = cutout_utils.make_composite_cutout(vis_cutout, y_cutout)
-                    Image.fromarray(cutout).save(cutout_locs['composite'])
+                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_composite'])
                 
                 if 'vis_only' in cfg.jpg_outputs:
                     cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'])
-                    Image.fromarray(cutout).save(cutout_locs['vis_only'])
+                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_vis_only'])
 
                 if 'vis_lsb' in cfg.jpg_outputs:
                     cutout = cutout_utils.make_lsb_cutout(cutout_by_band['VIS'], stretch=20, power=0.5)
-                    Image.fromarray(cutout).save(cutout_locs['vis_lsb'])
+                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_vis_lsb'])
 
                 if 'vis_only_sw' in cfg.jpg_outputs:  # VIS, Q=500
                     cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'], q=500)
-                    Image.fromarray(cutout).save(cutout_locs['vis_only_sw'])
+                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_vis_only_sw'])
 
                 if 'vis_y_sw' in cfg.jpg_outputs:  # VIS and Y, Q=500
                     y_cutout = cutout_by_band['NISP_Y']
                     cutout = cutout_utils.make_composite_cutout(vis_cutout, y_cutout, vis_q=500, nisp_q=1)
-                    Image.fromarray(cutout).save(cutout_locs['vis_y_sw'])
+                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_vis_y_sw'])
 
                 if 'vis_j_sw' in cfg.jpg_outputs:  # VIS and J, Q=500
                     j_cutout = cutout_by_band['NISP_J']
                     cutout = cutout_utils.make_composite_cutout(vis_cutout, j_cutout, vis_q=500, nisp_q=0.5)
-                    Image.fromarray(cutout).save(cutout_locs['vis_j_sw'])
+                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_vis_j_sw'])
 
                 if 'vis_low_y_sw' in cfg.jpg_outputs:
                     y_cutout = cutout_by_band['NISP_Y']
                     cutout = cutout_utils.make_composite_cutout(vis_cutout, y_cutout, vis_q=500, nisp_q=.2)
-                    Image.fromarray(cutout).save(cutout_locs['vis_low_y_sw'])
+                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_vis_low_y_sw'])
 
                 # TODO now I can add strong lensing options here
 
