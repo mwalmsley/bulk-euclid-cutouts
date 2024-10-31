@@ -73,7 +73,9 @@ def zip_for_download(cfg: OmegaConf):
     shutil.make_archive(cfg.download_dir + '_catalogs', 'zip', root_dir=cfg.catalog_dir)
     logging.info('Zipped catalogs')
     shutil.make_archive(cfg.download_dir + '_jpg_cutouts', 'zip', root_dir=cfg.jpg_dir)
-    logging.info('Zipped cutouts')
+    logging.info('Zipped jpg cutouts')
+    shutil.make_archive(cfg.download_dir + '_fits_cutouts', 'zip', root_dir=cfg.fits_dir)
+    logging.info('Zipped fits cutouts')
 
 
 

@@ -17,7 +17,7 @@ def run(cfg):
     logging.info('Import successful')
 
     a_make_catalogs_and_cutouts.run(cfg)
-    # b_export.run(cfg)
+    b_export.run(cfg)
 
     logging.info('Done :)')
 
