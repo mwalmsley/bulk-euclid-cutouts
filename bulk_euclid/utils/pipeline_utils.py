@@ -321,12 +321,8 @@ def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, o
 
 
 def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
-
-    # , output_format:str='jpg', overwrite:bool=False, allow_radius_estimate:bool=True
-
     # assumes the tile has been downloaded and catalogued
     # assumes tile_galaxies includes all/only the bands to load and potentially include
-
     print(tile_galaxies.columns.values)
     
     logging.info('loading bands for tile')
@@ -363,7 +359,7 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
             if cfg.field_of_view == 'galaxy_zoo':
                 # TODO this bit should use Cutout2D instead
                 galaxy.index = galaxy.index.str.upper()  # for the radius estimate
-                cutout_by_band[band] = m_utils.extract_cutout_from_array(tile_data[band], galaxy, buff=0, allow_radius_estimate=cfg.allow_radius_estimate)
+                cutout_by_band[band] = m_utils.extract_cutout_from_array(tile_data[band], galaxy, buff=0, allow_radius_estimate=True)
                 galaxy.index = galaxy.index.str.lower()
             else:
                 if cfg.field_of_view == 'space_warps':
