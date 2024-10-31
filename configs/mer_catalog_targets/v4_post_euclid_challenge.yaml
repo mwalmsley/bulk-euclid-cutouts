@@ -1,4 +1,9 @@
+base_dir: '/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/pipeline_runs'
+name: 'v4_post_euclid_challenge'
 release_name: F-006
+
+bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']
+
 num_tiles: 0  # all tiles
 refresh_catalogs: True
 seed: 1
@@ -7,8 +12,7 @@ debug: False
 run_async: False
 max_retries: 1
 
-base_dir: '/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/pipeline_runs'
-name: 'v4_post_euclid_challenge'
+
 download_dir: !
 tile_dir: !
 catalog_dir: !

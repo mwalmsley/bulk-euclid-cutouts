@@ -13,11 +13,11 @@ def run(cfg):
     os.path.isdir(repo_dir)
     sys.path.insert(0,repo_dir)
 
-    from bulk_euclid.pipeline import a_make_catalogs_and_cutouts, b_export
+    from bulk_euclid.mer_catalog_targets import a_make_catalogs_and_cutouts, b_export
     logging.info('Import successful')
 
     a_make_catalogs_and_cutouts.run(cfg)
-    b_export.run(cfg)
+    # b_export.run(cfg)
 
     logging.info('Done :)')
 
@@ -25,7 +25,7 @@ def run(cfg):
 
 if __name__ == "__main__":
 
-    cfg = OmegaConf.load('configs/remote_debug.yaml')
+    cfg = OmegaConf.load('configs/mer_catalog_targets/strong_lens_v1.yaml')
     # cfg = OmegaConf.load('configs/v4_post_euclid_challenge.yaml')
 
     cfg.log_file = cfg.base_dir + f'/pipeline_{cfg.name}_{time.time()}.log'

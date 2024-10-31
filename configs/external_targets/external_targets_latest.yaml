@@ -1,7 +1,9 @@
 base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
 name: 'latest'
 release_name: null  # allow tiles from any release. Read as None in Python.
-bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']
+# bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']
+bands: ['VIS', 'NIR_Y']
+
 auxillary_products: ['MERPSF', 'MERRMS']
 release_priority: ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', 'F-003_240612' , 'F-006']
 overwrite_fits: false

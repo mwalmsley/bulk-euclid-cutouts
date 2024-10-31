@@ -9,8 +9,10 @@ import numpy as np
 import pandas as pd
 from astropy.io import fits
 from astropy.wcs import WCS
+import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.io.fits.verify import VerifyWarning
+from astropy.nddata import Cutout2D
 from PIL import Image
 
 if os.path.isdir('/media/home/team_workspaces'):  # on datalabs
@@ -19,63 +21,63 @@ if os.path.isdir('/media/home/team_workspaces'):  # on datalabs
 from bulk_euclid.utils import morphology_utils_ou_mer as m_utils, cutout_utils
 
 
-Survey = namedtuple('Survey', ['name', 'min_tile_index', 'max_tile_index', 'tile_width', 'tile_overlap'])
+# Survey = namedtuple('Survey', ['name', 'min_tile_index', 'max_tile_index', 'tile_width', 'tile_overlap'])
 
-# https://www.cosmos.esa.int/documents/10647/12245842/EUCL-EST-ME-8-007_v11_EST_Q1_memo_2022-10-06.pdf
-# https://www.cosmos.esa.int/documents/10647/12245842/EUCL-EST-ME-8-014_v10_Q1_product_definition_2023-08-14.pdf
-# https://www.cosmos.esa.int/documents/10647/12245842/EUCL-EST-ME-8-018_v1_Q1_fields_definition_2024-07-04.pdf/841e9693-3b5c-89b6-828f-f0faa4f7545b?t=1720533267223
+# # https://www.cosmos.esa.int/documents/10647/12245842/EUCL-EST-ME-8-007_v11_EST_Q1_memo_2022-10-06.pdf
+# # https://www.cosmos.esa.int/documents/10647/12245842/EUCL-EST-ME-8-014_v10_Q1_product_definition_2023-08-14.pdf
+# # https://www.cosmos.esa.int/documents/10647/12245842/EUCL-EST-ME-8-018_v1_Q1_fields_definition_2024-07-04.pdf/841e9693-3b5c-89b6-828f-f0faa4f7545b?t=1720533267223
 
-# https://euclid.roe.ac.uk/projects/mer_pf/wiki/Tiling
-# tile ids figure
+# # https://euclid.roe.ac.uk/projects/mer_pf/wiki/Tiling
+# # tile ids figure
 
-# deep fields are 17x17 arcmin always
-# wide tiles are 32x32 arcmin except when edited for special objects
+# # deep fields are 17x17 arcmin always
+# # wide tiles are 32x32 arcmin except when edited for special objects
 
-# wide tiles include 2' of overlap (so 30' without overlap, and 1' on each side)
-# deep tiles are exactly the same (despite being smaller)
+# # wide tiles include 2' of overlap (so 30' without overlap, and 1' on each side)
+# # deep tiles are exactly the same (despite being smaller)
 
-# nominal v1.2 tiling for these surveys, but no data yet except PV-005 below
-# EDF_SOUTH = pipeline_utils.Survey(
-#     name='edf_south',
+# # nominal v1.2 tiling for these surveys, but no data yet except PV-005 below
+# # EDF_SOUTH = pipeline_utils.Survey(
+# #     name='edf_south',
+# #     min_tile_index=0,
+# #     max_tile_index=int(1.013e8),
+# #     tile_width=17,
+# #     tile_overlap=2
+# # )
+# # EDF_NORTH = pipeline_utils.Survey(
+# #     name='edf_north',
+# #     min_tile_index=int(1.017e8),
+# #     max_tile_index=int(1.019e8),
+# #     tile_width=17,
+# #     tile_overlap=2
+# # )
+
+# # tiles from both south and north in PV-005, likely to be removed in near future (and no catalogues)
+# EDF_PV = Survey(
+#     name='edf_pv',
 #     min_tile_index=0,
 #     max_tile_index=int(1.013e8),
 #     tile_width=17,
 #     tile_overlap=2
 # )
-# EDF_NORTH = pipeline_utils.Survey(
-#     name='edf_north',
-#     min_tile_index=int(1.017e8),
-#     max_tile_index=int(1.019e8),
+
+# # no data yet
+# EDF_FORNAX = Survey(
+#     name='edf_fornax',
+#     min_tile_index=int(1.0132e8),
+#     max_tile_index=int(1.014e8),
 #     tile_width=17,
 #     tile_overlap=2
 # )
-
-# tiles from both south and north in PV-005, likely to be removed in near future (and no catalogues)
-EDF_PV = Survey(
-    name='edf_pv',
-    min_tile_index=0,
-    max_tile_index=int(1.013e8),
-    tile_width=17,
-    tile_overlap=2
-)
-
-# no data yet
-EDF_FORNAX = Survey(
-    name='edf_fornax',
-    min_tile_index=int(1.0132e8),
-    max_tile_index=int(1.014e8),
-    tile_width=17,
-    tile_overlap=2
-)
     
-# 1700 tiles :)
-WIDE = Survey(
-    name='wide',
-    min_tile_index=int(1.02e8),
-    max_tile_index=int(1.022e8),
-    tile_width=32,
-    tile_overlap=2
-)
+# # 1700 tiles :)
+# WIDE = Survey(
+#     name='wide',
+#     min_tile_index=int(1.02e8),
+#     max_tile_index=int(1.022e8),
+#     tile_width=32,
+#     tile_overlap=2
+# )
     
 
 
@@ -160,7 +162,7 @@ def get_tile_extents_fov(tiles: pd.DataFrame) -> pd.DataFrame:
     return tiles
 
 
-def find_relevant_sources_in_tile(cfg, tile):
+def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     # apply our final selection criteria
 
     """
@@ -192,25 +194,31 @@ def find_relevant_sources_in_tile(cfg, tile):
         query_str += """AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
         """
     elif cfg.selection_cuts == 'lens_candidates':
+        # https://euclidconsortium.slack.com/archives/C05JVCV6TA5/p1728644532577239
         logging.info('Applying lens candidate cuts')
-        query_str += """AND segmentation_area > 100
-        AND flux_r_ext_decam_aper > 3.630780547701008
-        AND flux_r_ext_decam_aper < 229.08676527677702
-        AND flux_g_ext_decam_aper < 36.307805477010085
-        AND flux_i_ext_decam_aper < 190.54607179632464
-        AND flux_i_ext_decam_aper > 1.4454397707459257
-        AND (flux_g_ext_decam_aper / flux_i_ext_decam_aper) > 0.01
-        AND (flux_g_ext_decam_aper / flux_i_ext_decam_aper) < 0.19054607179632474
-        AND (flux_g_ext_decam_aper / flux_r_ext_decam_aper) > 0.06309573444801933
-        AND (flux_g_ext_decam_aper / flux_r_ext_decam_aper) < 0.5754399373371569
-        """
+        query_str += """AND segmentation_area > 400
+                        AND mer.FLUX_DETECTION_TOTAL>=3.63078
+                        AND mer.MUMAX_MINUS_MAG>=-2.6
+                        AND mer.MU_MAX>=15.0
+                        """
+
+        # AND flux_r_ext_decam_aper > 3.630780547701008
+        # AND flux_r_ext_decam_aper < 229.08676527677702
+        # AND flux_g_ext_decam_aper < 36.307805477010085
+        # AND flux_i_ext_decam_aper < 190.54607179632464
+        # AND flux_i_ext_decam_aper > 1.4454397707459257
+        # AND (flux_g_ext_decam_aper / flux_i_ext_decam_aper) > 0.01
+        # AND (flux_g_ext_decam_aper / flux_i_ext_decam_aper) < 0.19054607179632474
+        # AND (flux_g_ext_decam_aper / flux_r_ext_decam_aper) > 0.06309573444801933
+        # AND (flux_g_ext_decam_aper / flux_r_ext_decam_aper) < 0.5754399373371569
+        # """
         # AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) < 5
         # AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) > 1.8
         # AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) < 3
         # AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) > 0.6
 
     # within the tile via segmentation map id
-    closing_str = f"""AND CAST(segmentation_map_id as varchar) LIKE '{tile['tile_index']}%'
+    closing_str = f"""AND CAST(segmentation_map_id as varchar) LIKE '{tile_index}%'
     ORDER BY object_id ASC
     """
     query_str += closing_str
@@ -238,13 +246,13 @@ def find_relevant_sources_in_tile(cfg, tile):
 
     logging.info(f"Found {len(df)} query results")
     
-    df['tile_index'] = tile['tile_index']
+    df['tile_index'] = tile_index
     df['mag_segmentation'] = -2.5 * np.log10(df['flux_segmentation']) + 23.9  # for convenience
 
     return df.reset_index(drop=True)
 
 
-def download_mosaics(tile_index: int, tiles: pd.DataFrame, download_dir: str):
+def download_mosaics(tile_index: int, tiles: pd.DataFrame, download_dir: str) -> pd.DataFrame:
     # save all matching tiles, assuming the tiles catalog only includes relevant data already
 
     matching_tiles = tiles.query(f'tile_index == {tile_index}')
@@ -314,11 +322,20 @@ def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, o
     return os.path.join(base_dir, subdir, filename_without_format + '.' + output_format)
 
 
-def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:str='jpg', overwrite:bool=False, allow_radius_estimate:bool=True):
+def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
+
+    # , output_format:str='jpg', overwrite:bool=False, allow_radius_estimate:bool=True
+
+    # assumes the tile has been downloaded and catalogued
+    # assumes tile_galaxies includes all/only the bands to load and potentially include
     
-    logging.info('loading tile')
-    vis_data, header = fits.getdata(vis_loc, header=True, memmap=False, decompress_in_memory=True)
-    nisp_data = fits.getdata(nisp_loc, header=False, memmap=False, decompress_in_memory=True)
+    logging.info('loading bands for tile')
+    tile_data = {}
+    for band in cfg.bands:
+        tile_data[band] = fits.getdata(tile_galaxies[f'{band}_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
+    header = fits.getheader(tile_galaxies[f'{cfg.bands[0]}_loc'].iloc[0])
+    # vis_loc = tile_galaxies['vis_tile'].iloc[0]
+    # nisp_loc = tile_galaxies['y_tile'].iloc[0]
     logging.info('tile loaded')
     
     tile_galaxies = tile_galaxies.reset_index(drop=True)
@@ -339,52 +356,59 @@ def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:s
         galaxy['y_center'] = y_center
         galaxy['log_segmentation_area'] = np.log10(galaxy['segmentation_area'])
         galaxy['log_kron_radius'] = np.log10(galaxy['kron_radius'])
+
+        cutout_by_band = {}
+        for band in cfg.bands:
+
+            if cfg.field_of_view == 'galaxy_zoo':
+                # TODO this bit should use Cutout2D instead
+                galaxy.index = galaxy.index.str.upper()  # for the radius estimate
+                cutout_by_band[band] = m_utils.extract_cutout_from_array(tile_data[band], galaxy, buff=0, allow_radius_estimate=cfg.allow_radius_estimate)
+                galaxy.index = galaxy.index.str.lower()
+            elif isinstance(cfg.field_of_view, float) or isinstance(cfg.field_of_view, int):
+                # TODO once Cutout2D throughout, I can preserve the header, for now, do .data instead
+                cutout_by_band[band] = Cutout2D(tile_data[band], (x_center, y_center), cfg.field_of_view * u.arcsec, wcs=tile_wcs).data 
+            else:
+                raise ValueError(f'Unknown field of view setting {cfg.field_of_view}')
+
         
-        if output_format == 'jpg':
+        if cfg.jpg_outputs:  # anything in this list
             
             try:
                 
-                # really should make this a class...
-                # TODO might be different for lens search
-                cutout_locs = galaxy[['jpg_loc_composite', 'jpg_loc_vis_only', 'jpg_loc_vis_lsb']]
+                cutout_locs = galaxy[cfg.jpg_outputs]  # assume paths already made earlier in catalog creation step
 
                 # assume they all are in the same subdir
                 if i == 0:
-                    cutout_subdir = os.path.dirname(cutout_locs['jpg_loc_composite'])
+                    cutout_subdir = os.path.dirname(cutout_locs[cfg.jpg_outputs[0]])
                     if not os.path.isdir(cutout_subdir):
                         os.makedirs(cutout_subdir)
-    
                 
-                if np.all([os.path.isfile(loc) for loc in cutout_locs]) and not overwrite:
+                if np.all([os.path.isfile(loc) for loc in cutout_locs]) and not cfg.overwrite_jpg:
                     continue
 
-                galaxy.index = galaxy.index.str.upper()
-                vis_cutout = m_utils.extract_cutout_from_array(vis_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
-                nisp_cutout = m_utils.extract_cutout_from_array(nisp_data, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
-                galaxy.index = galaxy.index.str.lower()
-                # extremely lazy coding, I should make a class or smth
-                # print(f'got slice {vis_cutout.shape}, {nisp_cutout.shape}')
+                if 'composite' in cfg.jpg_outputs:
+                    vis_cutout = cutout_by_band['VIS']
+                    nisp_cutout = cutout_by_band['NISP_Y']
+                    cutout = cutout_utils.make_composite_cutout(vis_cutout, nisp_cutout)
+                    Image.fromarray(cutout).save(cutout_locs['composite'])
+                
+                if 'vis_only' in cfg.jpg_outputs:
+                    cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'])
+                    Image.fromarray(cutout).save(cutout_locs['vis_only'])
 
-                cutout = cutout_utils.make_composite_cutout(vis_cutout, nisp_cutout)
-                Image.fromarray(cutout).save(galaxy['jpg_loc_composite'])
+                if 'vis_lsb' in cfg.jpg_outputs:
+                    cutout = cutout_utils.make_lsb_cutout(cutout_by_band['VIS'], stretch=20, power=0.5)
+                    Image.fromarray(cutout).save(cutout_locs['vis_lsb'])
 
-                cutout = m_utils.make_vis_only_cutout(vis_cutout)
-                Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only'])
+                # TODO now I can add strong lensing options here
 
-                # magic params from tinkering
-                cutout = cutout_utils.make_lsb_cutout(vis_cutout, stretch=20, power=0.5)
-                # print('vis lsb ready')
-                Image.fromarray(cutout).save(galaxy['jpg_loc_vis_lsb'])
-                # print('vis lsb saved')
                 
             except AssertionError as e:
-                galaxy.index = galaxy.index.str.lower()
                 print(f'skipping galaxy {galaxy["object_id"]} in tile {galaxy["tile_index"]} due to \n{e}')
 
             
-        elif (output_format == 'fits.gz') or (output_format == 'fits'):
-
-    
+        elif cfg.fits_outputs:
 
             # lazy copy
             # assume they all are in the same subdir
@@ -393,32 +417,22 @@ def save_cutouts(vis_loc, nisp_loc, tile_galaxies: pd.DataFrame, output_format:s
                 if not os.path.isdir(cutout_subdir):
                     os.makedirs(cutout_subdir)
 
-
-            # lazy copy
-
-            galaxy.index = galaxy.index.str.upper()
-            vis_cutout, cutout_wcs = m_utils.extract_cutout_from_fits(vis_data, tile_wcs, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
-            nisp_cutout, _ = m_utils.extract_cutout_from_fits(nisp_data, tile_wcs, galaxy, buff=0, allow_radius_estimate=allow_radius_estimate)
-            # galaxy.index = galaxy.index.str.lower()
-
-    
+            # TODO this is a bit of a mess, but I can't use Cutout2D with a header yet
             hdr = fits.Header()
-            # hdr['COMMENT'] = json.dumps(galaxy[['object_id', 'tile_index', 'release_name']].to_dict())
             hdr.update(galaxy[['OBJECT_ID', 'TILE_INDEX', 'RELEASE_NAME']].to_dict())
-            hdr.update(cutout_wcs.to_header())  # adds WCS for cutout (vs whole tile)
+            # hdr.update(cutout_wcs.to_header())  # adds WCS for cutout (vs whole tile)
             header_hdu = fits.PrimaryHDU(header=hdr)
-            
-            vis_hdu = fits.ImageHDU(data=vis_cutout, name="VIS_FLUX_MICROJANSKY", header=hdr)
-            nisp_hdu = fits.ImageHDU(data=nisp_cutout, name="NISP_Y_FLUX_MICROJANSKY", header=hdr)
-            
-            hdul = fits.HDUList([header_hdu, vis_hdu, nisp_hdu])
+            hdu_list = [header_hdu]
+
+            for band in cfg.bands:
+                hdu_list.append(fits.ImageHDU(data=cutout_by_band[band], name=f"{band}_FLUX", header=hdr))
             
             with warnings.catch_warnings():
                 # it rewrites my columns to fit the FITS standard by adding HEIRARCH
                 warnings.simplefilter('ignore', VerifyWarning)
-                hdul.writeto(galaxy['FITS_LOC'], overwrite=True)
+                fits.HDUList(hdu_list).writeto(galaxy['FITS_LOC'], overwrite=True)
         else:
-            raise ValueError(f'{output_format} format not recognised')
+            raise ValueError(f'No cfg.jpg_outputs or cfg.fits_outputs, format not recognised')
 
 
 def login():
