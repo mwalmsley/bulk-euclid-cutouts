@@ -193,7 +193,7 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
         # at least 1200px in area OR ( vis mag < 20.5 (expressed as flux) and at least 200px in area)
         query_str += """AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
         """
-    elif cfg.selection_cuts == 'lens_candidates':
+    elif cfg.selection_cuts == 'space_warps':
         # https://euclidconsortium.slack.com/archives/C05JVCV6TA5/p1728644532577239
         logging.info('Applying lens candidate cuts')
         query_str += """AND segmentation_area > 400
@@ -365,11 +365,12 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
                 galaxy.index = galaxy.index.str.upper()  # for the radius estimate
                 cutout_by_band[band] = m_utils.extract_cutout_from_array(tile_data[band], galaxy, buff=0, allow_radius_estimate=cfg.allow_radius_estimate)
                 galaxy.index = galaxy.index.str.lower()
-            elif isinstance(cfg.field_of_view, float) or isinstance(cfg.field_of_view, int):
+            else:
+                if cfg.field_of_view == 'space_warps':
+                    cfg.field_of_view = 20  # arcsec
+                assert isinstance(cfg.field_of_view, float) or isinstance(cfg.field_of_view, int)
                 # TODO once Cutout2D throughout, I can preserve the header, for now, do .data instead
                 cutout_by_band[band] = Cutout2D(tile_data[band], (x_center, y_center), cfg.field_of_view * u.arcsec, wcs=tile_wcs).data 
-            else:
-                raise ValueError(f'Unknown field of view setting {cfg.field_of_view}')
 
         
         if cfg.jpg_outputs:  # anything in this list

@@ -14,6 +14,7 @@ max_retries: 1
 jpg_outputs: ['composite', 'vis_only', 'vis_lsb']
 overwrite_jpg: False
 # overwrite_fits: false
+selection_cuts: space_warps
 field_of_view: galaxy_zoo  # or number in arcseconds
 
 download_dir: !
