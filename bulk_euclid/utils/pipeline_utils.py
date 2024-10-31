@@ -446,7 +446,7 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
                 with warnings.catch_warnings():
                     # it rewrites my columns to fit the FITS standard by adding HEIRARCH
                     warnings.simplefilter('ignore', VerifyWarning)
-                    fits.HDUList(hdu_list).writeto(galaxy['FITS_LOC'], overwrite=True)
+                    fits.HDUList(hdu_list).writeto(galaxy['fits_loc'], overwrite=True)
         else:
             raise ValueError(f'No cfg.jpg_outputs or cfg.fits_outputs, format not recognised')
 
