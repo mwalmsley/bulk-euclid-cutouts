@@ -164,6 +164,9 @@ def add_cutout_paths(cfg, catalog):
     for output_name in cfg.jpg_outputs:
         catalog[f'jpg_loc_{output_name}'] = catalog.apply(
             lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix=output_name, oneway_hash=False), axis=1)
+    if cfg.fits_outputs:  # true or false, unlike jpg_loc:
+        catalog['fits_loc'] = catalog.apply(
+            lambda x: pipeline_utils.get_cutout_loc(cfg.fits_dir, x, output_format='fits.gz', version_suffix=None, oneway_hash=False), axis=1)
 
 
 def make_volunteer_cutouts(cfg, df):

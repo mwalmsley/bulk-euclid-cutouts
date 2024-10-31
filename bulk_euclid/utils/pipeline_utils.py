@@ -421,7 +421,7 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
                 print(f'skipping galaxy {galaxy["object_id"]} in tile {galaxy["tile_index"]} due to \n{e}')
 
             
-        elif cfg.fits_outputs:
+        if cfg.fits_outputs:
 
             # skip if all exist and not overwriting. If any missing, don't skip.
             if cfg.overwrite_fits or (not os.path.isfile(galaxy['fits_loc'])):

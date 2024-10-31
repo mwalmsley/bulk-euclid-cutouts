@@ -16,8 +16,8 @@ selection_cuts: space_warps
 field_of_view: galaxy_zoo  # or number in arcseconds
 
 # jpg_outputs: ['composite', 'vis_only', 'vis_lsb']
-jpg_outputs: ['jpg_loc_vis_only_sw', 'jpg_loc_vis_y_sw', 'jpg_loc_vis_low_y_sw', 'jpg_loc_vis_j_sw']
-fits_outputs: true
+jpg_outputs: ['vis_only_sw', 'vis_y_sw', 'vis_low_y_sw', 'vis_j_sw']
+fits_outputs: True
 overwrite_jpg: False
 overwrite_fits: False
 
