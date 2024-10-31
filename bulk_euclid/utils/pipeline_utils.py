@@ -230,10 +230,8 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     while retries < cfg.max_retries:
         try:
             if cfg.run_async:
-                output_tmpfile = f'tmpfile_{np.random.rand(int(1e8))}.csv'
                 job = Euclid.launch_job_async(query_str, background=False)
-                df = pd.read_csv(output_tmpfile)
-                shutil.rm(output_tmpfile)
+                df = job.get_results().to_pandas()
             else:
                 job = Euclid.launch_job(query_str)
                 df = job.get_results().to_pandas()
