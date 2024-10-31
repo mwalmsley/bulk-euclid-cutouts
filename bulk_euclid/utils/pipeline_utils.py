@@ -231,7 +231,7 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
         try:
             if cfg.run_async:
                 output_tmpfile = f'tmpfile_{np.random.rand(int(1e8))}.csv'
-                job = Euclid.launch_job_async(query_str, background=False, output_file=output_tmpfile, output_format='csv')
+                job = Euclid.launch_job_async(query_str, background=False)
                 df = pd.read_csv(output_tmpfile)
                 shutil.rm(output_tmpfile)
             else:
