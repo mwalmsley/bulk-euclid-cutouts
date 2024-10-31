@@ -330,8 +330,8 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
     logging.info('loading bands for tile')
     tile_data = {}
     for band in cfg.bands:
-        tile_data[band] = fits.getdata(tile_galaxies[f'{band}_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
-    header = fits.getheader(tile_galaxies[f'{cfg.bands[0]}_loc'].iloc[0])
+        tile_data[band] = fits.getdata(tile_galaxies[f'{band.lower()}_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
+    header = fits.getheader(tile_galaxies[f'{cfg.bands[0].lower()}_loc'].iloc[0])
     # vis_loc = tile_galaxies['vis_tile'].iloc[0]
     # nisp_loc = tile_galaxies['y_tile'].iloc[0]
     logging.info('tile loaded')
