@@ -387,7 +387,7 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
                 # GZ Euclid image processing
 
                 if 'composite' in cfg.jpg_outputs:
-                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NISP_Y'], vis_q=100, nisp_q=0.2)
+                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_Y'], vis_q=100, nisp_q=0.2)
                     Image.fromarray(cutout).save(galaxy['jpg_loc_composite'])
                 
                 if 'vis_only' in cfg.jpg_outputs:
@@ -405,16 +405,15 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
                     Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only_sw'])
 
                 if 'vis_y_sw' in cfg.jpg_outputs:  # VIS and Y, Q=500,1
-                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NISP_Y'], vis_q=500, nisp_q=1)
+                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_Y'], vis_q=500, nisp_q=1)
                     Image.fromarray(cutout).save(galaxy['jpg_loc_vis_y_sw'])
 
                 if 'vis_low_y_sw' in cfg.jpg_outputs: # VIS and Y, Q=500,0.2
-                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NISP_Y'], vis_q=500, nisp_q=.2)
+                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_Y'], vis_q=500, nisp_q=.2)
                     Image.fromarray(cutout).save(galaxy['jpg_loc_vis_low_y_sw'])
 
                 if 'vis_j_sw' in cfg.jpg_outputs:  # VIS and J, Q=500,0.5
-                    j_cutout = cutout_by_band['NISP_J']
-                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], j_cutout, vis_q=500, nisp_q=0.5)
+                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_J'], vis_q=500, nisp_q=0.5)
                     Image.fromarray(cutout).save(galaxy['jpg_loc_vis_j_sw'])
 
                 
