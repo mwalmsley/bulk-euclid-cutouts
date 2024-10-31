@@ -132,7 +132,7 @@ def download_tile_and_catalog(cfg, tiles_to_download: pd.DataFrame, tile_index: 
     for band in cfg.bands:
         tile_metadata_to_copy[f'{band.lower()}_loc'] = download_tiles.query(f'filter_name == "{band}"')['file_loc'].squeeze()
 
-    print(tile_metadata_to_copy )
+    logging.debug(tile_metadata_to_copy)
 
     tile_catalog = get_and_save_tile_catalog(cfg, tile_index, tile_metadata_to_copy)
     return tile_catalog
@@ -150,7 +150,7 @@ def get_and_save_tile_catalog(cfg, tile_index: int, tile_metadata_to_copy: dict)
 
         # add metadata
         for key, value in tile_metadata_to_copy.items():
-            tile_galaxies[value] = tile_metadata_to_copy[key]
+            tile_galaxies[key] = value
 
         add_cutout_paths(cfg, tile_galaxies)  # inplace
         tile_galaxies.to_csv(tile_catalog_loc, index=False)
