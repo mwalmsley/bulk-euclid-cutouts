@@ -90,7 +90,7 @@ def select_tiles(cfg, tiles):
 
     # tiles.groupby('tile_index')['filter_name'].unique().value_counts()
     # filter name will only include the cfg.bands, due to the query in get_tiles_in_survey
-    is_missing_bands = tiles.pivot(index='tile_index', columns='filter_name', values='file_loc').isna().any(axis=1) # series like {tile_index: is_missing_bands}
+    is_missing_bands = tiles.pivot(index='tile_index', columns='filter_name', values='file_name').isna().any(axis=1) # series like {tile_index: is_missing_bands}. file_name not used.
     possible_indices = is_missing_bands[~is_missing_bands].index  # flip to get indices with all bands, then get index
     logging.info(f'Num. of tiles with all bands: {len(possible_indices)}')
 
