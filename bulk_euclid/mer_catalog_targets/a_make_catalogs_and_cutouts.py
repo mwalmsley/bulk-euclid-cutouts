@@ -147,8 +147,8 @@ def get_and_save_tile_catalog(cfg, tile_index: int, tile_metadata_to_copy: dict)
         logging.info(tile_galaxies['tile_index_from_segmentation_map_id'].value_counts())
 
         # add metadata
-        for col, value in tile_metadata_to_copy.items():
-            tile_galaxies[col] = tile_metadata_to_copy[value]
+        for key, value in tile_metadata_to_copy.items():
+            tile_galaxies[value] = tile_metadata_to_copy[key]
 
         add_cutout_paths(cfg, tile_galaxies)  # inplace
         tile_galaxies.to_csv(tile_catalog_loc, index=False)
