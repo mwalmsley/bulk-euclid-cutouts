@@ -70,7 +70,7 @@ def get_tile_catalog(cfg: OmegaConf):
     
     logging.info(tiles['instrument_name'].value_counts())
     logging.info(tiles['release_name'].value_counts())
-    assert not tiles.duplicated(subset=['ra', 'dec', 'instrument_name']).any()
+    assert not tiles.duplicated(subset=['ra', 'dec', 'instrument_name', 'filter_name']).any()
 
     # logging.info(f'Tiles after restricting to southern area: {len(tiles)}')
 
@@ -163,13 +163,6 @@ def add_cutout_paths(cfg, catalog):
     for output_name in cfg.jpg_outputs:
         catalog[f'jpg_loc_{output_name}'] = catalog.apply(
             lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix=output_name, oneway_hash=False), axis=1)
-    # catalog['jpg_loc_composite'] = catalog.apply(
-    #     lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix='composite', oneway_hash=False), axis=1)
-    # catalog['jpg_loc_vis_only'] = catalog.apply(
-    #     lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix='vis_only', oneway_hash=False), axis=1)
-    # catalog['jpg_loc_vis_lsb'] = catalog.apply(
-    #     lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix='vis_lsb', oneway_hash=False), axis=1)
-    
 
 
 def make_volunteer_cutouts(cfg, df):
