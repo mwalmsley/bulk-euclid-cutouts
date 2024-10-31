@@ -173,7 +173,7 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     """
 
     query_str = f"""
-    SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_vis_aper, ellipticity, kron_radius, segmentation_map_id, flux_g_ext_decam_aper, flux_i_ext_decam_aper, flux_r_ext_decam_aper
+    SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_detection_total, flux_vis_aper, mumax_minux_mag, mu_max, ellipticity, kron_radius, segmentation_map_id, flux_g_ext_decam_aper, flux_i_ext_decam_aper, flux_r_ext_decam_aper
     FROM catalogue.mer_catalogue
     """
 
@@ -197,10 +197,10 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
         # https://euclidconsortium.slack.com/archives/C05JVCV6TA5/p1728644532577239
         logging.info('Applying lens candidate cuts')
         query_str += """AND segmentation_area > 400
-                        AND mer.FLUX_DETECTION_TOTAL>=3.63078
-                        AND mer.MUMAX_MINUS_MAG>=-2.6
-                        AND mer.MU_MAX>=15.0
-                        """
+                        AND flux_detection_total >= 3.63078
+                        AND mumax_minux_mag >= -2.6
+                        AND mu_max >= 15.0
+        """
 
         # AND flux_r_ext_decam_aper > 3.630780547701008
         # AND flux_r_ext_decam_aper < 229.08676527677702
