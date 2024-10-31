@@ -370,55 +370,49 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
 
         
         if cfg.jpg_outputs:  # anything in this list
-            
+            # assume paths already made earlier in catalog creation step
             try:
-                
-                cutout_locs = galaxy[cfg.jpg_outputs]  # assume paths already made earlier in catalog creation step
-
                 # assume they all are in the same subdir
                 if i == 0:
-                    cutout_subdir = os.path.dirname(cutout_locs[cfg.jpg_outputs[0]])
+                    cutout_subdir = os.path.dirname(galaxy['jpg_loc_' + cfg.jpg_outputs[0]])
                     if not os.path.isdir(cutout_subdir):
                         os.makedirs(cutout_subdir)
                 
-                if np.all([os.path.isfile(loc) for loc in cutout_locs]) and not cfg.overwrite_jpg:
+                if np.all([os.path.isfile(loc) for loc in galaxy]) and not cfg.overwrite_jpg:
                     continue
 
-                vis_cutout = cutout_by_band['VIS']  # always used
+                # GZ Euclid image processing
 
                 if 'composite' in cfg.jpg_outputs:
-                    y_cutout = cutout_by_band['NISP_Y']
-                    cutout = cutout_utils.make_composite_cutout(vis_cutout, y_cutout)
-                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_composite'])
+                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NISP_Y'], vis_q=100, nisp_q=0.2)
+                    Image.fromarray(cutout).save(galaxy['jpg_loc_composite'])
                 
                 if 'vis_only' in cfg.jpg_outputs:
-                    cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'])
-                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_vis_only'])
+                    cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'], q=100)
+                    Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only'])
 
                 if 'vis_lsb' in cfg.jpg_outputs:
                     cutout = cutout_utils.make_lsb_cutout(cutout_by_band['VIS'], stretch=20, power=0.5)
-                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_vis_lsb'])
+                    Image.fromarray(cutout).save(galaxy['jpg_loc_vis_lsb'])
+
+                # Space Warps Euclid image processing
 
                 if 'vis_only_sw' in cfg.jpg_outputs:  # VIS, Q=500
                     cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'], q=500)
-                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_vis_only_sw'])
+                    Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only_sw'])
 
-                if 'vis_y_sw' in cfg.jpg_outputs:  # VIS and Y, Q=500
-                    y_cutout = cutout_by_band['NISP_Y']
-                    cutout = cutout_utils.make_composite_cutout(vis_cutout, y_cutout, vis_q=500, nisp_q=1)
-                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_vis_y_sw'])
+                if 'vis_y_sw' in cfg.jpg_outputs:  # VIS and Y, Q=500,1
+                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NISP_Y'], vis_q=500, nisp_q=1)
+                    Image.fromarray(cutout).save(galaxy['jpg_loc_vis_y_sw'])
 
-                if 'vis_j_sw' in cfg.jpg_outputs:  # VIS and J, Q=500
+                if 'vis_low_y_sw' in cfg.jpg_outputs: # VIS and Y, Q=500,0.2
+                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NISP_Y'], vis_q=500, nisp_q=.2)
+                    Image.fromarray(cutout).save(galaxy['jpg_loc_vis_low_y_sw'])
+
+                if 'vis_j_sw' in cfg.jpg_outputs:  # VIS and J, Q=500,0.5
                     j_cutout = cutout_by_band['NISP_J']
-                    cutout = cutout_utils.make_composite_cutout(vis_cutout, j_cutout, vis_q=500, nisp_q=0.5)
-                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_vis_j_sw'])
-
-                if 'vis_low_y_sw' in cfg.jpg_outputs:
-                    y_cutout = cutout_by_band['NISP_Y']
-                    cutout = cutout_utils.make_composite_cutout(vis_cutout, y_cutout, vis_q=500, nisp_q=.2)
-                    Image.fromarray(cutout).save(cutout_locs['jpg_loc_vis_low_y_sw'])
-
-                # TODO now I can add strong lensing options here
+                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], j_cutout, vis_q=500, nisp_q=0.5)
+                    Image.fromarray(cutout).save(galaxy['jpg_loc_vis_j_sw'])
 
                 
             except AssertionError as e:
