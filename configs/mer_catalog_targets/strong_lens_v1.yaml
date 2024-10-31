@@ -11,12 +11,15 @@ delete_tiles: False
 debug: False
 run_async: True  # necessary for strong lens selection func
 max_retries: 1
-# jpg_outputs: ['composite', 'vis_only', 'vis_lsb']
-jpg_outputs: ['jpg_loc_vis_only_sw', 'jpg_loc_vis_y_sw', 'jpg_loc_vis_low_y_sw', 'jpg_loc_vis_j_sw']
-overwrite_jpg: False
-# overwrite_fits: false
+
 selection_cuts: space_warps
 field_of_view: galaxy_zoo  # or number in arcseconds
+
+# jpg_outputs: ['composite', 'vis_only', 'vis_lsb']
+jpg_outputs: ['jpg_loc_vis_only_sw', 'jpg_loc_vis_y_sw', 'jpg_loc_vis_low_y_sw', 'jpg_loc_vis_j_sw']
+fits_outputs: true
+overwrite_jpg: False
+overwrite_fits: False
 
 download_dir: !
 tile_dir: !

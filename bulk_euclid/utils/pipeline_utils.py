@@ -381,40 +381,40 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
                     if not os.path.isdir(cutout_subdir):
                         os.makedirs(cutout_subdir)
                 
-                if np.all([os.path.isfile(loc) for loc in cutout_locs]) and not cfg.overwrite_jpg:
-                    continue  # skip if all exist and not overwriting. If any missing, don't skip.
+                # skip if all exist and not overwriting. If any missing, don't skip.
+                if  cfg.overwrite_jpg or (not np.all([os.path.isfile(loc) for loc in cutout_locs])):
 
-                # GZ Euclid image processing
+                    # GZ Euclid image processing
 
-                if 'composite' in cfg.jpg_outputs:
-                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_Y'], vis_q=100, nisp_q=0.2)
-                    Image.fromarray(cutout).save(galaxy['jpg_loc_composite'])
-                
-                if 'vis_only' in cfg.jpg_outputs:
-                    cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'], q=100)
-                    Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only'])
+                    if 'composite' in cfg.jpg_outputs:
+                        cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_Y'], vis_q=100, nisp_q=0.2)
+                        Image.fromarray(cutout).save(galaxy['jpg_loc_composite'])
+                    
+                    if 'vis_only' in cfg.jpg_outputs:
+                        cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'], q=100)
+                        Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only'])
 
-                if 'vis_lsb' in cfg.jpg_outputs:
-                    cutout = cutout_utils.make_lsb_cutout(cutout_by_band['VIS'], stretch=20, power=0.5)
-                    Image.fromarray(cutout).save(galaxy['jpg_loc_vis_lsb'])
+                    if 'vis_lsb' in cfg.jpg_outputs:
+                        cutout = cutout_utils.make_lsb_cutout(cutout_by_band['VIS'], stretch=20, power=0.5)
+                        Image.fromarray(cutout).save(galaxy['jpg_loc_vis_lsb'])
 
-                # Space Warps Euclid image processing
+                    # Space Warps Euclid image processing
 
-                if 'vis_only_sw' in cfg.jpg_outputs:  # VIS, Q=500
-                    cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'], q=500)
-                    Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only_sw'])
+                    if 'vis_only_sw' in cfg.jpg_outputs:  # VIS, Q=500
+                        cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'], q=500)
+                        Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only_sw'])
 
-                if 'vis_y_sw' in cfg.jpg_outputs:  # VIS and Y, Q=500,1
-                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_Y'], vis_q=500, nisp_q=1)
-                    Image.fromarray(cutout).save(galaxy['jpg_loc_vis_y_sw'])
+                    if 'vis_y_sw' in cfg.jpg_outputs:  # VIS and Y, Q=500,1
+                        cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_Y'], vis_q=500, nisp_q=1)
+                        Image.fromarray(cutout).save(galaxy['jpg_loc_vis_y_sw'])
 
-                if 'vis_low_y_sw' in cfg.jpg_outputs: # VIS and Y, Q=500,0.2
-                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_Y'], vis_q=500, nisp_q=.2)
-                    Image.fromarray(cutout).save(galaxy['jpg_loc_vis_low_y_sw'])
+                    if 'vis_low_y_sw' in cfg.jpg_outputs: # VIS and Y, Q=500,0.2
+                        cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_Y'], vis_q=500, nisp_q=.2)
+                        Image.fromarray(cutout).save(galaxy['jpg_loc_vis_low_y_sw'])
 
-                if 'vis_j_sw' in cfg.jpg_outputs:  # VIS and J, Q=500,0.5
-                    cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_J'], vis_q=500, nisp_q=0.5)
-                    Image.fromarray(cutout).save(galaxy['jpg_loc_vis_j_sw'])
+                    if 'vis_j_sw' in cfg.jpg_outputs:  # VIS and J, Q=500,0.5
+                        cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_J'], vis_q=500, nisp_q=0.5)
+                        Image.fromarray(cutout).save(galaxy['jpg_loc_vis_j_sw'])
 
                 
             except AssertionError as e:
@@ -423,27 +423,30 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
             
         elif cfg.fits_outputs:
 
-            # lazy copy
-            # assume they all are in the same subdir
-            if i == 0:
-                cutout_subdir = os.path.dirname(galaxy['fits_loc'])
-                if not os.path.isdir(cutout_subdir):
-                    os.makedirs(cutout_subdir)
+            # skip if all exist and not overwriting. If any missing, don't skip.
+            if cfg.overwrite_fits or (not os.path.isfile(galaxy['fits_loc'])):
 
-            # TODO this is a bit of a mess, but I can't use Cutout2D with a header yet
-            hdr = fits.Header()
-            hdr.update(galaxy[['OBJECT_ID', 'TILE_INDEX', 'RELEASE_NAME']].to_dict())
-            # hdr.update(cutout_wcs.to_header())  # adds WCS for cutout (vs whole tile)
-            header_hdu = fits.PrimaryHDU(header=hdr)
-            hdu_list = [header_hdu]
+                # lazy copy
+                # assume they all are in the same subdir
+                if i == 0:
+                    cutout_subdir = os.path.dirname(galaxy['fits_loc'])
+                    if not os.path.isdir(cutout_subdir):
+                        os.makedirs(cutout_subdir)
 
-            for band in cfg.bands:
-                hdu_list.append(fits.ImageHDU(data=cutout_by_band[band], name=f"{band}_FLUX", header=hdr))
-            
-            with warnings.catch_warnings():
-                # it rewrites my columns to fit the FITS standard by adding HEIRARCH
-                warnings.simplefilter('ignore', VerifyWarning)
-                fits.HDUList(hdu_list).writeto(galaxy['FITS_LOC'], overwrite=True)
+                # TODO this is a bit of a mess, but I can't use Cutout2D with a header yet
+                hdr = fits.Header()
+                hdr.update(galaxy[['OBJECT_ID', 'TILE_INDEX', 'RELEASE_NAME']].to_dict())
+                # hdr.update(cutout_wcs.to_header())  # adds WCS for cutout (vs whole tile)
+                header_hdu = fits.PrimaryHDU(header=hdr)
+                hdu_list = [header_hdu]
+
+                for band in cfg.bands:
+                    hdu_list.append(fits.ImageHDU(data=cutout_by_band[band], name=f"{band}_FLUX", header=hdr))
+                
+                with warnings.catch_warnings():
+                    # it rewrites my columns to fit the FITS standard by adding HEIRARCH
+                    warnings.simplefilter('ignore', VerifyWarning)
+                    fits.HDUList(hdu_list).writeto(galaxy['FITS_LOC'], overwrite=True)
         else:
             raise ValueError(f'No cfg.jpg_outputs or cfg.fits_outputs, format not recognised')
 
