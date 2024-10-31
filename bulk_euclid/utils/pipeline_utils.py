@@ -371,15 +371,18 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
         
         if cfg.jpg_outputs:  # anything in this list
             # assume paths already made earlier in catalog creation step
+
+            # just for convenience
+            cutout_locs = list(galaxy[[f'jpg_loc_{output_name}' for output_name in cfg.jpg_outputs]])
             try:
                 # assume they all are in the same subdir
                 if i == 0:
-                    cutout_subdir = os.path.dirname(galaxy['jpg_loc_' + cfg.jpg_outputs[0]])
+                    cutout_subdir = os.path.dirname(cutout_locs[0])
                     if not os.path.isdir(cutout_subdir):
                         os.makedirs(cutout_subdir)
                 
-                if np.all([os.path.isfile(loc) for loc in galaxy]) and not cfg.overwrite_jpg:
-                    continue
+                if np.all([os.path.isfile(loc) for loc in cutout_locs]) and not cfg.overwrite_jpg:
+                    continue  # skip if all exist and not overwriting. If any missing, don't skip.
 
                 # GZ Euclid image processing
 
