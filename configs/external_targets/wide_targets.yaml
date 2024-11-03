@@ -17,4 +17,5 @@ download_dir: !
 tile_dir: !
 cutout_dir: !
 fits_dir: !
+jpg_dir: !
 sanity_dir: !
