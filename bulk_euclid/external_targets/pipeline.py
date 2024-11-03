@@ -340,7 +340,7 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
             cfg.jpg_dir, str(target["tile_index"]), str(target["id_str"]) + ".jpg"
         )
         try:
-            if cfg.fits_cutouts:
+            if cfg.fits_outputs:
                 save_multifits_cutout(cfg, target_data, target_header_data, fits_save_loc)
             if cfg.jpg_outputs:
                 save_jpg_cutout(cfg, target_data, jpg_save_loc)
