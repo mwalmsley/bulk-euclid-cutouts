@@ -492,6 +492,10 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
 
 def save_jpg_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
+
+    if not os.path.isdir(os.path.dirname(save_loc)):
+        os.mkdir(os.path.dirname(save_loc))
+
     assert 'VIS' in target_data.keys()
     vis_im: np.ndarray = target_data['VIS']['FLUX'].data
 
