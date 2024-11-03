@@ -59,7 +59,7 @@ def run(cfg: OmegaConf):
     known = known[known['final_classification'].isin(['A', 'B'])]  # drop the Cs, not plausible
     known['category'] = 'known_lens_candidate'
 
-    gz_euclid = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/gz_euclid.csv')
+    gz_euclid = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/gz_euclid.csv')[3:]
     gz_euclid['category'] = 'gz_euclid'
 
     # external_targets = lrg
@@ -220,11 +220,15 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
             logging.critical(e)
 
         if cfg.delete_tiles:
-            logging.info('Deleting tile')
-            for band in cfg.bands:
-                os.remove(dict_of_locs[band]["FLUX"])
-                for aux in cfg.auxillary_products:
-                    os.remove(dict_of_locs[band][aux])
+            try:
+                logging.info('Deleting tile')
+                for band in cfg.bands:
+                    os.remove(dict_of_locs[band]["FLUX"])
+                    for aux in cfg.auxillary_products:
+                        os.remove(dict_of_locs[band][aux])
+            except Exception as e:
+                logging.error(f"Error deleting tile {tile_index}")
+                logging.error(e)
 
 
 
