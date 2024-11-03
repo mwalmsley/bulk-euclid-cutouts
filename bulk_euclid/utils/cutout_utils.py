@@ -7,6 +7,8 @@ from astropy.nddata.utils import Cutout2D
 # import WCS
 from astropy.wcs import WCS
 
+import cv2 ## new dependency
+# pip install opencv-python
 
 
 def make_composite_cutout_from_tiles(source, vis_im, nir_im, allow_radius_estimate=False):
@@ -90,6 +92,103 @@ def gordon_scaling(x, stretch, power):
     
     
     return x
+
+
+"""Courtesy Tian Li"""
+
+# First cover RGB image into LAB image
+# Replace L channel in LAB space with the B channal (or VIS) in RGB spac
+def replace_luminosity_channel(rgb_image: np.ndarray, rgb_channel_for_luminosity: int, desaturate_speckles: bool = False):
+    lab_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2LAB)
+    # Replace L channel
+    lab_image[:, :, 0] = rgb_image[:, :, rgb_channel_for_luminosity]
+    # Convert back to RGB
+    modified_rgb_image = cv2.cvtColor(lab_image, cv2.COLOR_LAB2RGB)
+
+    if desaturate_speckles:
+        modified_rgb_image = desaturate_bright_pixels(modified_rgb_image)
+    return modified_rgb_image
+
+
+# this tends to give "blue speckles" from the blue channel/luminsity background
+# desaturate individual pixels brighter than nearby pixels
+# from astropy.stats import sigma_clipped_stats
+def desaturate_bright_pixels(rgb_image: np.ndarray, threshold: int=150):
+    hsv_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2HSV)
+    # lab_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2LAB)
+    # find highly saturated pixels
+    saturation = hsv_image[:, :, 1]
+    # print(np.isnan(saturation).mean())
+    # saturation_nansafe = np.where
+    # saturation_smoothed = cv2.medianBlur(saturation, 9)
+    # saturation_diff = saturation - saturation_smoothed
+    # desaturate highly saturated pixels
+    # threshold = np.percentile(saturation, percentile)
+
+
+
+    # mean, median, std = sigma_clipped_stats(hsv_image[:, :, 2], sigma=3.0)
+
+    # threshold = threshold  # 0-255
+    oversaturated = saturation > threshold
+    hsv_image[:, :, 1] = np.clip(saturation, 0, threshold)
+    lightness = hsv_image[:, :, 2]
+    hsv_image[:, :, 2] = np.where(oversaturated, lightness * 0.5, lightness)
+
+    # desaturation_factor = np.clip(saturation_diff / threshold, 0, 1)
+    # hsv_image[:, :, 1] = hsv_image[:, :, 1] * (1 - desaturation_factor)
+    # hsv_image[:, :, 2] = saturation_diff
+    # Convert back to RGB
+    modified_rgb_image = cv2.cvtColor(hsv_image, cv2.COLOR_HSV2RGB)
+    # modified_rgb_image = saturation > threshold
+
+    # bkg = hsv_image[:, :, 2] < (median - std)
+
+    # print(threshold, (saturation.min(), saturation.max()), saturation.mean(), (saturation > threshold).mean())
+    # return saturation > 170
+    return modified_rgb_image
+
+
+
+
+
+# this is basically a way to attempt to automatically set the "curves" tool from e.g. photoshop, where m sets the curve and MTF is the application of the curve. I will make a little comparison.
+def MTF(x, desired_mean = 0.25):
+    """Compute the Midtones Transfer Function (MTF) for given x and m."""
+
+
+    x = np.clip(x, 0, np.percentile(x, 99))
+    # x = np.arcsinh(x)
+    # x = np.clip(x, 0, 1)  # image should already be normalized
+    x = x / x.max()  # normalize to 0-1, maybe percentile clip
+
+    m = find_m_for_mean(x, desired_mean)
+    
+    y = np.zeros_like(x)
+    mask0 = (x == 0)
+    maskm = (x == m)
+    mask1 = (x == 1)
+    mask_else = ~(mask0 | maskm | mask1)
+
+    y[mask0] = 0  # 0 -> 0
+    y[maskm] = 0.5 # 0.5 -> 0.5
+    y[mask1] = 1  # 1 -> 1
+    # ..and everything else gets curved
+    x_else = x[mask_else]
+
+    # shape of the curve
+    numerator = (m - 1) * x_else
+    denominator = (2 * m - 1) * x_else - m
+
+    # apply the curve
+    y[mask_else] = numerator / denominator
+
+    return y  # curved values
+
+def find_m_for_mean(normalized_image, desired_mean):
+    x = np.mean(normalized_image)
+    alpha = desired_mean
+    return (x-alpha*x)/(x-2*alpha*x+alpha)
     
     
     

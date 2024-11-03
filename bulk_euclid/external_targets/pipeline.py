@@ -8,7 +8,7 @@ For each tile, download that tile, and use cutout2d to slice out the relevant fi
 """
 
 import logging
-import warnings
+# import warnings
 import os
 
 import numpy as np
@@ -21,9 +21,10 @@ from astropy.wcs import WCS
 from astropy.nddata import Cutout2D
 import astropy.units as u
 from astropy.table import Table
-from astropy.io.fits.verify import VerifyWarning
+# from astropy.io.fits.verify import VerifyWarning
+from PIL import Image
 
-from bulk_euclid.utils import pipeline_utils
+from bulk_euclid.utils import pipeline_utils, cutout_utils, morphology_utils_ou_mer
 
 
 def run(cfg: OmegaConf):
@@ -58,9 +59,13 @@ def run(cfg: OmegaConf):
     known = known[known['final_classification'].isin(['A', 'B'])]  # drop the Cs, not plausible
     known['category'] = 'known_lens_candidate'
 
+    gz_euclid = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/gz_euclid.csv')
+    gz_euclid['category'] = 'gz_euclid'
+
     # external_targets = lrg
     # external_targets = pd.concat([known, lrg], axis=0).reset_index(drop=True)
-    external_targets = pd.concat([known, lrg, false_positives_desi], axis=0).reset_index(drop=True)
+    # external_targets = pd.concat([gz_euclid, known, lrg, false_positives_desi], axis=0).reset_index(drop=True)
+    external_targets = pd.concat([gz_euclid], axis=0).reset_index(drop=True)
 
     external_targets['target_field_of_view'] = 20  # arcseconds
 
@@ -214,6 +219,13 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
             logging.critical(f"Error downloading tile data and making cutouts for {tile_index}")
             logging.critical(e)
 
+        if cfg.delete_tiles:
+            logging.info('Deleting tile')
+            for band in cfg.bands:
+                os.remove(dict_of_locs[band]["FLUX"])
+                for aux in cfg.auxillary_products:
+                    os.remove(dict_of_locs[band][aux])
+
 
 
 def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
@@ -321,11 +333,17 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
         # e.g. { VIS: {FLUX: flux_cutout, MERPSF: psf_cutout, ...}, NIR_Y: {...}, ...}
         target_data = { band: cutout_data[band][target_n] for band in cfg.bands }
         target_header_data = { band: header_data[band][target_n] for band in cfg.bands }
-        save_loc = os.path.join(
+        fits_save_loc = os.path.join(
             cfg.fits_dir, str(target["tile_index"]), str(target["id_str"]) + ".fits"
         )
+        jpg_save_loc = os.path.join(
+            cfg.jpg_dir, str(target["tile_index"]), str(target["id_str"]) + ".jpg"
+        )
         try:
-            save_multifits_cutout(cfg, target_data, target_header_data, save_loc)
+            if cfg.fits_cutouts:
+                save_multifits_cutout(cfg, target_data, target_header_data, fits_save_loc)
+            if cfg.jpg_outputs:
+                save_jpg_cutout(cfg, target_data, jpg_save_loc)
         except AssertionError as e:
             logging.critical(f"Error saving cutout for target {target['id_str']}")
             logging.critical(e)
@@ -453,12 +471,8 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
             # this is the metadata row describing the PSF with the closest sky coordinates to the target
 
             # slice out that PSF
-
-            # ends up off center for some reason?
-            # WCS used only to have a convenient header for the output file
             psf_center_pixels = (closest_psf["x_center"]-1, closest_psf["y_center"]-1)
-            # logging.info(target)
-            # logging.info(f"PSF center: {psf_center_pixels}")
+
             psf_cutout = Cutout2D(
                 data=psf_tile,
                 position=psf_center_pixels,  # slice using x_center, y_center, the pixel coordinates of the PSF center in the PSF tile
@@ -466,13 +480,6 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
                 wcs=psf_wcs,
                 mode="partial",
             ).data
-
-            # could alternatively use the RA/DEC
-            # psf_cutout = Cutout2D(data=psf_tile, position=(closest_psf['RA'], closest_psf['Dec']), size=stamp_size*u.pix)
-
-            # unlike the others, this is a pure array, not a Cutout2D
-            # psf_cutout = cutout_psf_manually(psf_tile, closest_psf["x_center"], closest_psf["y_center"], cutout_size=stamp_size)
-
 
             cutout_data_for_target["MERPSF"] = psf_cutout
             header_data_for_target["MERPSF"] = psf_header
@@ -482,6 +489,22 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
     logging.debug(f'Cutouts made for all targets in band')
     return cutout_data, header_data
+
+
+def save_jpg_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
+    assert 'VIS' in target_data.keys()
+    vis_im: np.ndarray = target_data['VIS']['FLUX'].data
+
+    if 'vis_only' in cfg.jpg_outputs:
+        vis_rgb = morphology_utils_ou_mer.make_vis_only_cutout(vis_im.copy(), q=500)
+        Image.fromarray(vis_rgb).save(save_loc.replace('.jpg', '_vis_only.jpg'))
+
+    if 'vis_y' in cfg.jpg_outputs:
+        assert 'NIR_Y' in target_data.keys()
+        y_im: np.ndarray = target_data['NIR_Y']['FLUX'].data
+        vis_y_rgb = cutout_utils.make_composite_cutout(vis_im.copy(), y_im.copy(), vis_q=500, nisp_q=1)
+        vis_y_rgb_lab = cutout_utils.replace_luminosity_channel(vis_y_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(vis_y_rgb_lab).save(save_loc.replace('.jpg', '_vis_y.jpg'))
 
 
 def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data: dict, save_loc: str):
