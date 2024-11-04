@@ -410,6 +410,8 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
 
 def create_jpgs(cfg, galaxy, cutout_by_band):
 
+    # pretty lazy duplicate in pipeline.py:471
+
     # GZ Euclid image processing
 
     if 'composite' in cfg.jpg_outputs:
@@ -426,21 +428,43 @@ def create_jpgs(cfg, galaxy, cutout_by_band):
 
     # Space Warps Euclid image processing
 
-    if 'vis_only_sw' in cfg.jpg_outputs:  # VIS, Q=500
+    if 'sw_vis_only' in cfg.jpg_outputs:  # VIS, Q=500
         cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'], q=500)
-        Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only_sw'])
+        Image.fromarray(cutout).save(galaxy['jpg_loc_sw_vis_only'])
 
-    if 'vis_y_sw' in cfg.jpg_outputs:  # VIS and Y, Q=500,1
-        cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_Y'], vis_q=500, nisp_q=1)
-        Image.fromarray(cutout).save(galaxy['jpg_loc_vis_y_sw'])
+    if 'sw_vis_y' in cfg.jpg_outputs:
+        # assert 'NIR_Y' in cutout_by_band.keys()
+        vis_im: np.ndarray = cutout_by_band['VIS']
+        y_im: np.ndarray = cutout_by_band['NIR_Y']
+        vis_y_rgb = cutout_utils.make_composite_cutout(vis_im.copy(), y_im.copy(), vis_q=500, nisp_q=1)
+        vis_y_rgb_lab = cutout_utils.replace_luminosity_channel(vis_y_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(vis_y_rgb_lab).save(galaxy['jpg_loc_sw_vis_y'])
 
-    if 'vis_low_y_sw' in cfg.jpg_outputs: # VIS and Y, Q=500,0.2
-        cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_Y'], vis_q=500, nisp_q=.2)
-        Image.fromarray(cutout).save(galaxy['jpg_loc_vis_low_y_sw'])
+    if 'sw_vis_low_y' in cfg.jpg_outputs:
+        # assert 'NIR_Y' in cutout_by_band.keys()
+        vis_im: np.ndarray = cutout_by_band['VIS']
+        y_im: np.ndarray = cutout_by_band['NIR_Y']
+        vis_y_rgb = cutout_utils.make_composite_cutout(vis_im.copy(), y_im.copy(), vis_q=500, nisp_q=0.2)  # bluer
+        vis_y_rgb_lab = cutout_utils.replace_luminosity_channel(vis_y_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(vis_y_rgb_lab).save(galaxy['jpg_loc_sw_vis_low_y'])
 
-    if 'vis_j_sw' in cfg.jpg_outputs:  # VIS and J, Q=500,0.5
-        cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_J'], vis_q=500, nisp_q=0.5)
-        Image.fromarray(cutout).save(galaxy['jpg_loc_vis_j_sw'])
+    if 'sw_vis_j' in cfg.jpg_outputs:
+        # assert 'NIR_J' in cutout_by_band.keys()
+        vis_im: np.ndarray = cutout_by_band['VIS']
+        j_im: np.ndarray = cutout_by_band['NIR_J']
+        vis_j_rgb = cutout_utils.make_composite_cutout(vis_im.copy(), j_im.copy(), vis_q=500, nisp_q=1)
+        vis_j_rgb_lab = cutout_utils.replace_luminosity_channel(vis_j_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(vis_j_rgb_lab).save(galaxy['jpg_loc_sw_vis_j'])
+    
+    if 'sw_vis_y_j' in cfg.jpg_outputs:
+        # assert 'NIR_Y' in cutout_by_band.keys()
+        # assert 'NIR_J' in cutout_by_band.keys()
+        vis_im: np.ndarray = cutout_by_band['VIS']
+        y_im: np.ndarray = cutout_by_band['NIR_Y']
+        j_im: np.ndarray = cutout_by_band['NIR_J']
+        triple_rgb = cutout_utils.make_triple_cutout(vis_im.copy(), y_im.copy(), j_im.copy(), short_q=500, mid_q=1, long_q=0.5)
+        triple_rgb_lab = cutout_utils.replace_luminosity_channel(triple_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(triple_rgb_lab).save(galaxy['jpg_loc_sw_vis_y_j'])
 
 
 def create_simple_fits(cfg, galaxy, cutout_by_band):

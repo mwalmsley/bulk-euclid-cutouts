@@ -1,10 +1,10 @@
 base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
-name: 'mer_catalog_debug'
+name: 'mer_catalog_random_tiles'
 release_name: F-006
 
 bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']
 
-num_tiles: 2  # all tiles
+num_tiles: 10  # all tiles
 refresh_catalogs: False  # WARNING
 delete_tiles: False
 debug: False
@@ -16,8 +16,8 @@ selection_cuts: space_warps
 # field_of_view: galaxy_zoo  # or number in arcseconds
 field_of_view: 20  # or number in arcseconds
 
-# jpg_outputs: ['composite', 'vis_only', 'vis_lsb']
-jpg_outputs: ['vis_only_sw', 'vis_y_sw', 'vis_low_y_sw', 'vis_j_sw']
+# jpg_outputs: ['composite', 'vis_only', 'vis_lsb'] # GZ style
+jpg_outputs: ['sw_vis_only', 'sw_vis_y', 'sw_vis_low_y', 'sw_vis_j', 'sw_vis_y_j']
 fits_outputs: True
 overwrite_jpg: True
 overwrite_fits: True
