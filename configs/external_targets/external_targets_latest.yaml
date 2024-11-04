@@ -10,7 +10,7 @@ auxillary_products: ['MERPSF', 'MERRMS']
 release_priority: ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', 'F-003_240612' , 'F-006']
 overwrite_fits: false
 delete_tiles: false  # high storage cost
-fits_outputs: true
+fits_outputs: false # temp removed
 jpg_outputs: ['vis_only', 'vis_y', 'vis_j', 'vis_y_j']
 
 
