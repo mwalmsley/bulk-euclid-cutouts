@@ -41,37 +41,8 @@ def run(cfg: OmegaConf):
     create_folders(cfg)
     pipeline_utils.login()
 
+    external_targets = pd.read_csv(cfg.external_targets_loc)
 
-    # external_targets should have columns
-    # ['id_str', 'target_ra' (deg), 'target_dec' (deg), 'target_field_of_view' (arcsec)].
-    # but it doesn't, and it has duplicates, so here's some ad hoc setup
-    lrg = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/LRGs_4sims_all.csv')
-    lrg = lrg.rename(columns={'ra': 'target_ra', 'dec': 'target_dec', 'ID': 'id_str'})
-    del lrg['Unnamed: 0']
-    lrg['category'] = 'lrg_master_list'
-
-    # also add the false positives
-    false_positives_desi = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/False_Positives_DESI.csv')
-    false_positives_desi['category'] = 'desi_false_positive'
-
-    # also add the known candidates
-    known = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/strong_lens_for_pipeline.csv')
-    known = known[known['final_classification'].isin(['A', 'B'])]  # drop the Cs, not plausible
-    known['category'] = 'known_lens_candidate'
-
-    # gz_euclid = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/gz_euclid.csv')
-    gz_euclid = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/top_lenses_gz_euclid_round_2.csv')
-    # gz_euclid['category'] = 'gz_euclid'
-
-    # external_targets = lrg
-    # external_targets = pd.concat([known, lrg], axis=0).reset_index(drop=True)
-    # external_targets = pd.concat([gz_euclid, known, lrg, false_positives_desi], axis=0).reset_index(drop=True)
-    external_targets = pd.concat([gz_euclid], axis=0).reset_index(drop=True)
-
-    external_targets['target_field_of_view'] = 20  # arcseconds
-
-    # TODO Karina to remove these duplicates in a more sensible way
-    external_targets = external_targets.drop_duplicates(subset=['id_str'], keep='first')
 
     # NOW we go!
     # matching each target with the best tile

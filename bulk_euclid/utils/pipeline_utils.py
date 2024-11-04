@@ -196,7 +196,7 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     elif cfg.selection_cuts == 'space_warps':
         # https://euclidconsortium.slack.com/archives/C05JVCV6TA5/p1728644532577239
         logging.info('Applying lens candidate cuts')
-        query_str += """AND segmentation_area > 400
+        query_str += """AND segmentation_area > 200
         AND flux_detection_total >= 3.63078
         AND mumax_minus_mag >= -2.6
         AND mu_max >= 15.0
