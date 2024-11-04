@@ -486,6 +486,22 @@ def save_jpg_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         vis_y_rgb_lab = cutout_utils.replace_luminosity_channel(vis_y_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
         Image.fromarray(vis_y_rgb_lab).save(save_loc.replace('.jpg', '_vis_y.jpg'))
 
+    if 'vis_j' in cfg.jpg_outputs:
+        assert 'NIR_J' in target_data.keys()
+        j_im: np.ndarray = target_data['NIR_J']['FLUX'].data
+        vis_j_rgb = cutout_utils.make_composite_cutout(vis_im.copy(), j_im.copy(), vis_q=500, nisp_q=1)
+        vis_j_rgb_lab = cutout_utils.replace_luminosity_channel(vis_j_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(vis_j_rgb_lab).save(save_loc.replace('.jpg', '_vis_j.jpg'))
+    
+    if 'vis_y_j' in cfg.jpg_outputs:
+        assert 'NIR_Y' in target_data.keys()
+        assert 'NIR_J' in target_data.keys()
+        y_im: np.ndarray = target_data['NIR_Y']['FLUX'].data
+        j_im: np.ndarray = target_data['NIR_J']['FLUX'].data
+        triple_rgb = cutout_utils.make_triple_cutout(vis_im.copy(), y_im.copy(), j_im.copy(), short_q=500, mid_q=1, long_q=0.5)
+        triple_rgb_lab = cutout_utils.replace_luminosity_channel(triple_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(triple_rgb_lab).save(save_loc.replace('.jpg', '_vis_y_j.jpg'))
+
 
 def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data: dict, save_loc: str):
     """
