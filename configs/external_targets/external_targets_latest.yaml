@@ -11,7 +11,7 @@ release_priority: ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', '
 overwrite_fits: false
 delete_tiles: false  # high storage cost
 fits_outputs: false # temp removed
-jpg_outputs: ['vis_only', 'vis_y', 'vis_j', 'vis_y_j']
+jpg_outputs: ['sw_vis_only', 'sw_vis_y', sw_vis_low_y', 'sw_vis_j', 'sw_vis_y_j']
 
 
 # ignore these

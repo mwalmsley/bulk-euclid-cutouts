@@ -487,6 +487,13 @@ def save_jpg_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         vis_y_rgb_lab = cutout_utils.replace_luminosity_channel(vis_y_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
         Image.fromarray(vis_y_rgb_lab).save(save_loc.replace('.jpg', '_vis_y.jpg'))
 
+    if 'sw_vis_low_y' in cfg.jpg_outputs:
+        assert 'NIR_Y' in target_data.keys()
+        y_im: np.ndarray = target_data['NIR_Y']['FLUX'].data
+        vis_y_rgb = cutout_utils.make_composite_cutout(vis_im.copy(), y_im.copy(), vis_q=500, nisp_q=0.2)
+        vis_y_rgb_lab = cutout_utils.replace_luminosity_channel(vis_y_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(vis_y_rgb_lab).save(save_loc.replace('.jpg', '_vis_low_y.jpg'))
+
     if 'sw_vis_j' in cfg.jpg_outputs:
         assert 'NIR_J' in target_data.keys()
         j_im: np.ndarray = target_data['NIR_J']['FLUX'].data

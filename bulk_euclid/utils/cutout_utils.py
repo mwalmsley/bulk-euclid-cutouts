@@ -18,7 +18,7 @@ def make_composite_cutout_from_tiles(source, vis_im, nir_im, allow_radius_estima
     return make_composite_cutout(vis_cutout, nisp_cutout)
     
 
-def make_composite_cutout(vis_cutout, nisp_cutout, vis_q=100, vis_clip=99.85, nisp_q=.2, nisp_clip=99.85):
+def make_composite_cutout(vis_cutout, nisp_cutout, vis_q=100, vis_clip=99.85, nisp_q=1, nisp_clip=99.85):
     assert vis_cutout.shape == nisp_cutout.shape, f'vis shape {vis_cutout.shape}, nisp shape {nisp_cutout.shape}'
     assert vis_cutout.size < 19200**2, f'accidentally passed a whole tile, vis size {vis_cutout.size}'
     assert vis_cutout.shape != (19200, 19200), f'accidentally passed a whole tile, vis size {vis_cutout.size}'
