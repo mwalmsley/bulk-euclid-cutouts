@@ -72,10 +72,12 @@ def zip_for_download(cfg: OmegaConf):
     # save to e.g. v1_challenge_launch_cutouts.zip
     shutil.make_archive(cfg.download_dir + '_catalogs', 'zip', root_dir=cfg.catalog_dir)
     logging.info('Zipped catalogs')
-    shutil.make_archive(cfg.download_dir + '_jpg_cutouts', 'zip', root_dir=cfg.jpg_dir)
-    logging.info('Zipped jpg cutouts')
-    shutil.make_archive(cfg.download_dir + '_fits_cutouts', 'zip', root_dir=cfg.fits_dir)
-    logging.info('Zipped fits cutouts')
+    if cfg.jpg_outputs:
+        shutil.make_archive(cfg.download_dir + '_jpg_cutouts', 'zip', root_dir=cfg.jpg_dir)
+        logging.info('Zipped jpg cutouts')
+    if cfg.fits_outputs:
+        shutil.make_archive(cfg.download_dir + '_fits_cutouts', 'zip', root_dir=cfg.fits_dir)
+        logging.info('Zipped fits cutouts')
 
 
 

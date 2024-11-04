@@ -4,7 +4,7 @@ release_name: F-006
 
 bands: ['VIS', 'NIR_Y', 'NIR_J']
 
-num_tiles: 2  # all tiles
+num_tiles: 10  # all tiles
 refresh_catalogs: False  # WARNING
 delete_tiles: False
 debug: False
