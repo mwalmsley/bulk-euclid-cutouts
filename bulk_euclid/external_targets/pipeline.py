@@ -59,8 +59,9 @@ def run(cfg: OmegaConf):
     known = known[known['final_classification'].isin(['A', 'B'])]  # drop the Cs, not plausible
     known['category'] = 'known_lens_candidate'
 
-    gz_euclid = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/gz_euclid.csv')[3:]
-    gz_euclid['category'] = 'gz_euclid'
+    # gz_euclid = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/gz_euclid.csv')
+    gz_euclid = pd.read_csv('/media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/top_lenses_gz_euclid_round_2.csv')
+    # gz_euclid['category'] = 'gz_euclid'
 
     # external_targets = lrg
     # external_targets = pd.concat([known, lrg], axis=0).reset_index(drop=True)
