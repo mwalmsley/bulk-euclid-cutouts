@@ -1,15 +1,17 @@
+# for the master list of external sl-related targets
 base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
 name: 'latest'
 release_name: null  # allow tiles from any release. Read as None in Python.
-bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']
-# bands: ['VIS', 'NIR_Y']
+bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands
+
+external_targets_loc: /media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/strong_lensing_q1_master_external_target_list.csv
 
 auxillary_products: ['MERPSF', 'MERRMS']
 release_priority: ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', 'F-003_240612' , 'F-006']
 overwrite_fits: false
-delete_tiles: false
+delete_tiles: false  # high storage cost
 fits_outputs: true
-jpg_outputs: ['vis_only', 'vis_y', 'vis_j', 'vis_y_j']  # TODO add these
+jpg_outputs: ['vis_only', 'vis_y', 'vis_j', 'vis_y_j']
 
 
 # ignore these
@@ -18,4 +20,5 @@ download_dir: !
 tile_dir: !
 cutout_dir: !
 fits_dir: !
+jpg_dir: !
 sanity_dir: !

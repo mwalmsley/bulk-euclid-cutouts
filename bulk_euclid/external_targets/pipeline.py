@@ -286,7 +286,7 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
     Args:
         cfg (OmegaConf): cfg (OmegaConf): dictlike with configuration options (folders, bands, auxillary products, etc)
         dict_of_locs (dict): nested dict of paths to (already downloaded) products for each band, for a single tile. Structure in docstring of download_all_data_at_tile_index
-        targets_at_that_index (pd.DataFrame): The subset of targets (sources) within that single tile. Columns ["tile_index" (now only one), "id_str", "target_ra", "target_dec", "target_field_of_view"]
+        targets_at_that_index (pd.DataFrame): The subset of targets (sources) within that single tile. Columns ["tile_index" (now only one), "id_str", "target_ra", "target_dec", "target_field_of_view", "category"]
     """
 
     assert targets_at_that_index["tile_index"].nunique() == 1
@@ -309,11 +309,12 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
         # e.g. { VIS: {FLUX: flux_cutout, MERPSF: psf_cutout, ...}, NIR_Y: {...}, ...}
         target_data = { band: cutout_data[band][target_n] for band in cfg.bands }
         target_header_data = { band: header_data[band][target_n] for band in cfg.bands }
+        # updated to save by category, assuming less than e.g. 50k targets per category
         fits_save_loc = os.path.join(
-            cfg.fits_dir, str(target["tile_index"]), str(target["id_str"]) + ".fits"
+            cfg.fits_dir, str(target["category"]), str(target["id_str"]) + ".fits"
         )
         jpg_save_loc = os.path.join(
-            cfg.jpg_dir, str(target["tile_index"]), str(target["id_str"]) + ".jpg"
+            cfg.jpg_dir, str(target["category"]), str(target["id_str"]) + ".jpg"
         )
         try:
             if cfg.fits_outputs:

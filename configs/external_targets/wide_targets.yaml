@@ -1,7 +1,7 @@
+# for ad hoc download of GZCD and GZ Euclid targets
 base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
 name: 'wide_partial_gzcd'
 release_name: null  # allow tiles from any release. Read as None in Python.
-# bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']
 bands: ['VIS', 'NIR_Y']
 
 # external_targets_loc: /media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/top_lenses_gz_euclid.csv
