@@ -2,7 +2,7 @@ base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/ext
 name: 'mer_catalog_random_tiles'
 release_name: F-006
 
-bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']
+bands: ['VIS', 'NIR_Y', 'NIR_J']
 
 num_tiles: 2  # all tiles
 refresh_catalogs: False  # WARNING
