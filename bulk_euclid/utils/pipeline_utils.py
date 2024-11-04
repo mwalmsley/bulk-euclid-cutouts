@@ -404,8 +404,6 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
 
                 # TODO this is a bit of a mess, but I can't use Cutout2D with a header yet
                 create_simple_fits(cfg, galaxy, cutout_by_band)
-        else:
-            raise ValueError(f'No cfg.jpg_outputs or cfg.fits_outputs, format not recognised')
 
 
 def create_jpgs(cfg, galaxy, cutout_by_band):
