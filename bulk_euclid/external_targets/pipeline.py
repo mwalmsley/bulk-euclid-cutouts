@@ -486,7 +486,7 @@ def save_jpg_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
     else:
         j_im = None
 
-    save_jpg_cutout_from_bands(cfg, save_loc, vis_im, y_im, j_im)
+    cutout_utils.save_jpg_cutouts(cfg, save_loc, vis_im, y_im, j_im)
 
 
 
