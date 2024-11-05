@@ -1,14 +1,96 @@
 from bulk_euclid.utils import morphology_utils_ou_mer as m_utils  # try to keep this exactly like ou mer version
 
 import numpy as np
-
-# import Cutout2d
 from astropy.nddata.utils import Cutout2D
-# import WCS
-from astropy.wcs import WCS
-
 import cv2 ## new dependency
 # pip install opencv-python
+from PIL import Image
+
+
+def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j_im: np.ndarray=None):
+    # see lensing_cutout_colours.ipynb for a minimal example
+
+    # flip to match fits if requested
+    if cfg.use_fits_origin_for_jpg:
+        vis_im = np.flipud(vis_im)
+        if y_im is not None:
+            y_im = np.flipud(y_im)
+        if j_im is not None:
+            j_im = np.flipud(j_im)
+
+    ### GZ Euclid arcsinh processing ###
+
+    if 'gz_arcsinh_vis_y' in cfg.jpg_outputs:
+        cutout = make_composite_cutout(vis_im, y_im, vis_q=100, nisp_q=0.2)
+        Image.fromarray(cutout).save(save_loc.replace('.jpg', '_gz_arcsinh_vis_y_j.jpg'), quality=cfg.jpg_quality)
+                    
+    if 'gz_arcsinh_vis_only' in cfg.jpg_outputs:
+        cutout = m_utils.make_vis_only_cutout(vis_im, q=100)
+        Image.fromarray(cutout).save(save_loc.replace('.jpg', '_gz_arcsinh_vis_y.jpg'), quality=cfg.jpg_quality)
+
+    if 'gz_arcsinh_vis_lsb' in cfg.jpg_outputs:
+        # unique to GZ, for tidal features etc
+        cutout = make_lsb_cutout(vis_im, stretch=20, power=0.5)
+        Image.fromarray(cutout).save(save_loc.replace('.jpg', '_gz_arcsinh_vis_lsb.jpg'), quality=cfg.jpg_quality)
+
+    ### Space Warps arcinsh processing ###
+
+    if 'sw_arcsinh_vis_only' in cfg.jpg_outputs:
+        vis_rgb = m_utils.make_vis_only_cutout(vis_im.copy(), q=500)
+        Image.fromarray(vis_rgb).save(save_loc.replace('.jpg', '_sw_arcsinh_vis_only.jpg'), quality=cfg.jpg_quality)
+
+    if 'sw_arcsinh_vis_y' in cfg.jpg_outputs:
+        assert y_im is not None
+        vis_y_rgb = make_composite_cutout(vis_im.copy(), y_im.copy(), vis_q=500, nisp_q=1)
+        vis_y_rgb_lab = replace_luminosity_channel(vis_y_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(vis_y_rgb_lab).save(save_loc.replace('.jpg', '_sw_arcinsh_vis_y.jpg'), quality=cfg.jpg_quality)
+
+    if 'sw_arcsinh_vis_j' in cfg.jpg_outputs:
+        assert j_im is not None
+        vis_j_rgb = make_composite_cutout(vis_im.copy(), j_im.copy(), vis_q=500, nisp_q=1)
+        vis_j_rgb_lab = replace_luminosity_channel(vis_j_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(vis_j_rgb_lab).save(save_loc.replace('.jpg', '_sw_arcsinh_vis_j.jpg'), quality=cfg.jpg_quality)
+    
+    if 'sw_arcsinh_vis_y_j' in cfg.jpg_outputs:
+        assert y_im is not None
+        assert j_im is not None
+        triple_rgb = make_triple_cutout(vis_im.copy(), y_im.copy(), j_im.copy(), short_q=500, mid_q=1, long_q=0.5)
+        triple_rgb_lab = replace_luminosity_channel(triple_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(triple_rgb_lab).save(save_loc.replace('.jpg', '_sw_arcsinh_vis_y_j.jpg'), quality=cfg.jpg_quality)
+
+    ### Space Warps MTF processing ###
+
+    if 'sw_mtf_vis_only' in cfg.jpg_outputs:
+
+        vis_mtf = apply_MTF(vis_im)
+
+        # assume if we're getting VIS MTF and we also have the other bands available then
+        # we will probably want these as well
+        if y_im is not None:
+            y_mtf = apply_MTF(y_im)
+
+        if j_im is not None:
+            j_mtf = apply_MTF(j_im)
+
+        Image.fromarray(vis_mtf).save(save_loc.replace('.jpg', '_sw_mtf_vis_only.jpg'), quality=cfg.jpg_quality)
+
+    if 'sw_mtf_vis_y' in cfg.jpg_outputs:
+        mean_mtf = np.mean([vis_mtf, y_mtf], axis=0)
+        rgb_mtf = np.stack([y_mtf, mean_mtf, vis_mtf], axis=2).astype(np.uint8)
+        lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(lab_mtf).save(save_loc.replace('.jpg', '_sw_mtf_vis_y.jpg'), quality=cfg.jpg_quality)
+
+    if 'sw_mtf_vis_j' in cfg.jpg_outputs:
+        mean_mtf = np.mean([vis_mtf, j_mtf], axis=0)
+        rgb_mtf = np.stack([j_mtf, mean_mtf, vis_mtf], axis=2).astype(np.uint8)
+        lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(lab_mtf).save(save_loc.replace('.jpg', '_sw_mtf_vis_j.jpg'), quality=cfg.jpg_quality)
+
+    if 'sw_mtf_vis_y_j' in cfg.jpg_outputs:
+        rgb_mtf = np.stack([j_mtf, y_mtf, vis_mtf], axis=2).astype(np.uint8)
+        lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=True)
+        Image.fromarray(lab_mtf).save(save_loc.replace('.jpg', '_sw_mtf_vis_y_j.jpg'), quality=cfg.jpg_quality)
+
 
 
 def make_composite_cutout_from_tiles(source, vis_im, nir_im, allow_radius_estimate=False):
@@ -149,49 +231,58 @@ def desaturate_bright_pixels(rgb_image: np.ndarray, threshold: int=150):
     return modified_rgb_image
 
 
-
-
-
-# this is basically a way to attempt to automatically set the "curves" tool from e.g. photoshop, where m sets the curve and MTF is the application of the curve. I will make a little comparison.
-def MTF(x, desired_mean = 0.25):
-    """Compute the Midtones Transfer Function (MTF) for given x and m."""
-
-
-    x = np.clip(x, 0, np.percentile(x, 99))
-    # x = np.arcsinh(x)
-    # x = np.clip(x, 0, 1)  # image should already be normalized
-    x = x / x.max()  # normalize to 0-1, maybe percentile clip
-
-    m = find_m_for_mean(x, desired_mean)
     
+def MTF_on_normalised_data(x, m):
+    """
+    Compute the Midtones Transfer Function (MTF) for given x and m.
+    This is basically a way to attempt to automatically set the "curves" tool from e.g. photoshop, 
+    where m sets the curve and MTF is the application of the curve."""
+    # x = np.clip(x, 0, 1)
+    assert x.max() <= 1
+    assert x.min() >= 0
     y = np.zeros_like(x)
     mask0 = (x == 0)
     maskm = (x == m)
     mask1 = (x == 1)
     mask_else = ~(mask0 | maskm | mask1)
-
-    y[mask0] = 0  # 0 -> 0
-    y[maskm] = 0.5 # 0.5 -> 0.5
-    y[mask1] = 1  # 1 -> 1
+    # these remain fixed
+    y[mask0] = 0
+    y[maskm] = 0.5
+    y[mask1] = 1
     # ..and everything else gets curved
     x_else = x[mask_else]
 
     # shape of the curve
     numerator = (m - 1) * x_else
     denominator = (2 * m - 1) * x_else - m
-
     # apply the curve
     y[mask_else] = numerator / denominator
+    return y # curved values
 
-    return y  # curved values
-
-def find_m_for_mean(normalized_image, desired_mean):
-    x = np.mean(normalized_image)
+def find_m_for_mean(normalized_data, desired_mean):
+    x = np.mean(normalized_data)
     alpha = desired_mean
     return (x-alpha*x)/(x-2*alpha*x+alpha)
-    
-    
-    
+
+def apply_MTF(image_data, desired_mean_normalized=0.2):  
+    image_data = np.nan_to_num(image_data, nan=0.0, posinf=0.0, neginf=0.0)
+    # Normalize the image data to [0, 1]
+    normalized_data = image_data.astype(np.float64)
+    min_val = np.min(normalized_data)
+    max_val = np.max(normalized_data)
+    normalized_data = (normalized_data - min_val) / (max_val - min_val)
+    # Desired mean value at 1/5 of the maximum pixel value
+    # Raised from 1/8 default from Tian
+    # Find the appropriate midtones balance parameter m
+    m = find_m_for_mean(normalized_data, desired_mean_normalized)
+    # Apply the MTF to the image
+    transformed_data = MTF_on_normalised_data(normalized_data, m)
+    # Scale transformed data to [0, 255] for JPEG output
+    transformed_image_data = (transformed_data * 255).astype(np.uint8)
+    return transformed_image_data
+
+
+
     
 def get_alpha(x, original_min, stretch, power):
 

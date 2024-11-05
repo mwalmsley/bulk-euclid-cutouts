@@ -16,12 +16,13 @@ selection_cuts: space_warps
 # field_of_view: galaxy_zoo  # or number in arcseconds
 field_of_view: 20  # or number in arcseconds
 
-# jpg_outputs: ['composite', 'vis_only', 'vis_lsb'] # GZ style
-jpg_outputs: ['sw_vis_only', 'sw_vis_y', 'sw_vis_low_y', 'sw_vis_j', 'sw_vis_y_j']
+jpg_outputs: ['sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j', 'sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j']
 fits_outputs: true
 # skip if exists
 overwrite_jpg: false
 overwrite_fits: false
+jpg_quality: 95
+use_fits_origin_for_jpg: true
 
 download_dir: !
 tile_dir: !

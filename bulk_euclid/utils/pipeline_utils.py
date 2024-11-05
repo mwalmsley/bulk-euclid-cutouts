@@ -370,22 +370,21 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
 
         
         if cfg.jpg_outputs:  # anything in this list
-            # assume paths already made earlier in catalog creation step
 
-            # just for convenience
-            cutout_locs = list(galaxy[[f'jpg_loc_{output_name}' for output_name in cfg.jpg_outputs]])
+            # assume jpg_loc_generic key added earlier in catalog creation step
+            generic_loc = galaxy['jpg_loc_generic']
             try:
-                # assume they all are in the same subdir
                 if i == 0:
-                    cutout_subdir = os.path.dirname(cutout_locs[0])
+                    cutout_subdir = os.path.dirname(generic_loc)
                     if not os.path.isdir(cutout_subdir):
                         os.makedirs(cutout_subdir)
                 
+                # we expect to find the outputs here, see cutout_utils.py
                 # skip if all exist and not overwriting. If any missing, don't skip.
-                if  cfg.overwrite_jpg or (not np.all([os.path.isfile(loc) for loc in cutout_locs])):
-                    create_jpgs(cfg, galaxy, cutout_by_band)
+                cutout_locs = [generic_loc.replace('.jpg', output_name + '.jpg') for output_name in cfg.jpg_outputs]
+                if cfg.overwrite_jpg or (not np.all([os.path.isfile(loc) for loc in cutout_locs])):
+                    create_jpgs_within_pipeline(cfg, galaxy, cutout_by_band)
 
-                
             except AssertionError as e:
                 print(f'skipping galaxy {galaxy["object_id"]} in tile {galaxy["tile_index"]} due to \n{e}')
 
@@ -406,63 +405,17 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
                 create_simple_fits(cfg, galaxy, cutout_by_band)
 
 
-def create_jpgs(cfg, galaxy, cutout_by_band):
 
-    # pretty lazy duplicate in pipeline.py:471
+def create_jpgs_within_pipeline(cfg, galaxy, cutout_by_band):
 
-    # GZ Euclid image processing
+    vis_im = cutout_by_band['VIS']
+    y_im = cutout_by_band.get('NIR_Y', None)
+    j_im = cutout_by_band.get('NIR_J', None)
+    # assume jpg_loc_generic key added earlier in catalog creation step
+    save_loc = galaxy['jpg_loc_generic']
 
-    if 'composite' in cfg.jpg_outputs:
-        cutout = cutout_utils.make_composite_cutout(cutout_by_band['VIS'], cutout_by_band['NIR_Y'], vis_q=100, nisp_q=0.2)
-        Image.fromarray(cutout).save(galaxy['jpg_loc_composite'])
-                    
-    if 'vis_only' in cfg.jpg_outputs:
-        cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'], q=100)
-        Image.fromarray(cutout).save(galaxy['jpg_loc_vis_only'])
+    cutout_utils.save_jpg_cutouts(cfg, save_loc, vis_im, y_im, j_im)
 
-    if 'vis_lsb' in cfg.jpg_outputs:
-        cutout = cutout_utils.make_lsb_cutout(cutout_by_band['VIS'], stretch=20, power=0.5)
-        Image.fromarray(cutout).save(galaxy['jpg_loc_vis_lsb'])
-
-    # Space Warps Euclid image processing
-
-    if 'sw_vis_only' in cfg.jpg_outputs:  # VIS, Q=500
-        cutout = m_utils.make_vis_only_cutout(cutout_by_band['VIS'], q=500)
-        Image.fromarray(cutout).save(galaxy['jpg_loc_sw_vis_only'])
-
-    if 'sw_vis_y' in cfg.jpg_outputs:
-        # assert 'NIR_Y' in cutout_by_band.keys()
-        vis_im: np.ndarray = cutout_by_band['VIS']
-        y_im: np.ndarray = cutout_by_band['NIR_Y']
-        vis_y_rgb = cutout_utils.make_composite_cutout(vis_im.copy(), y_im.copy(), vis_q=500, nisp_q=1)
-        vis_y_rgb_lab = cutout_utils.replace_luminosity_channel(vis_y_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
-        Image.fromarray(vis_y_rgb_lab).save(galaxy['jpg_loc_sw_vis_y'])
-
-    if 'sw_vis_low_y' in cfg.jpg_outputs:
-        # assert 'NIR_Y' in cutout_by_band.keys()
-        vis_im: np.ndarray = cutout_by_band['VIS']
-        y_im: np.ndarray = cutout_by_band['NIR_Y']
-        vis_y_rgb = cutout_utils.make_composite_cutout(vis_im.copy(), y_im.copy(), vis_q=500, nisp_q=0.2)  # bluer
-        vis_y_rgb_lab = cutout_utils.replace_luminosity_channel(vis_y_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
-        Image.fromarray(vis_y_rgb_lab).save(galaxy['jpg_loc_sw_vis_low_y'])
-
-    if 'sw_vis_j' in cfg.jpg_outputs:
-        # assert 'NIR_J' in cutout_by_band.keys()
-        vis_im: np.ndarray = cutout_by_band['VIS']
-        j_im: np.ndarray = cutout_by_band['NIR_J']
-        vis_j_rgb = cutout_utils.make_composite_cutout(vis_im.copy(), j_im.copy(), vis_q=500, nisp_q=1)
-        vis_j_rgb_lab = cutout_utils.replace_luminosity_channel(vis_j_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
-        Image.fromarray(vis_j_rgb_lab).save(galaxy['jpg_loc_sw_vis_j'])
-    
-    if 'sw_vis_y_j' in cfg.jpg_outputs:
-        # assert 'NIR_Y' in cutout_by_band.keys()
-        # assert 'NIR_J' in cutout_by_band.keys()
-        vis_im: np.ndarray = cutout_by_band['VIS']
-        y_im: np.ndarray = cutout_by_band['NIR_Y']
-        j_im: np.ndarray = cutout_by_band['NIR_J']
-        triple_rgb = cutout_utils.make_triple_cutout(vis_im.copy(), y_im.copy(), j_im.copy(), short_q=500, mid_q=1, long_q=0.5)
-        triple_rgb_lab = cutout_utils.replace_luminosity_channel(triple_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
-        Image.fromarray(triple_rgb_lab).save(galaxy['jpg_loc_sw_vis_y_j'])
 
 
 def create_simple_fits(cfg, galaxy, cutout_by_band):
