@@ -28,7 +28,7 @@ def run(cfg):
 
 if __name__ == "__main__":
 
-    config_loc = 'configs/external_targets/external_targets_latest.yaml'
+    config_loc = 'configs/external_targets/external_targets_master_list.yaml'
     # config_loc = 'configs/external_targets/wide_targets.yaml'
     cfg = OmegaConf.load(config_loc)
 
