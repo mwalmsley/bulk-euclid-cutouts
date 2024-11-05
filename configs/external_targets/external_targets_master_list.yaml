@@ -12,7 +12,7 @@ delete_tiles: false  # high storage cost
 
 
 jpg_outputs: ['sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j', 'sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j']
-fits_outputs: false # temp removed
+fits_outputs: true # add fits overnight
 overwrite_jpg: false
 overwrite_fits: false
 jpg_quality: 100
