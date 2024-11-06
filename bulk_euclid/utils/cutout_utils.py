@@ -6,7 +6,7 @@ from astropy.nddata.utils import Cutout2D
 import cv2 ## new dependency
 # pip install opencv-python
 from PIL import Image
-
+import logging
 
 def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j_im: np.ndarray=None):
     # see lensing_cutout_colours.ipynb for a minimal example
@@ -93,6 +93,7 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
         save_image_wrapper(lab_mtf, save_loc.replace('generic', 'sw_mtf_vis_y_j'), quality=cfg.jpg_quality)
 
 def save_image_wrapper(image, save_loc, quality):
+    logging.info(save_loc)
     os.makedirs(os.path.basename(save_loc), exist_ok=True)
     Image.fromarray(image).save(save_loc, quality=quality)
 
