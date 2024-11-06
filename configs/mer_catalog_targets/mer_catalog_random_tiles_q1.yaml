@@ -1,11 +1,13 @@
 base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
 name: 'mer_catalog_random_tiles_q1'
-release_name: F-006
-sas_environment: 'OTF'
+release_name: 'Q1_R1'
+sas_environment: 'IDR'  # or OTF
 bands: ['VIS', 'NIR_Y', 'NIR_J']
 
 num_tiles: 2  # all tiles
 refresh_catalogs: True
+
+download_method: 'datalabs_path'  # or sas
 delete_tiles: False
 debug: False
 run_async: True  # necessary for strong lens selection func

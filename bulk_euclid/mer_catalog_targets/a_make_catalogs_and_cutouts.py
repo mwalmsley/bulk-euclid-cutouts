@@ -15,18 +15,18 @@ def run(cfg):
     cfg = create_folders(cfg)
     tiles = get_tile_catalog(cfg)
 
-    print(tiles.columns.values)
-    print(tiles.head())
-    print(tiles['release_name'].value_counts)
-    exit()
+    # print(tiles.columns.values)
+    # print(tiles.head())
+    # print(tiles['release_name'].value_counts)
+    # exit()
 
     tiles = select_tiles(cfg, tiles)
     
 
     print(tiles.columns.values)
     print(tiles.head())
-    print(tiles['release_name'].value_counts)
-    exit()
+    print(tiles['release_name'].value_counts())
+    # exit()
 
     for tile_n, tile_index in enumerate(tiles['tile_index'].unique()):
         logging.info(f'tile {tile_index}: {tile_n} of {len(tiles)}')
@@ -128,24 +128,28 @@ def select_tiles(cfg, tiles) -> pd.DataFrame:
 
 
 def download_tile_and_catalog(cfg, tiles_to_download: pd.DataFrame, tile_index: int):
-    download_tiles = pipeline_utils.download_mosaics(tile_index, tiles_to_download, cfg.tile_dir)
-    # vis_tile = download_tiles.query('filter_name == "VIS"')['file_loc'].squeeze()
-    # nisp_tile = download_tiles.query('filter_name == "NIR_Y"')['file_loc'].squeeze()
-    # vis_loc = vis_tile['file_loc']
-    # nisp_loc = nisp_tile['file_loc']
+    # tiles_to_download is a df of all tiles, including metadata like datalabs_path if available
+
+    if cfg.download_method == 'sas':
+        # df of paths to downloaded tiles, keyed by 'file_loc'
+        downloaded_tiles = pipeline_utils.download_mosaics(tile_index, tiles_to_download, cfg.tile_dir)
+    else:
+        assert cfg.download_method == 'datalabs_path'
+        assert 'datalabs_path' in tiles_to_download.columns
+        downloaded_tiles = tiles_to_download.query(f'tile_index == {tile_index}').copy()
+        # instead of downloading, just point the path to datalabs
+        downloaded_tiles['file_loc'] = downloaded_tiles['datalabs_path']
 
     tile_metadata_to_copy = dict()  # scalars
     tile_metadata_to_copy['tile_index'] = tile_index
     # use VIS for RA, Dec, release name. Only one release name allowed so should all be the same or very similar.
-    vis_tile = download_tiles.query('filter_name == "VIS"').iloc[0]
+    vis_tile = downloaded_tiles.query('filter_name == "VIS"').iloc[0]
     tile_metadata_to_copy['ra'] = vis_tile['ra']
     tile_metadata_to_copy['dec'] = vis_tile['dec'] 
     tile_metadata_to_copy['release_name'] = vis_tile['release_name']
     # record the tile file locations for each band
     for band in cfg.bands:
-        tile_metadata_to_copy[f'{band.lower()}_loc'] = download_tiles.query(f'filter_name == "{band}"')['file_loc'].squeeze()
-
-    logging.debug(tile_metadata_to_copy)
+        tile_metadata_to_copy[f'{band.lower()}_loc'] = downloaded_tiles.query(f'filter_name == "{band}"')['file_loc'].squeeze()
 
     tile_catalog = get_and_save_tile_catalog(cfg, tile_index, tile_metadata_to_copy)
     return tile_catalog

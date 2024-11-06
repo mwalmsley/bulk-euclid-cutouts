@@ -186,13 +186,13 @@ def download_mosaics(tile_index: int, tiles: pd.DataFrame, download_dir: str) ->
     return matching_tiles
 
 
-def save_euclid_products(df: pd.DataFrame, download_dir: str):
+def save_euclid_products(df: pd.DataFrame, download_dir: str) -> pd.DataFrame:
     # adds file_loc to downloaded path
     df['file_loc'] = df['file_name'].apply(lambda x: save_euclid_product(x, download_dir))
     return df
 
 
-def save_euclid_product(product_filename, download_dir):
+def save_euclid_product(product_filename, download_dir) -> str:
     output_loc = os.path.join(download_dir, product_filename)
     if not os.path.isfile(output_loc):
         downloaded_path = Euclid.get_product(file_name=product_filename, output_file=output_loc)[0]  # 0 as one product
