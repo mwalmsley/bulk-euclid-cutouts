@@ -11,15 +11,20 @@ from bulk_euclid.utils import pipeline_utils
 
 
 def run(cfg):
-    pipeline_utils.login()
+    pipeline_utils.login(cfg)
     cfg = create_folders(cfg)
     tiles = get_tile_catalog(cfg)
     tiles = select_tiles(cfg, tiles)
+    
+    print(tile_catalog.columns.values())
+    print(tile_catalog.head())
+    exit()
 
     for tile_n, tile_index in enumerate(tiles['tile_index'].unique()):
         logging.info(f'tile {tile_index}: {tile_n} of {len(tiles)}')
         try:
             tile_catalog = download_tile_and_catalog(cfg, tiles, tile_index)
+
             make_volunteer_cutouts(cfg, tile_catalog)
             if cfg.delete_tiles:
                 logging.info('Deleting tile')

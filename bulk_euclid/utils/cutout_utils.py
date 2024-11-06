@@ -93,7 +93,7 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
         save_image_wrapper(lab_mtf, save_loc.replace('generic', 'sw_mtf_vis_y_j'), quality=cfg.jpg_quality)
 
 def save_image_wrapper(image, save_loc, quality):
-    logging.info(save_loc)
+    # logging.info(save_loc)
     subdir = os.path.dirname(save_loc)
     if not os.path.isdir(subdir):
         os.makedirs(subdir, exist_ok=True)

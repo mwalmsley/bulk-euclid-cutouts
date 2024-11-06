@@ -1,7 +1,6 @@
-from collections import namedtuple
+
 import logging
 import os
-import shutil
 import warnings
 import hashlib
 
@@ -13,75 +12,8 @@ import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.io.fits.verify import VerifyWarning
 from astropy.nddata import Cutout2D
-from PIL import Image
-
-if os.path.isdir('/media/home/team_workspaces'):  # on datalabs
-    from astroquery.esa.euclid.core import EuclidClass
-    Euclid = EuclidClass(environment='OTF')  # TODO need a way to set this
 
 from bulk_euclid.utils import morphology_utils_ou_mer as m_utils, cutout_utils
-
-
-# Survey = namedtuple('Survey', ['name', 'min_tile_index', 'max_tile_index', 'tile_width', 'tile_overlap'])
-
-# # https://www.cosmos.esa.int/documents/10647/12245842/EUCL-EST-ME-8-007_v11_EST_Q1_memo_2022-10-06.pdf
-# # https://www.cosmos.esa.int/documents/10647/12245842/EUCL-EST-ME-8-014_v10_Q1_product_definition_2023-08-14.pdf
-# # https://www.cosmos.esa.int/documents/10647/12245842/EUCL-EST-ME-8-018_v1_Q1_fields_definition_2024-07-04.pdf/841e9693-3b5c-89b6-828f-f0faa4f7545b?t=1720533267223
-
-# # https://euclid.roe.ac.uk/projects/mer_pf/wiki/Tiling
-# # tile ids figure
-
-# # deep fields are 17x17 arcmin always
-# # wide tiles are 32x32 arcmin except when edited for special objects
-
-# # wide tiles include 2' of overlap (so 30' without overlap, and 1' on each side)
-# # deep tiles are exactly the same (despite being smaller)
-
-# # nominal v1.2 tiling for these surveys, but no data yet except PV-005 below
-# # EDF_SOUTH = pipeline_utils.Survey(
-# #     name='edf_south',
-# #     min_tile_index=0,
-# #     max_tile_index=int(1.013e8),
-# #     tile_width=17,
-# #     tile_overlap=2
-# # )
-# # EDF_NORTH = pipeline_utils.Survey(
-# #     name='edf_north',
-# #     min_tile_index=int(1.017e8),
-# #     max_tile_index=int(1.019e8),
-# #     tile_width=17,
-# #     tile_overlap=2
-# # )
-
-# # tiles from both south and north in PV-005, likely to be removed in near future (and no catalogues)
-# EDF_PV = Survey(
-#     name='edf_pv',
-#     min_tile_index=0,
-#     max_tile_index=int(1.013e8),
-#     tile_width=17,
-#     tile_overlap=2
-# )
-
-# # no data yet
-# EDF_FORNAX = Survey(
-#     name='edf_fornax',
-#     min_tile_index=int(1.0132e8),
-#     max_tile_index=int(1.014e8),
-#     tile_width=17,
-#     tile_overlap=2
-# )
-    
-# # 1700 tiles :)
-# WIDE = Survey(
-#     name='wide',
-#     min_tile_index=int(1.02e8),
-#     max_tile_index=int(1.022e8),
-#     tile_width=32,
-#     tile_overlap=2
-# )
-    
-
-
 
 
 def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
@@ -92,15 +24,8 @@ def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limit
         WHERE (product_type='DpdMerBksMosaic')
         """
     
-    # if survey is not None:
-    #     assert tile_index is None, 'Cannot specify both survey and tile index'
-    #     query_str += f"""
-    #     AND (tile_index > {survey.min_tile_index}) AND (tile_index < {survey.max_tile_index})
-    #     """
-    
     if tile_index is not None:
         query_str += f"AND (tile_index={tile_index})"
-        # assert survey is None, 'Cannot specify both survey and tile index'
     
     if bands is not None:
         if isinstance(bands, str):
@@ -445,11 +370,13 @@ def create_simple_fits(cfg, galaxy, cutout_by_band):
         fits.HDUList(hdu_list).writeto(galaxy['fits_loc'], overwrite=True)
 
 
-def login():
-
+def login(cfg):
     if os.path.isdir('/media/home/team_workspaces'):
         # two line file, username and password
         # do not commit or put in any team workspace, obviously...
+        from astroquery.esa.euclid.core import EuclidClass
+        Euclid = EuclidClass(environment=cfg.sas_environment)
         Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
+        globals()['Euclid'] = Euclid  # hack this into everything else, janky but it works and is cleaner than passing it around
     else:
         raise ValueError('Not on DataLabs')

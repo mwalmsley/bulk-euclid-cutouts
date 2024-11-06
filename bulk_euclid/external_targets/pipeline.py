@@ -8,7 +8,6 @@ For each tile, download that tile, and use cutout2d to slice out the relevant fi
 """
 
 import logging
-# import warnings
 import os
 
 import numpy as np
@@ -21,8 +20,6 @@ from astropy.wcs import WCS
 from astropy.nddata import Cutout2D
 import astropy.units as u
 from astropy.table import Table
-# from astropy.io.fits.verify import VerifyWarning
-from PIL import Image
 
 from bulk_euclid.utils import pipeline_utils, cutout_utils
 
@@ -39,7 +36,7 @@ def run(cfg: OmegaConf):
     logging.info("Starting external targets pipeline")
 
     create_folders(cfg)
-    pipeline_utils.login()
+    pipeline_utils.login(cfg)
 
     external_targets = pd.read_csv(cfg.external_targets_loc)
 
