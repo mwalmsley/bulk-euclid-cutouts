@@ -153,6 +153,7 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     # added min segmentation area to remove tiny bright artifacts
     # TODO copy to mer cuts/pipeline
     retries = 0
+    df = None
     while retries < cfg.max_retries:
         try:
             if cfg.run_async:
@@ -167,6 +168,9 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
             logging.info(e)
             logging.info(f'Retrying, {retries}')
         retries += 1
+    if df is None:
+        raise ValueError(f'Query failed after retries: {query_str}')
+    
 
     logging.info(f"Found {len(df)} query results")
     
