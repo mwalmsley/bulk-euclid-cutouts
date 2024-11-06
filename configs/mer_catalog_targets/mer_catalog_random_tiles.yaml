@@ -1,6 +1,6 @@
 base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
 name: 'mer_catalog_random_tiles_q1'
-release_name: F-006
+release_name: null
 sas_environment: 'IDR'  # or OTF
 bands: ['VIS', 'NIR_Y', 'NIR_J']
 
