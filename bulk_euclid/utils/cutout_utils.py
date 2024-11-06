@@ -1,5 +1,6 @@
 from bulk_euclid.utils import morphology_utils_ou_mer as m_utils  # try to keep this exactly like ou mer version
 
+import os
 import numpy as np
 from astropy.nddata.utils import Cutout2D
 import cv2 ## new dependency
@@ -22,41 +23,41 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
 
     if 'gz_arcsinh_vis_y' in cfg.jpg_outputs:
         cutout = make_composite_cutout(vis_im, y_im, vis_q=100, nisp_q=0.2)
-        Image.fromarray(cutout).save(save_loc.replace('generic', 'gz_arcsinh_vis_y'), quality=cfg.jpg_quality)
+        save_image_wrapper(cutout, save_loc.replace('generic', 'gz_arcsinh_vis_y'), quality=cfg.jpg_quality)
                     
     if 'gz_arcsinh_vis_only' in cfg.jpg_outputs:
         cutout = m_utils.make_vis_only_cutout(vis_im, q=100)
-        Image.fromarray(cutout).save(save_loc.replace('generic', 'gz_arcsinh_vis_only'), quality=cfg.jpg_quality)
+        save_image_wrapper(cutout, save_loc.replace('generic', 'gz_arcsinh_vis_only'), quality=cfg.jpg_quality)
 
     if 'gz_arcsinh_vis_lsb' in cfg.jpg_outputs:
         # unique to GZ, for tidal features etc
         cutout = make_lsb_cutout(vis_im, stretch=20, power=0.5)
-        Image.fromarray(cutout).save(save_loc.replace('generic', 'gz_arcsinh_vis_lsb'), quality=cfg.jpg_quality)
+        save_image_wrapper(cutout, save_loc.replace('generic', 'gz_arcsinh_vis_lsb'), quality=cfg.jpg_quality)
 
     ### Space Warps arcinsh processing ###
 
     if 'sw_arcsinh_vis_only' in cfg.jpg_outputs:
         vis_rgb = m_utils.make_vis_only_cutout(vis_im.copy(), q=500)
-        Image.fromarray(vis_rgb).save(save_loc.replace('generic', 'sw_arcsinh_vis_only'), quality=cfg.jpg_quality)
+        save_image_wrapper(vis_rgb, save_loc.replace('generic', 'sw_arcsinh_vis_only'), quality=cfg.jpg_quality)
 
     if 'sw_arcsinh_vis_y' in cfg.jpg_outputs:
         assert y_im is not None
         vis_y_rgb = make_composite_cutout(vis_im.copy(), y_im.copy(), vis_q=500, nisp_q=1)
         vis_y_rgb_lab = replace_luminosity_channel(vis_y_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
-        Image.fromarray(vis_y_rgb_lab).save(save_loc.replace('generic', 'sw_arcsinh_vis_y'), quality=cfg.jpg_quality)
+        save_image_wrapper(vis_y_rgb_lab, save_loc.replace('generic', 'sw_arcsinh_vis_y'), quality=cfg.jpg_quality)
 
     if 'sw_arcsinh_vis_j' in cfg.jpg_outputs:
         assert j_im is not None
         vis_j_rgb = make_composite_cutout(vis_im.copy(), j_im.copy(), vis_q=500, nisp_q=1)
         vis_j_rgb_lab = replace_luminosity_channel(vis_j_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
-        Image.fromarray(vis_j_rgb_lab).save(save_loc.replace('generic', 'sw_arcsinh_vis_j'), quality=cfg.jpg_quality)
+        save_image_wrapper(vis_j_rgb_lab, save_loc.replace('generic', 'sw_arcsinh_vis_j'), quality=cfg.jpg_quality)
     
     if 'sw_arcsinh_vis_y_j' in cfg.jpg_outputs:
         assert y_im is not None
         assert j_im is not None
         triple_rgb = make_triple_cutout(vis_im.copy(), y_im.copy(), j_im.copy(), short_q=500, mid_q=1, long_q=0.5)
         triple_rgb_lab = replace_luminosity_channel(triple_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=True)
-        Image.fromarray(triple_rgb_lab).save(save_loc.replace('generic', 'sw_arcsinh_vis_y_j'), quality=cfg.jpg_quality)
+        save_image_wrapper(triple_rgb_lab, save_loc.replace('generic', 'sw_arcsinh_vis_y_j'), quality=cfg.jpg_quality)
 
     ### Space Warps MTF processing ###
 
@@ -72,26 +73,28 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
         if j_im is not None:
             j_mtf = apply_MTF(j_im)
 
-        Image.fromarray(vis_mtf).save(save_loc.replace('generic', 'sw_mtf_vis_only'), quality=cfg.jpg_quality)
+        save_image_wrapper(vis_mtf, save_loc.replace('generic', 'sw_mtf_vis_only'), quality=cfg.jpg_quality)
 
     if 'sw_mtf_vis_y' in cfg.jpg_outputs:
         mean_mtf = np.mean([vis_mtf, y_mtf], axis=0)
         rgb_mtf = np.stack([y_mtf, mean_mtf, vis_mtf], axis=2).astype(np.uint8)
         lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=True)
-        Image.fromarray(lab_mtf).save(save_loc.replace('generic', 'sw_mtf_vis_y'), quality=cfg.jpg_quality)
+        save_image_wrapper(lab_mtf, save_loc.replace('generic', 'sw_mtf_vis_y'), quality=cfg.jpg_quality)
 
     if 'sw_mtf_vis_j' in cfg.jpg_outputs:
         mean_mtf = np.mean([vis_mtf, j_mtf], axis=0)
         rgb_mtf = np.stack([j_mtf, mean_mtf, vis_mtf], axis=2).astype(np.uint8)
         lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=True)
-        Image.fromarray(lab_mtf).save(save_loc.replace('generic', 'sw_mtf_vis_j'), quality=cfg.jpg_quality)
+        save_image_wrapper(lab_mtf, save_loc.replace('generic', 'sw_mtf_vis_j'), quality=cfg.jpg_quality)
 
     if 'sw_mtf_vis_y_j' in cfg.jpg_outputs:
         rgb_mtf = np.stack([j_mtf, y_mtf, vis_mtf], axis=2).astype(np.uint8)
         lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=True)
-        Image.fromarray(lab_mtf).save(save_loc.replace('generic', 'sw_mtf_vis_y_j'), quality=cfg.jpg_quality)
+        save_image_wrapper(lab_mtf, save_loc.replace('generic', 'sw_mtf_vis_y_j'), quality=cfg.jpg_quality)
 
-
+def save_image_wrapper(image, save_loc, quality):
+    os.makedirs(save_loc, exist_ok=True)
+    Image.fromarray(image).save(save_loc, quality=quality)
 
 def make_composite_cutout_from_tiles(source, vis_im, nir_im, allow_radius_estimate=False):
     vis_cutout = m_utils.extract_cutout_from_array(vis_im, source, buff=0, allow_radius_estimate=allow_radius_estimate)
