@@ -14,7 +14,7 @@ seed: 1
 
 selection_cuts: space_warps
 # field_of_view: galaxy_zoo  # or number in arcseconds
-field_of_view: 20
+field_of_view: 15
 
 jpg_outputs: ['sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j', 'sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j']
 fits_outputs: false
