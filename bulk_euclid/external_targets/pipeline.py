@@ -24,7 +24,7 @@ from astropy.table import Table
 # from astropy.io.fits.verify import VerifyWarning
 from PIL import Image
 
-from bulk_euclid.utils import pipeline_utils, cutout_utils, morphology_utils_ou_mer
+from bulk_euclid.utils import pipeline_utils, cutout_utils
 
 
 def run(cfg: OmegaConf):

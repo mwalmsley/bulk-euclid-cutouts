@@ -16,7 +16,8 @@ from astropy.nddata import Cutout2D
 from PIL import Image
 
 if os.path.isdir('/media/home/team_workspaces'):  # on datalabs
-    from astroquery.esa.euclid.core import Euclid
+    from astroquery.esa.euclid.core import EuclidClass
+    Euclid = EuclidClass(environment='OTF')  # TODO need a way to set this
 
 from bulk_euclid.utils import morphology_utils_ou_mer as m_utils, cutout_utils
 
@@ -447,8 +448,6 @@ def create_simple_fits(cfg, galaxy, cutout_by_band):
 def login():
 
     if os.path.isdir('/media/home/team_workspaces'):
-        from astroquery.esa.euclid.core import EuclidClass
-        Euclid = EuclidClass(environment='OTF')
         # two line file, username and password
         # do not commit or put in any team workspace, obviously...
         Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
