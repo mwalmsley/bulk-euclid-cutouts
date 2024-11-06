@@ -17,9 +17,9 @@ def run(cfg):
     tiles = select_tiles(cfg, tiles)
     
 
-    print(tile_catalog.columns.values())
-    print(tile_catalog.head())
-    print(tile_catalog['release_name'].value_counts)
+    print(tiles.columns.values())
+    print(tiles.head())
+    print(tiles['release_name'].value_counts)
     exit()
 
     for tile_n, tile_index in enumerate(tiles['tile_index'].unique()):
