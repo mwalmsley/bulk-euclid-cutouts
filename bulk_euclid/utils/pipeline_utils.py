@@ -447,7 +447,8 @@ def create_simple_fits(cfg, galaxy, cutout_by_band):
 def login():
 
     if os.path.isdir('/media/home/team_workspaces'):
-        from astroquery.esa.euclid.core import Euclid
+        from astroquery.esa.euclid.core import EuclidClass
+        Euclid = EuclidClass(environment='OTF')
         # two line file, username and password
         # do not commit or put in any team workspace, obviously...
         Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
