@@ -94,7 +94,9 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
 
 def save_image_wrapper(image, save_loc, quality):
     logging.info(save_loc)
-    os.makedirs(os.path.dirname(save_loc), exist_ok=True)
+    subdir = os.path.dirname(save_loc)
+    if not os.path.isdir(subdir):
+        os.makedirs(subdir, exist_ok=True)
     Image.fromarray(image).save(save_loc, quality=quality)
 
 def make_composite_cutout_from_tiles(source, vis_im, nir_im, allow_radius_estimate=False):
