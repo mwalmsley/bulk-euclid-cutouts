@@ -259,8 +259,13 @@ def MTF_on_normalised_data(x, m):
     y[mask_else] = numerator / denominator
     return y # curved values
 
-def find_m_for_mean(normalized_data, desired_mean):
-    x = np.mean(normalized_data)
+def find_m_for_mean(normalized_data, desired_mean, central_crop_size=100):  # 0.1 arcsec per pixel for MER tiles
+    # central crop to 100x100
+    width = normalized_data.shape[1]
+    central_crop_low_edge = width//2 - central_crop_size//2
+    central_crop_high_edge = width//2 + central_crop_size//2
+    normalized_data_central = normalized_data[central_crop_low_edge:central_crop_high_edge, central_crop_low_edge:central_crop_high_edge]
+    x = np.mean(normalized_data_central)
     alpha = desired_mean
     return (x-alpha*x)/(x-2*alpha*x+alpha)
 
