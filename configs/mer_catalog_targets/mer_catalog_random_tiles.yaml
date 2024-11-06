@@ -20,7 +20,7 @@ jpg_outputs: ['sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw
 fits_outputs: false
 overwrite_jpg: false
 overwrite_fits: false
-jpg_quality: 100
+jpg_quality: 98
 use_fits_origin_for_jpg: true
 
 download_dir: !
