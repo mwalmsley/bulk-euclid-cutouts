@@ -308,22 +308,27 @@ def get_auxillary_tiles(mosaic_product_oid, auxillary_products=['MERPSF', 'MERRM
 def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, oneway_hash=False):
     tile_index = str(int(galaxy['tile_index']))
     object_id = str(int(galaxy['object_id'])).replace('-', 'NEG')
-    subdir = tile_index
+
     filename_without_format = tile_index + '_' + object_id
+    subdir = tile_index
+    # e.g. 102159774/102159774_123456.jpg
     if version_suffix is not None:
+        subdir = version_suffix + '/' + tile_index
         filename_without_format = filename_without_format + '_' + version_suffix
+        # e.g. vis_only/102159774/102159774_123456_vis_only.jpg
         
     if oneway_hash:
         hasher = hashlib.sha256()
         hasher.update(filename_without_format.encode())
         filename_without_format = hasher.hexdigest()
+
     return os.path.join(base_dir, subdir, filename_without_format + '.' + output_format)
 
 
 def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
     # assumes the tile has been downloaded and catalogued
     # assumes tile_galaxies includes all/only the bands to load and potentially include
-    print(tile_galaxies.columns.values)
+    # print(tile_galaxies.columns.values)
     
     logging.info('loading bands for tile')
     tile_data = {}
@@ -373,15 +378,18 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
 
             # assume jpg_loc_generic key added earlier in catalog creation step
             generic_loc = galaxy['jpg_loc_generic']
+            # e.g. jpg_loc/generic/102159774/102159774_123456_generic.jpg
+
             try:
-                if i == 0:
-                    cutout_subdir = os.path.dirname(generic_loc)
-                    if not os.path.isdir(cutout_subdir):
-                        os.makedirs(cutout_subdir)
+                # if i == 0:
+                #     cutout_subdir = os.path.dirname(generic_loc)
+                #     if not os.path.isdir(cutout_subdir):
+                #         os.makedirs(cutout_subdir)
                 
                 # we expect to find the outputs here, see cutout_utils.py
                 # skip if all exist and not overwriting. If any missing, don't skip.
-                cutout_locs = [generic_loc.replace('.jpg', output_name + '.jpg') for output_name in cfg.jpg_outputs]
+                cutout_locs = [generic_loc.replace('generic', output_name) for output_name in cfg.jpg_outputs]
+                # e.g. jpg_loc/vis_only/102159774/102159774_123456_vis_only.jpg
                 if cfg.overwrite_jpg or (not np.all([os.path.isfile(loc) for loc in cutout_locs])):
                     create_jpgs_within_pipeline(cfg, galaxy, cutout_by_band)
 

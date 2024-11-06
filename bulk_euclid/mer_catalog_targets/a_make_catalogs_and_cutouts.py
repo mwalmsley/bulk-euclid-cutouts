@@ -163,8 +163,9 @@ def get_and_save_tile_catalog(cfg, tile_index: int, tile_metadata_to_copy: dict)
 def add_cutout_paths(cfg, catalog):
     # will be used like .jpg -> output_name.jpg later
     if cfg.jpg_outputs:
+        # e.g. jpg_loc/generic/102159774/102159774_123456_generic.jpg
         catalog['jpg_loc_generic'] = catalog.apply(
-            lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix=None, oneway_hash=False), axis=1)
+            lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix='generic', oneway_hash=False), axis=1)
    
     if cfg.fits_outputs:  # true or false, unlike jpg_loc:
         catalog['fits_loc'] = catalog.apply(
