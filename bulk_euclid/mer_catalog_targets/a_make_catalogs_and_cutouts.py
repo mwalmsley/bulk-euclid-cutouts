@@ -14,10 +14,16 @@ def run(cfg):
     pipeline_utils.login(cfg)
     cfg = create_folders(cfg)
     tiles = get_tile_catalog(cfg)
+
+    print(tiles.columns.values)
+    print(tiles.head())
+    print(tiles['release_name'].value_counts)
+    exit()
+
     tiles = select_tiles(cfg, tiles)
     
 
-    print(tiles.columns.values())
+    print(tiles.columns.values)
     print(tiles.head())
     print(tiles['release_name'].value_counts)
     exit()
@@ -92,7 +98,7 @@ def get_tile_catalog(cfg: OmegaConf):
     return tiles
 
 
-def select_tiles(cfg, tiles):
+def select_tiles(cfg, tiles) -> pd.DataFrame:
     rng = np.random.default_rng(cfg.seed)
 
     # tiles.groupby('tile_index')['filter_name'].unique().value_counts()
