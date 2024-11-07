@@ -50,11 +50,11 @@ def run(cfg: OmegaConf):
     logging.info('Targets per release: \n{}'.format(targets_with_tiles['release_name'].value_counts()))
     logging.info('{} unqiue tiles for {} targets'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles)))
 
-    targets_with_tiles = targets_with_tiles[:2]  # for testing
+    targets_with_tiles = targets_with_tiles.sample(2, random_state=42)  # for testing
 
     make_cutouts(cfg, targets_with_tiles)
 
-    make_archive_for_download(cfg, external_targets['category'].unique())
+    make_archive_for_download(cfg)
 
     logging.info("External targets pipeline complete")
 
@@ -683,7 +683,10 @@ def create_folders(cfg: OmegaConf):
 
     return cfg
 
-def make_archive_for_download(cfg: OmegaConf, categories: list):
+def make_archive_for_download(cfg: OmegaConf):
+    # list subdirectories within cfg.jpg_dir
+    categories = [f for f in os.listdir(cfg.jpg_dir) if os.path.isdir(os.path.join(cfg.jpg_dir, f))]
+
     logging.info('Archiving cutouts')
     if cfg.jpg_outputs:
         for category in categories:
