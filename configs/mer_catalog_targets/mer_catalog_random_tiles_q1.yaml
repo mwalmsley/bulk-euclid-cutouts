@@ -1,0 +1,35 @@
+base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
+name: 'mer_catalog_random_tiles_q1_10_with_fits'
+release_name: 'Q1_R1'
+sas_environment: 'IDR'  # or OTF
+bands: ['VIS', 'NIR_Y', 'NIR_J']
+
+num_tiles: 10  # all tiles
+refresh_catalogs: True
+
+download_method: 'datalabs_path'  # or sas
+delete_tiles: False
+debug: False
+run_async: True  # necessary for strong lens selection func
+max_retries: 1
+seed: 1
+
+selection_cuts: space_warps
+# field_of_view: galaxy_zoo  # or number in arcseconds
+field_of_view: 15
+
+jpg_outputs: ['sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j', 'sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j']
+fits_outputs: true
+overwrite_jpg: false
+overwrite_fits: false
+jpg_quality: 98
+use_fits_origin_for_jpg: true
+
+download_dir: !
+tile_dir: !
+catalog_dir: !
+cutout_dir: !
+jpg_dir: !
+fits_dir: !
+sanity_dir: !
+log_file: !

@@ -15,12 +15,16 @@ version = "0.0.2"
 dependencies = [
     'numpy',
     'pandas',
+    'pyarrow',
+    'jupyterlab',
     'matplotlib',
     'scikit-learn',
+    'opencv-python',  # for RGB/LAB conversion
     'astropy',
     'tqdm',
     'panoptes-client',
-    'omegaconf'  # for config
+    'omegaconf',  # for config
+    'pytest'  # for testing
 ]
 requires-python = ">= 3.9"
 authors = [

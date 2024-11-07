@@ -1,0 +1,12 @@
+base_dir: '/media/home/team_workspaces/Galaxy-Zoo-Euclid/data/pipeline_runs'
+name: 'external_targets_debug'
+
+external_targets_loc: '/media/user/repos/bulk-euclid-cutouts/tests/data/102021539_mer_catalog.csv'
+release_name: 'F-006'
+bands: ['VIS', 'NIR_Y']
+
+download_dir: !
+tile_dir: !
+cutout_dir: !
+fits_dir: !
+sanity_dir: !
