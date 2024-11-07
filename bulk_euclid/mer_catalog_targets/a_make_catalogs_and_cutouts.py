@@ -139,6 +139,7 @@ def download_tile_and_catalog(cfg, tiles_to_download: pd.DataFrame, tile_index: 
         downloaded_tiles = tiles_to_download.query(f'tile_index == {tile_index}').copy()
         # instead of downloading, just point the path to datalabs
         downloaded_tiles['file_loc'] = downloaded_tiles['datalabs_path']
+        logging.info(f'Tile locations: {downloaded_tiles['file_loc'] }')
 
     tile_metadata_to_copy = dict()  # scalars
     tile_metadata_to_copy['tile_index'] = tile_index
