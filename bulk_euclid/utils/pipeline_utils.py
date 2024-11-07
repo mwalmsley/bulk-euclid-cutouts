@@ -99,13 +99,13 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     """
 
     if cfg.sas_environment == 'IDR':
-        vis_flux_col = 'FLUX_VIS_1FWHM_APER'  # now renamed with 1FWHM etc
+        vis_flux_col = 'flux_vis_1fwhm_aper'  # now renamed with 1FWHM etc
         ext_cols = ''  # not yet available
     else:
-        vis_flux_col = 'FLUX_VIS_APER'
+        vis_flux_col = 'flux_vis_aper'
         ext_cols = ', flux_g_ext_decam_aper, flux_i_ext_decam_aper, flux_r_ext_decam_aper'
     query_str = f"""
-    SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_detection_total, {vis_flux_col}, mumax_minus_mag, mu_max, ellipticity, kron_radius, segmentation_map_id, {ext_cols}
+    SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_detection_total, {vis_flux_col}, mumax_minus_mag, mu_max, ellipticity, kron_radius, segmentation_map_id {ext_cols}
     FROM catalogue.mer_catalogue
     """
 
