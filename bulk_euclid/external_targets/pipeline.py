@@ -79,9 +79,8 @@ def get_matching_tiles(
         bands=["VIS"], release_name=cfg.release_name
     )
     assert len(tiles) > 0
-    print(tiles['release_name'].value_counts())
-    exit()
-    tiles.to_csv("temp_tiles.csv")  # for debugging
+    logging.info(tiles['release_name'].value_counts())
+    # tiles.to_csv("temp_tiles.csv")  # for debugging
 
     # add tile FoV
     # adds cols ['ra_min', 'ra_max', 'dec_min', 'dec_max'] by unpacking the "fov" tile metadata column
@@ -313,7 +312,7 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
             cfg.fits_dir, str(target["category"]), str(target["id_str"]) + ".fits"
         )
         jpg_save_loc = os.path.join(
-            cfg.jpg_dir, str(target["category"]), str(target["id_str"]) + ".jpg"
+            cfg.jpg_dir, str(target["category"]), 'generic', str(target["id_str"]) + "_generic.jpg"  # generic will be replaced
         )
         try:
             if cfg.fits_outputs:
@@ -680,45 +679,45 @@ def create_folders(cfg: OmegaConf):
 
 
 
-def cutout_psf_manually(psf_grid, x_center, y_center, cutout_size):
-    #cutout is the size of the image cutout to search for the PSFs in that space
-    x_start = int(round(x_center - cutout_size / 2))
-    x_end = x_start + cutout_size
-    y_start = int(round(y_center - cutout_size / 2))
-    y_end = y_start + cutout_size
+# def cutout_psf_manually(psf_grid, x_center, y_center, cutout_size):
+#     #cutout is the size of the image cutout to search for the PSFs in that space
+#     x_start = int(round(x_center - cutout_size / 2))
+#     x_end = x_start + cutout_size
+#     y_start = int(round(y_center - cutout_size / 2))
+#     y_end = y_start + cutout_size
 
-    # avoid edge effects (possibly not needed)
-    if x_start < 0:
-        x_start = 0
-    if x_end > psf_grid.shape[1]:
-        x_end = psf_grid.shape[1]
-    if y_start < 0:
-        y_start = 0
-    if y_end > psf_grid.shape[0]:
-        y_end = psf_grid.shape[0]
-    # logging.debug(f'before edge: {y_start} {y_end}, {x_start} {x_end}')
+#     # avoid edge effects (possibly not needed)
+#     if x_start < 0:
+#         x_start = 0
+#     if x_end > psf_grid.shape[1]:
+#         x_end = psf_grid.shape[1]
+#     if y_start < 0:
+#         y_start = 0
+#     if y_end > psf_grid.shape[0]:
+#         y_end = psf_grid.shape[0]
+#     # logging.debug(f'before edge: {y_start} {y_end}, {x_start} {x_end}')
 
-    # make the slice
+#     # make the slice
 
-    # logging.debug(f'first: {y_start} {y_end}, {x_start} {x_end}')
-    cutout = psf_grid[y_start:y_end, x_start:x_end]
+#     # logging.debug(f'first: {y_start} {y_end}, {x_start} {x_end}')
+#     cutout = psf_grid[y_start:y_end, x_start:x_end]
 
-    # find the maxima
-    max_y_local, max_x_local = np.unravel_index(np.argmax(cutout), cutout.shape)
-    max_x_global = x_start + max_x_local
-    max_y_global = y_start + max_y_local
-    brightest_pixels = [max_x_global, max_y_global]
+#     # find the maxima
+#     max_y_local, max_x_local = np.unravel_index(np.argmax(cutout), cutout.shape)
+#     max_x_global = x_start + max_x_local
+#     max_y_global = y_start + max_y_local
+#     brightest_pixels = [max_x_global, max_y_global]
 
-    # update x_center and y_center to the actual brightest pixels
-    x_center = brightest_pixels[0]
-    y_center = brightest_pixels[1]
+#     # update x_center and y_center to the actual brightest pixels
+#     x_center = brightest_pixels[0]
+#     y_center = brightest_pixels[1]
 
-    # make the slice AGAIN
-    x_start = int(x_center - cutout_size / 2)
-    x_end = int(x_center + cutout_size / 2)
-    y_start = int(y_center - cutout_size / 2)
-    y_end = int(y_center + cutout_size / 2)
-    # logging.debug(f'second: {y_start} {y_end}, {x_start} {x_end}')
-    cutout = psf_grid[y_start:y_end, x_start:x_end]
+#     # make the slice AGAIN
+#     x_start = int(x_center - cutout_size / 2)
+#     x_end = int(x_center + cutout_size / 2)
+#     y_start = int(y_center - cutout_size / 2)
+#     y_end = int(y_center + cutout_size / 2)
+#     # logging.debug(f'second: {y_start} {y_end}, {x_start} {x_end}')
+#     cutout = psf_grid[y_start:y_end, x_start:x_end]
 
-    return cutout
+#     return cutout
