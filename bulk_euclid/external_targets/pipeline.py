@@ -691,12 +691,12 @@ def make_archive_for_download(cfg: OmegaConf):
     if cfg.jpg_outputs:
         for category in categories:
             # .../cutouts/jpg/known_lens_candidate/sw_arcsinh_vis_only/EUCLJ095929.92+021352.1_sw_arcsinh_vis_only.jpg
-            shutil.make_archive(cfg.cutout_dir + f'jpg_{category}', 'tar', root_dir=cfg.jpg_dir + '/' + category)
+            shutil.make_archive(cfg.cutout_dir + f'_jpg_{category}', 'tar', root_dir=cfg.jpg_dir + '/' + category)
             logging.info(f'Archived {category} jpg cutouts')
         logging.info('Archived all jpg cutouts')
     if cfg.fits_outputs:
         for category in categories:
-            shutil.make_archive(cfg.cutout_dir + f'fits_{category}', 'tar', root_dir=cfg.fits_dir + '/' + category)
+            shutil.make_archive(cfg.cutout_dir + f'_fits_{category}', 'tar', root_dir=cfg.fits_dir + '/' + category)
             logging.info(f'Archived {category} fits cutouts')
         logging.info('Archived fits cutouts')
 
