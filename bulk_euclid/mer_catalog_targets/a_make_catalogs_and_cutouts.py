@@ -138,7 +138,7 @@ def download_tile_and_catalog(cfg, tiles_to_download: pd.DataFrame, tile_index: 
         assert 'datalabs_path' in tiles_to_download.columns
         downloaded_tiles = tiles_to_download.query(f'tile_index == {tile_index}').copy()
         # instead of downloading, just point the path to datalabs
-        downloaded_tiles['file_loc'] = downloaded_tiles['datalabs_path']
+        downloaded_tiles['file_loc'] = downloaded_tiles['datalabs_path'] + '/' + downloaded_tiles['file_name']  # slightly counterintuitive, datalabs_path is the directory only
         logging.info(f'Tile locations: {downloaded_tiles["file_loc"] }')
 
     tile_metadata_to_copy = dict()  # scalars
