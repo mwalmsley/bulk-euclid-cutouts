@@ -98,8 +98,14 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     WHERE CAST(segmentation_map_id as varchar) LIKE '102020107%'
     """
 
+    if cfg.sas_environment == 'IDR':
+        vis_flux_col = 'FLUX_VIS_1FWHM_APER'  # now renamed with 1FWHM etc
+        ext_cols = ''  # not yet available
+    else:
+        vis_flux_col = 'FLUX_VIS_APER'
+        ext_cols = ', flux_g_ext_decam_aper, flux_i_ext_decam_aper, flux_r_ext_decam_aper'
     query_str = f"""
-    SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_detection_total, flux_vis_aper, mumax_minus_mag, mu_max, ellipticity, kron_radius, segmentation_map_id, flux_g_ext_decam_aper, flux_i_ext_decam_aper, flux_r_ext_decam_aper
+    SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_detection_total, {vis_flux_col}, mumax_minus_mag, mu_max, ellipticity, kron_radius, segmentation_map_id, {ext_cols}
     FROM catalogue.mer_catalogue
     """
 
@@ -107,7 +113,7 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     # no cross-match to gaia stars
     # detected in vis
     # not "spurious" (very similar to detected in vis)
-    standard_quality_cuts = """WHERE flux_vis_aper > 0
+    standard_quality_cuts = f"""WHERE {vis_flux_col} > 0
     AND gaia_id IS NULL
     AND vis_det=1
     AND spurious_prob < 0.2
