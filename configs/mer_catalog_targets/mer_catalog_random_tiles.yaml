@@ -1,7 +1,7 @@
 base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
 name: 'mer_catalog_random_tiles_q1'
 release_name: F-006
-sas_environment: 'OTF'
+sas_environment: 'IDR'
 bands: ['VIS', 'NIR_Y', 'NIR_J']
 
 num_tiles: 2  # all tiles
@@ -16,7 +16,7 @@ selection_cuts: space_warps
 # field_of_view: galaxy_zoo  # or number in arcseconds
 field_of_view: 15
 
-jpg_outputs: ['sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j', 'sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j']
+jpg_outputs: ['sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j', 'sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j', ]
 fits_outputs: false
 overwrite_jpg: false
 overwrite_fits: false

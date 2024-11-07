@@ -79,6 +79,8 @@ def get_matching_tiles(
         bands=["VIS"], release_name=cfg.release_name
     )
     assert len(tiles) > 0
+    print(tiles['release_name'].value_counts())
+    exit()
     tiles.to_csv("temp_tiles.csv")  # for debugging
 
     # add tile FoV
