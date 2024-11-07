@@ -15,18 +15,12 @@ def run(cfg):
     cfg = create_folders(cfg)
     tiles = get_tile_catalog(cfg)
 
-    # print(tiles.columns.values)
-    # print(tiles.head())
-    # print(tiles['release_name'].value_counts)
-    # exit()
-
     tiles = select_tiles(cfg, tiles)
     
+    # logging.info(tiles.columns.values)
+    # logging.info(tiles.head())
+    logging.info(tiles['release_name'].value_counts())
 
-    print(tiles.columns.values)
-    print(tiles.head())
-    print(tiles['release_name'].value_counts())
-    # exit()
 
     for tile_n, tile_index in enumerate(tiles['tile_index'].unique()):
         logging.info(f'tile {tile_index}: {tile_n} of {len(tiles)}')
