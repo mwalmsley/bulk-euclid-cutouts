@@ -66,7 +66,7 @@ def visualise_catalog(cfg: OmegaConf, df):
 
 
 def make_archive_for_download(cfg: OmegaConf):
-    logging.info('Archivig cutouts and catalogs')
+    logging.info('Archiving cutouts and catalogs')
     # save to e.g. v1_challenge_launch_cutouts.zip
     shutil.make_archive(cfg.download_dir + '_catalogs', 'tar', root_dir=cfg.catalog_dir)
     logging.info('Archived catalogs')

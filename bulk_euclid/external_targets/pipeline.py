@@ -9,6 +9,7 @@ For each tile, download that tile, and use cutout2d to slice out the relevant fi
 
 import logging
 import os
+import shutil
 
 import numpy as np
 from omegaconf import OmegaConf
@@ -49,7 +50,11 @@ def run(cfg: OmegaConf):
     logging.info('Targets per release: \n{}'.format(targets_with_tiles['release_name'].value_counts()))
     logging.info('{} unqiue tiles for {} targets'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles)))
 
+    targets_with_tiles = targets_with_tiles[:2]  # for testing
+
     make_cutouts(cfg, targets_with_tiles)
+
+    make_archive_for_download(cfg, external_targets['category'].unique())
 
     logging.info("External targets pipeline complete")
 
@@ -677,6 +682,20 @@ def create_folders(cfg: OmegaConf):
             os.makedirs(d)
 
     return cfg
+
+def make_archive_for_download(cfg: OmegaConf, categories: list):
+    logging.info('Archiving cutouts')
+    if cfg.jpg_outputs:
+        for category in categories:
+            # .../cutouts/jpg/known_lens_candidate/sw_arcsinh_vis_only/EUCLJ095929.92+021352.1_sw_arcsinh_vis_only.jpg
+            shutil.make_archive(cfg.cutout_dir + f'jpg_{category}', 'tar', root_dir=cfg.jpg_dir + '/' + category)
+            logging.info(f'Archived {category} jpg cutouts')
+        logging.info('Archived all jpg cutouts')
+    if cfg.fits_outputs:
+        for category in categories:
+            shutil.make_archive(cfg.cutout_dir + f'fits_{category}', 'tar', root_dir=cfg.fits_dir + '/' + category)
+            logging.info(f'Archived {category} fits cutouts')
+        logging.info('Archived fits cutouts')
 
 
 
