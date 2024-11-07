@@ -19,6 +19,7 @@ dependencies = [
     'jupyterlab',
     'matplotlib',
     'scikit-learn',
+    'opencv-python',  # for RGB/LAB conversion
     'astropy',
     'tqdm',
     'panoptes-client',

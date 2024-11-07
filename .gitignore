@@ -180,3 +180,4 @@ tests/test_saving_cutouts/fits/102021539/.nfs00000000a205e6f200002f1f
 tests/test_saving_cutouts/fits/102021539/.nfs00000000a205e7da00002f1e
 tests/test_saving_cutouts/fits/102021539/.nfs00000000a205e83100002f20
 .conda
+*.pdf

@@ -13,6 +13,16 @@ These were developed for [Galaxy Zoo Euclid](https://www.esa.int/Science_Explora
 
 Help wanted. Let's build a pipeline that works for many projects. Contact Mike Walmsley ([m.walmsley@utoronto.ca](emailto:m.walmsley@utoronto.ca))
 
+
+## Making back into one pipeline?
+
+The basic process is similar: download a tile, slice cutouts, save as directed.
+
+The details in the first half are different: identify sources from the MER catalog, or sources from an external target list? 
+But once we have a list of targets: (id_str, ra, dec, FoV) we should be able to do the same download process.
+
+
+
 ## Quick Install Instructions on Datalabs
 
 Create a GitHub personal access token and save it somewhere. You will need it to clone this private repo.
