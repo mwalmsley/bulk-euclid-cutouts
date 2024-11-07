@@ -1,10 +1,10 @@
 base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
-name: 'mer_catalog_random_tiles_q1'
+name: 'mer_catalog_random_tiles_q1_full'
 release_name: 'Q1_R1'
 sas_environment: 'IDR'  # or OTF
 bands: ['VIS', 'NIR_Y', 'NIR_J']
 
-num_tiles: 2  # all tiles
+num_tiles: null  # all tiles
 refresh_catalogs: False
 
 download_method: 'datalabs_path'  # or sas
