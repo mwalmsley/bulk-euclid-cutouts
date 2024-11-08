@@ -5,7 +5,7 @@ sas_environment: 'IDR'  # or OTF
 bands: ['VIS', 'NIR_Y', 'NIR_J']
 
 num_tiles: 0  # all tiles
-refresh_catalogs: True
+refresh_catalogs: False
 
 download_method: 'datalabs_path'  # or sas
 delete_tiles: False
