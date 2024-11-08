@@ -42,6 +42,8 @@ def run(cfg: OmegaConf):
     required_cols = ['id_str', 'target_ra', 'target_dec', 'target_field_of_view', 'category']
     external_targets = pd.read_csv(cfg.external_targets_loc, usecols=required_cols)
 
+    logging.info(external_targets['category'].value_counts())
+
     # NOW we go!
     # matching each target with the best tile
     targets_with_tiles = get_matching_tiles(
@@ -49,6 +51,7 @@ def run(cfg: OmegaConf):
     )  
     logging.info('Targets per release: \n{}'.format(targets_with_tiles['release_name'].value_counts()))
     logging.info('{} unqiue tiles for {} targets'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles)))
+    logging.info(targets_with_tiles['category'].value_counts())
 
     # targets_with_tiles = targets_with_tiles.sample(2, random_state=42)  # for testing
 
@@ -327,8 +330,10 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
         )
         try:
             if cfg.fits_outputs:
+                logging.info('Saving fits')
                 save_multifits_cutout(cfg, target_data, target_header_data, fits_save_loc)
             if cfg.jpg_outputs:
+                logging.info('Saving jpg')
                 save_jpg_cutout(cfg, target_data, jpg_save_loc)
         except AssertionError as e:
             logging.critical(f"Error saving cutout for target {target['id_str']}")
@@ -498,6 +503,11 @@ def save_jpg_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
     else:
         j_im = None
 
+    expected_save_locs = [save_loc.replace('generic', output_format) for output_format in cfg.jpg_output_formats]
+    if all([os.path.isfile(loc) for loc in expected_save_locs]) and not cfg.overwrite_jpg:
+        logging.info(f"All jpg already exist for this galaxy, skipping: {save_loc}")
+        return
+
     cutout_utils.save_jpg_cutouts(cfg, save_loc, vis_im, y_im, j_im)
 
 
@@ -536,7 +546,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data:
     """
 
     if os.path.isfile(save_loc) and not cfg.overwrite_fits:
-        logging.debug(f"File already exists, skipping: {save_loc}")
+        logging.info(f"File already exists, skipping: {save_loc}")
         return
 
     header_hdu = fits.PrimaryHDU()
