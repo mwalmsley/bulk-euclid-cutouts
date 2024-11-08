@@ -403,10 +403,12 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
         assert target_pixels[0] > 0 and target_pixels[1] > 0, f"Target {target_n} has negative pixel coordinates, likely a WCS error or target just outside tile: {target_pixels}"
         if target_pixels[0] > 19200 and target_pixels[1] > 19200:
             logging.warning(f"Target {target_n} has too-large pixel coordinates, likely a WCS error or target just outside tile: {target_pixels}")
-        # logging.info(target)
-        # logging.info('WCS: {}'.format(flux_wcs))
-        # logging.info(f"Flux center: {target_coord}")
-        # logging.info(f"Flux center pixels: {target_pixels}")
+        logging.info(target)
+        logging.info('WCS: {}'.format(flux_wcs))
+        logging.info(f"Flux center: {target_coord}")
+        logging.info(f"Flux center pixels: {target_pixels}")
+        logging.info(target_coord)
+        logging.info(target['target_field_of_view'])
         flux_cutout = Cutout2D(
             data=flux_data,
             position=target_coord,
