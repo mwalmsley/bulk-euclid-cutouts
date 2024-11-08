@@ -72,11 +72,11 @@ def make_archive_for_download(cfg: OmegaConf):
     logging.info('Archived catalogs')
     if cfg.jpg_outputs:
         for output_format in cfg.jpg_outputs:
-            shutil.make_archive(cfg.cutout_dir + f'_jpg_cutouts_{output_format}', 'tar', root_dir=cfg.jpg_dir + '/' + output_format)  # tars from: download/cutouts/jpg/output_format
+            shutil.make_archive(cfg.cutout_dir + f'_jpg_{output_format}', 'tar', root_dir=cfg.jpg_dir + '/' + output_format)  # tars from: download/cutouts/jpg/output_format
             logging.info(f'Archived {output_format} jpg cutouts')
         logging.info('Archived all jpg cutouts')
     if cfg.fits_outputs:
-        shutil.make_archive(cfg.cutout_dir + '_fits_cutouts', 'tar', root_dir=cfg.fits_dir)
+        shutil.make_archive(cfg.cutout_dir + '_fits', 'tar', root_dir=cfg.fits_dir)
         logging.info('Archived fits cutouts')
 
 

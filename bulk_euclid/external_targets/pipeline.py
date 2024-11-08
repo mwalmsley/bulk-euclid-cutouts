@@ -39,8 +39,8 @@ def run(cfg: OmegaConf):
     create_folders(cfg)
     pipeline_utils.login(cfg)
 
-    external_targets = pd.read_csv(cfg.external_targets_loc)
-
+    required_cols = ['id_str', 'target_ra', 'target_dec', 'target_field_of_view', 'category']
+    external_targets = pd.read_csv(cfg.external_targets_loc, usecols=required_cols)
 
     # NOW we go!
     # matching each target with the best tile
