@@ -52,6 +52,7 @@ def run(cfg: OmegaConf):
     logging.info('Targets per release: \n{}'.format(targets_with_tiles['release_name'].value_counts()))
     logging.info('{} unqiue tiles for {} targets'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles)))
     logging.info(targets_with_tiles['category'].value_counts())
+    targets_with_tiles.to_csv(cfg.download_dir + '/targets_with_tiles.csv', index=False)
 
     # targets_with_tiles = targets_with_tiles.sample(2, random_state=42)  # for testing
 
