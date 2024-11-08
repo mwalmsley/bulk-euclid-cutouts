@@ -1,7 +1,7 @@
 # for the master list of external sl-related targets
 base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
-name: 'external_targets_master_list_regression'
-sas_environment: 'REG'
+name: 'external_targets_master_list_otf'
+sas_environment: 'OTF'
 release_name: null  # allow tiles from any release. Read as None in Python.
 bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands
 
