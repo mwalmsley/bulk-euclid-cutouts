@@ -50,7 +50,7 @@ def run(cfg: OmegaConf):
     logging.info('Targets per release: \n{}'.format(targets_with_tiles['release_name'].value_counts()))
     logging.info('{} unqiue tiles for {} targets'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles)))
 
-    targets_with_tiles = targets_with_tiles.sample(2, random_state=42)  # for testing
+    # targets_with_tiles = targets_with_tiles.sample(2, random_state=42)  # for testing
 
     make_cutouts(cfg, targets_with_tiles)
 
