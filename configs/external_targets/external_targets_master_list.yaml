@@ -10,7 +10,8 @@ external_targets_loc: /media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_eu
 
 auxillary_products: ['MERPSF', 'MERRMS']
 release_priority: ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', 'F-003_240612' , 'F-006', 'Q1_R1', 'REGREPROC1_R2']
-delete_tiles: true
+delete_tiles: False
+download_method: 'datalabs_path'  # or sas
 
 
 jpg_outputs: ['sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j', 'sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j']

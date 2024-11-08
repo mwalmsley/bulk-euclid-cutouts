@@ -244,9 +244,12 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
         tile_index=tile_index, bands=cfg.bands, release_name=cfg.release_name
     )
     # download all the flux tiles with that index
-    flux_tile_metadata = pipeline_utils.save_euclid_products(
-        flux_tile_metadata, download_dir=cfg.tile_dir
-    )
+    if cfg.download_method == 'datalabs_path':
+        flux_tile_metadata['file_loc'] = flux_tile_metadata['datalabs_path'] + '/' + flux_tile_metadata['file_name']
+    else:
+        flux_tile_metadata = pipeline_utils.save_euclid_products(
+            flux_tile_metadata, download_dir=cfg.tile_dir
+        )
 
     dict_of_locs = {}
 
@@ -257,9 +260,12 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
         auxillary_tile_metadata = pipeline_utils.get_auxillary_tiles(
             flux_tile["mosaic_product_oid"], auxillary_products=cfg.auxillary_products
         )
-        auxillary_tile_metadata = pipeline_utils.save_euclid_products(
-            auxillary_tile_metadata, download_dir=cfg.tile_dir
-        )
+        if cfg.download_method == 'datalabs_path':
+            auxillary_tile_metadata['file_loc'] = auxillary_tile_metadata['datalabs_path'] + '/' + auxillary_tile_metadata['file_name']
+        else:
+            auxillary_tile_metadata = pipeline_utils.save_euclid_products(
+                auxillary_tile_metadata, download_dir=cfg.tile_dir
+            )
         these_aux_locs = dict(
             zip(
                 auxillary_tile_metadata["product_type_sas"],
