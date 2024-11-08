@@ -92,9 +92,10 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
         lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=False)
         save_image_wrapper(lab_mtf, save_loc.replace('generic', 'sw_mtf_vis_y_j'), quality=cfg.jpg_quality)
 
+    logging.debug('Saved all jpg cutouts for single galaxy')
+
 def save_image_wrapper(image, save_loc, quality):
-    # logging.info(save_loc)
-    # exit()
+    logging.debug(save_loc)
     subdir = os.path.dirname(save_loc)
     if not os.path.isdir(subdir):
         os.makedirs(subdir, exist_ok=True)

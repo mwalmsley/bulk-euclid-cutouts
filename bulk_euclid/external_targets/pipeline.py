@@ -504,8 +504,9 @@ def save_jpg_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         j_im = None
 
     expected_save_locs = [save_loc.replace('generic', output_format) for output_format in cfg.jpg_output_formats]
+    logging.debug(expected_save_locs)
     if all([os.path.isfile(loc) for loc in expected_save_locs]) and not cfg.overwrite_jpg:
-        logging.info(f"All jpg already exist for this galaxy, skipping: {save_loc}")
+        logging.debug(f"All jpg already exist for this galaxy, skipping: {save_loc}")
         return
 
     cutout_utils.save_jpg_cutouts(cfg, save_loc, vis_im, y_im, j_im)

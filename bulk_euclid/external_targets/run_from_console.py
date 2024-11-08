@@ -32,10 +32,15 @@ if __name__ == "__main__":
     # config_loc = 'configs/external_targets/wide_targets.yaml'
     cfg = OmegaConf.load(config_loc)
 
-    cfg.log_file = cfg.base_dir + f'/external_targets_{cfg.name}_{time.time()}.log'
+    cfg.log_file = cfg.base_dir + f'/{cfg.name}_{time.time()}.log'
+
+    # logging.basicConfig(
+    #     level=logging.INFO, filename=cfg.log_file, filemode='w',
+    #     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    # )
 
     logging.basicConfig(
-        level=logging.INFO, filename=cfg.log_file, filemode='w',
+        level=logging.DEBUG, 
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
