@@ -5,18 +5,19 @@ sas_environment: 'IDR'
 bands: ['VIS', 'NIR_Y', 'NIR_J']
 
 num_tiles: 2  # all tiles
-refresh_catalogs: True
+refresh_catalogs: False
 delete_tiles: False
 debug: False
 run_async: True  # necessary for strong lens selection func
-max_retries: 1
+max_retries: 3
 seed: 1
 
 selection_cuts: space_warps
 # field_of_view: galaxy_zoo  # or number in arcseconds
 field_of_view: 15
 
-jpg_outputs: ['sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j', 'sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j', ]
+# jpg_outputs: ['sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j', 'sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j']
+jpg_outputs: ['sw_arcsinh_vis_y']
 fits_outputs: false
 overwrite_jpg: false
 overwrite_fits: false
