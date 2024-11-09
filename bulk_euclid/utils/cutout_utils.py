@@ -61,7 +61,7 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
 
     ### Space Warps MTF processing ###
 
-    if any(['mtf' in x for x in cfg.jpg.outputs]):
+    if any(['mtf' in x for x in cfg.jpg_outputs]):
 
         vis_mtf = apply_MTF(vis_im)
         # assume if the other bands are available then we will probably want these as well
