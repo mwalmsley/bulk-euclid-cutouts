@@ -61,7 +61,7 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
 
     ### Space Warps MTF processing ###
 
-    if 'sw_mtf_vis_only' in cfg.jpg_outputs:
+    if any(['mtf' in x for x in cfg.jpg.outputs]):
 
         vis_mtf = apply_MTF(vis_im)
 
@@ -73,6 +73,7 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
         if j_im is not None:
             j_mtf = apply_MTF(j_im)
 
+    if 'sw_mtf_vis_only' in cfg.jpg_outputs:
         save_image_wrapper(vis_mtf, save_loc.replace('generic', 'sw_mtf_vis_only'), quality=cfg.jpg_quality)
 
     if 'sw_mtf_vis_y' in cfg.jpg_outputs:
