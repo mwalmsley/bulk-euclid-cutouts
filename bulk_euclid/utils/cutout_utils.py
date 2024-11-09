@@ -64,34 +64,31 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
     if any(['mtf' in x for x in cfg.jpg.outputs]):
 
         vis_mtf = apply_MTF(vis_im)
-
-        # assume if we're getting VIS MTF and we also have the other bands available then
-        # we will probably want these as well
+        # assume if the other bands are available then we will probably want these as well
         if y_im is not None:
             y_mtf = apply_MTF(y_im)
-
         if j_im is not None:
             j_mtf = apply_MTF(j_im)
 
-    if 'sw_mtf_vis_only' in cfg.jpg_outputs:
-        save_image_wrapper(vis_mtf, save_loc.replace('generic', 'sw_mtf_vis_only'), quality=cfg.jpg_quality)
+        if 'sw_mtf_vis_only' in cfg.jpg_outputs:
+            save_image_wrapper(vis_mtf, save_loc.replace('generic', 'sw_mtf_vis_only'), quality=cfg.jpg_quality)
 
-    if 'sw_mtf_vis_y' in cfg.jpg_outputs:
-        mean_mtf = np.mean([vis_mtf, y_mtf], axis=0)
-        rgb_mtf = np.stack([y_mtf, mean_mtf, vis_mtf], axis=2).astype(np.uint8)
-        lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=False)
-        save_image_wrapper(lab_mtf, save_loc.replace('generic', 'sw_mtf_vis_y'), quality=cfg.jpg_quality)
+        if 'sw_mtf_vis_y' in cfg.jpg_outputs:
+            mean_mtf = np.mean([vis_mtf, y_mtf], axis=0)
+            rgb_mtf = np.stack([y_mtf, mean_mtf, vis_mtf], axis=2).astype(np.uint8)
+            lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=False)
+            save_image_wrapper(lab_mtf, save_loc.replace('generic', 'sw_mtf_vis_y'), quality=cfg.jpg_quality)
 
-    if 'sw_mtf_vis_j' in cfg.jpg_outputs:
-        mean_mtf = np.mean([vis_mtf, j_mtf], axis=0)
-        rgb_mtf = np.stack([j_mtf, mean_mtf, vis_mtf], axis=2).astype(np.uint8)
-        lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=False)
-        save_image_wrapper(lab_mtf, save_loc.replace('generic', 'sw_mtf_vis_j'), quality=cfg.jpg_quality)
+        if 'sw_mtf_vis_j' in cfg.jpg_outputs:
+            mean_mtf = np.mean([vis_mtf, j_mtf], axis=0)
+            rgb_mtf = np.stack([j_mtf, mean_mtf, vis_mtf], axis=2).astype(np.uint8)
+            lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=False)
+            save_image_wrapper(lab_mtf, save_loc.replace('generic', 'sw_mtf_vis_j'), quality=cfg.jpg_quality)
 
-    if 'sw_mtf_vis_y_j' in cfg.jpg_outputs:
-        rgb_mtf = np.stack([j_mtf, y_mtf, vis_mtf], axis=2).astype(np.uint8)
-        lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=False)
-        save_image_wrapper(lab_mtf, save_loc.replace('generic', 'sw_mtf_vis_y_j'), quality=cfg.jpg_quality)
+        if 'sw_mtf_vis_y_j' in cfg.jpg_outputs:
+            rgb_mtf = np.stack([j_mtf, y_mtf, vis_mtf], axis=2).astype(np.uint8)
+            lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=False)
+            save_image_wrapper(lab_mtf, save_loc.replace('generic', 'sw_mtf_vis_y_j'), quality=cfg.jpg_quality)
 
     logging.debug('Saved all jpg cutouts for single galaxy')
 
