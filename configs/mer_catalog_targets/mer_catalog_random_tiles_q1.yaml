@@ -20,7 +20,7 @@ field_of_view: 15
 
 jpg_outputs: ['sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j', 'sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j']
 fits_outputs: false
-overwrite_jpg: true
+overwrite_jpg: false
 overwrite_fits: false
 jpg_quality: 98
 use_fits_origin_for_jpg: true
