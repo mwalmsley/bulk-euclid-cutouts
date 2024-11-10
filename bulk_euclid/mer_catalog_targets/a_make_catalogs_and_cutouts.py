@@ -25,7 +25,7 @@ def run(cfg):
     tile_indices = tiles['tile_index'].unique()
 
     # start from 335, temporarily, debug 339 TODO
-    tile_indices = tile_indices[335:]
+    # tile_indices = tile_indices[335:]
 
     for tile_n, tile_index in enumerate(tile_indices):
         logging.info(f'tile {tile_index}: {tile_n} of {len(tile_indices)}')
