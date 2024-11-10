@@ -34,5 +34,6 @@ if __name__ == "__main__":
         level=logging.INFO, filename=cfg.log_file, filemode='w',
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
+    logging.getLogger().addHandler(logging.StreamHandler())  # also log to console
 
     run(cfg)
