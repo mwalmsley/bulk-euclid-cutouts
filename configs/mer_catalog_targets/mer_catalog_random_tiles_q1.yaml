@@ -2,8 +2,7 @@ base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/ext
 name: 'mer_catalog_random_tiles_q1_full'
 release_name: 'Q1_R1'
 sas_environment: 'IDR'  # or OTF
-# bands: ['VIS', 'NIR_Y', 'NIR_J']
-bands: ['VIS', 'NIR_Y']
+bands: ['VIS', 'NIR_Y', 'NIR_J']
 
 num_tiles: 0  # all tiles
 refresh_catalogs: False
@@ -20,7 +19,10 @@ selection_cuts: space_warps
 field_of_view: 15
 
 # jpg_outputs: ['sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j', 'sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j']  # everything
+
 # jpg_outputs: ['sw_mtf_vis_y']  # top priority colour
+# bands: ['VIS', 'NIR_Y']
+
 jpg_outputs: ['sw_mtf_vis_j', 'sw_mtf_vis_y_j', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j']  # the remaining colours
 fits_outputs: false
 overwrite_jpg: false

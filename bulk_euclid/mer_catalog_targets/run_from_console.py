@@ -31,15 +31,15 @@ if __name__ == "__main__":
     cfg.log_file = cfg.base_dir + f'/pipeline_{cfg.name}_{time.time()}.log'
 
 
-    logging.basicConfig(
-        level=logging.DEBUG, 
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-
     # logging.basicConfig(
-    #     level=logging.INFO, filename=cfg.log_file, filemode='w',
+    #     level=logging.DEBUG, 
     #     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     # )
-    # logging.getLogger().addHandler(logging.StreamHandler())  # also log to console
+
+    logging.basicConfig(
+        level=logging.INFO, filename=cfg.log_file, filemode='w',
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logging.getLogger().addHandler(logging.StreamHandler())  # also log to console
 
     run(cfg)
