@@ -27,7 +27,7 @@ def run(cfg):
     # start from 335, temporarily, debug 339 TODO
     tile_indices = tile_indices[335:]
 
-    for tile_n, tile_index in enumerate():
+    for tile_n, tile_index in enumerate(tile_indices):
         logging.info(f'tile {tile_index}: {tile_n} of {len(tile_indices)}')
         try:
             tile_catalog = download_tile_and_catalog(cfg, tiles, tile_index)
