@@ -22,8 +22,13 @@ def run(cfg):
     logging.info(tiles['release_name'].value_counts())
 
 
-    for tile_n, tile_index in enumerate(tiles['tile_index'].unique()):
-        logging.info(f'tile {tile_index}: {tile_n} of {len(tiles)}')
+    tile_indices = tiles['tile_index'].unique()
+
+    # start from 335, temporarily, debug 339 TODO
+    tile_indices = tile_indices[335:]
+
+    for tile_n, tile_index in enumerate():
+        logging.info(f'tile {tile_index}: {tile_n} of {len(tile_indices)}')
         try:
             tile_catalog = download_tile_and_catalog(cfg, tiles, tile_index)
 
