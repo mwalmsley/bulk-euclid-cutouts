@@ -24,8 +24,11 @@ def run(cfg):
 
     tile_indices = tiles['tile_index'].unique()
 
+    # remove one bad tile, 102160873
+    tile_indices = tile_indices[tile_indices != 102160873]
+
     # start from 335, temporarily, debug 339 TODO
-    # tile_indices = tile_indices[335:]
+    tile_indices = tile_indices[334:]
 
     for tile_n, tile_index in enumerate(tile_indices):
         logging.info(f'tile {tile_index}: {tile_n} of {len(tile_indices)}')

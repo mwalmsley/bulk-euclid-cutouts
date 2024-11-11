@@ -58,4 +58,8 @@ For long (hour plus) downloads, we've noticed Datalabs sometimes silently kills 
 
 Then pip install just like on Datalabs.
 
+If you get "setup.py not found, toml cannot be installed in editable, you need to upgrade pip to > 21.3:
+
+     pip install --upgrade pip
+
 The Euclid package on Datalabs is not yet available outside Datalabs and so you cannot download any Euclid data, unfortunately.
