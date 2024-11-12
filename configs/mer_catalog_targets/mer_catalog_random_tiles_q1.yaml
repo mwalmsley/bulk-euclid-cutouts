@@ -30,6 +30,7 @@ overwrite_fits: false
 jpg_quality: 98
 use_fits_origin_for_jpg: true
 
+# ignore these
 download_dir: !
 tile_dir: !
 catalog_dir: !
