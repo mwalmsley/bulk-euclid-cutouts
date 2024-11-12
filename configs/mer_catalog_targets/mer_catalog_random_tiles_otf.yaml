@@ -1,0 +1,36 @@
+base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
+name: 'mer_catalog_random_tiles_q1_otf'
+release_name: F-006
+sas_environment: 'OTF'
+bands: ['VIS', 'NIR_Y', 'NIR_J']
+
+num_tiles: 2  # two random tiles only, set 0 for all tiles
+refresh_catalogs: False  # if True, redownload the catalogs even if present
+
+download_method: 'sas'  # OTF not on datalabs, needs to be downloaded from SAS
+delete_tiles: False
+debug: False
+run_async: True  # necessary for strong lens selection func
+max_retries: 3
+seed: 1
+
+selection_cuts: space_warps
+# field_of_view: galaxy_zoo  # size according to segmentation area of galaxy
+field_of_view: 15  # number in arcseconds
+
+jpg_outputs: ['sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j', 'sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j']
+fits_outputs: false
+overwrite_jpg: false
+overwrite_fits: false
+jpg_quality: 98
+use_fits_origin_for_jpg: true
+
+# ignore these
+download_dir: !
+tile_dir: !
+catalog_dir: !
+cutout_dir: !
+jpg_dir: !
+fits_dir: !
+sanity_dir: !
+log_file: !

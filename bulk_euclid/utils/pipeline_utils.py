@@ -330,7 +330,7 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
                     create_jpgs_within_pipeline(cfg, galaxy, cutout_by_band)
 
             except AssertionError as e:
-                logging.debug(f'skipping galaxy {galaxy["object_id"]} in tile {galaxy["tile_index"]} due to \n{e}')
+                logging.debug(f'Assertion error, skipping galaxy {galaxy["object_id"]} in tile {galaxy["tile_index"]}')
 
             
         if cfg.fits_outputs:

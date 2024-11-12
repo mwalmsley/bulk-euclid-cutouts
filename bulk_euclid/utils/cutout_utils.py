@@ -19,6 +19,19 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
         if j_im is not None:
             j_im = np.flipud(j_im)
 
+    if 'generic' not in save_loc:
+        logging.debug(f'{save_loc} must include the string "generic" for renaming each cutout format e.g. foo_generic.jpg -> foo_sw_arcsinh_vis_y.jpg')
+        raise AssertionError('save_loc must include the string "generic" for renaming each cutout format e.g. foo_generic.jpg -> foo_sw_arcsinh_vis_y.jpg')
+
+    if ['vis_y' in x for x in cfg.jpg_outputs]:
+        if y_im is None:
+            logging.debug('Requested y colours but no y band image available')
+            raise AssertionError('No y band image available')
+    if ['vis_j' in x for x in cfg.jpg_outputs] or ['vis_y_j' in x for x in cfg.jpg_outputs]:
+        if j_im is None:
+            logging.debug('Requested j colours but no j band image available')
+            raise AssertionError('No j band image available')
+
     ### GZ Euclid arcsinh processing ###
 
     if 'gz_arcsinh_vis_y' in cfg.jpg_outputs:
@@ -41,20 +54,16 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
         save_image_wrapper(vis_rgb, save_loc.replace('generic', 'sw_arcsinh_vis_only'), quality=cfg.jpg_quality)
 
     if 'sw_arcsinh_vis_y' in cfg.jpg_outputs:
-        assert y_im is not None
         vis_y_rgb = make_composite_cutout(vis_im.copy(), y_im.copy(), vis_q=500, nisp_q=1)
         vis_y_rgb_lab = replace_luminosity_channel(vis_y_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=False)
         save_image_wrapper(vis_y_rgb_lab, save_loc.replace('generic', 'sw_arcsinh_vis_y'), quality=cfg.jpg_quality)
 
     if 'sw_arcsinh_vis_j' in cfg.jpg_outputs:
-        assert j_im is not None
         vis_j_rgb = make_composite_cutout(vis_im.copy(), j_im.copy(), vis_q=500, nisp_q=1)
         vis_j_rgb_lab = replace_luminosity_channel(vis_j_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=False)
         save_image_wrapper(vis_j_rgb_lab, save_loc.replace('generic', 'sw_arcsinh_vis_j'), quality=cfg.jpg_quality)
     
     if 'sw_arcsinh_vis_y_j' in cfg.jpg_outputs:
-        assert y_im is not None
-        assert j_im is not None
         triple_rgb = make_triple_cutout(vis_im.copy(), y_im.copy(), j_im.copy(), short_q=500, mid_q=1, long_q=0.5)
         triple_rgb_lab = replace_luminosity_channel(triple_rgb, rgb_channel_for_luminosity=2, desaturate_speckles=False)
         save_image_wrapper(triple_rgb_lab, save_loc.replace('generic', 'sw_arcsinh_vis_y_j'), quality=cfg.jpg_quality)
@@ -107,9 +116,15 @@ def make_composite_cutout_from_tiles(source, vis_im, nir_im, allow_radius_estima
     
 
 def make_composite_cutout(vis_cutout, nisp_cutout, vis_q=100, vis_clip=99.85, nisp_q=1, nisp_clip=99.85):
-    assert vis_cutout.shape == nisp_cutout.shape, f'vis shape {vis_cutout.shape}, nisp shape {nisp_cutout.shape}'
-    assert vis_cutout.size < 19200**2, f'accidentally passed a whole tile, vis size {vis_cutout.size}'
-    assert vis_cutout.shape != (19200, 19200), f'accidentally passed a whole tile, vis size {vis_cutout.size}'
+    if vis_cutout.shape != nisp_cutout.shape:
+        logging.debug(f'vis shape {vis_cutout.shape}, nisp shape {nisp_cutout.shape}')
+        raise AssertionError('Shapes do not match')
+    if vis_cutout.size >= 19200**2:
+        logging.debug(f'accidentally passed a whole tile, vis size {vis_cutout.size}')
+        raise AssertionError('Passed a whole tile')
+    if vis_cutout.shape == (19200, 19200):
+        logging.debug(f'accidentally passed a whole tile, vis size {vis_cutout.size}')
+        raise AssertionError('Passed a whole tile')
 
     vis_flux_adjusted = m_utils.adjust_dynamic_range(vis_cutout, q=vis_q, clip=vis_clip)
     nisp_flux_adjusted = m_utils.adjust_dynamic_range(nisp_cutout, q=nisp_q, clip=nisp_clip)
@@ -124,9 +139,16 @@ def make_composite_cutout(vis_cutout, nisp_cutout, vis_q=100, vis_clip=99.85, ni
     return im
 
 def make_triple_cutout(short_wav_cutout, mid_wav_cutout, long_wav_cutout, short_q=100, mid_q=.2, long_q=.1, short_clip=99.85, mid_clip=99.85, long_clip=99.85):
-    assert short_wav_cutout.shape == mid_wav_cutout.shape == long_wav_cutout.shape , f'short shape {short_wav_cutout.shape}, mid shape {mid_wav_cutout.shape}, long shape {long_wav_cutout.shape}'
-    assert short_wav_cutout.size < 19200**2, f'accidentally passed a whole tile, short wavelength size {short_wav_cutout.size}'
-    assert short_wav_cutout.shape != (19200, 19200), f'accidentally passed a whole tile, short wavelength size {short_wav_cutout.size}'
+
+    if not short_wav_cutout.shape == mid_wav_cutout.shape == long_wav_cutout.shape:
+        logging.debug(f'short shape {short_wav_cutout.shape}, mid shape {mid_wav_cutout.shape}, long shape {long_wav_cutout.shape}')
+        raise AssertionError('Shapes do not match')
+    if short_wav_cutout.size >= 19200**2:
+        logging.debug(f'accidentally passed a whole tile, short wavelength size {short_wav_cutout.size}')
+        raise AssertionError('Passed a whole tile')
+    if short_wav_cutout.shape == (19200, 19200):
+        logging.debug(f'accidentally passed a whole tile, short wavelength size {short_wav_cutout.size}')
+        raise AssertionError('Passed a whole tile')
 
     short_flux_adjusted = m_utils.adjust_dynamic_range(short_wav_cutout, q=short_q, clip=short_clip)
     mid_flux_adjusted = m_utils.adjust_dynamic_range(mid_wav_cutout, q=mid_q, clip=mid_clip)
