@@ -53,9 +53,6 @@ For long (hour plus) downloads, we've noticed Datalabs sometimes silently kills 
 
     python /media/user/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/run_from_console.py
 
-I use base_dir as a generic dir to run the pipeline, then name for a particular run, then cutout_dir/jpg/... for the files
-10:37
-
 
 ## Installing locally
 
