@@ -14,8 +14,14 @@ from astropy.io.fits.verify import VerifyWarning
 from astropy.nddata import Cutout2D
 
 from bulk_euclid.utils import morphology_utils_ou_mer as m_utils, cutout_utils
+from astroquery.esa.euclid.core import Euclid
 
+import joblib
 
+print('setting up query cache at ./joblib')
+mem = joblib.Memory('.', verbose=False)
+
+@mem.cache
 def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
 
     # TODO move release name into survey property, once happy with what it means, if it is per survey?
@@ -88,6 +94,7 @@ def get_tile_extents_fov(tiles: pd.DataFrame) -> pd.DataFrame:
     return tiles
 
 
+@mem.cache
 def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     # apply our final selection criteria
 
@@ -210,6 +217,7 @@ def save_euclid_product(product_filename, download_dir) -> str:
     return output_loc
 
 
+@mem.cache
 def get_auxillary_tiles(mosaic_product_oid, auxillary_products=['MERPSF', 'MERRMS', 'MERBKG']):
 
     for aux in auxillary_products:
@@ -330,7 +338,7 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
                     create_jpgs_within_pipeline(cfg, galaxy, cutout_by_band)
 
             except AssertionError as e:
-                logging.debug(f'Assertion error, skipping galaxy {galaxy["object_id"]} in tile {galaxy["tile_index"]}')
+                logging.debug(f'skipping galaxy {galaxy["object_id"]} in tile {galaxy["tile_index"]} due to \n{e}')
 
             
         if cfg.fits_outputs:
