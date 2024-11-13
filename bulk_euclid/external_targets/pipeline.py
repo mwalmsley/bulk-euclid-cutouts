@@ -425,6 +425,8 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
         )
         cutout_data_for_target["FLUX"] = flux_cutout
         header_data_for_target["FLUX"] = flux_header
+        header_data_for_target["FLUX"]['TARGETX'] = flux_cutout.input_position_cutout[0]
+        header_data_for_target["FLUX"]['TARGETY'] = flux_cutout.input_position_cutout[1]
         
 
         if "MERRMS" in cfg.auxillary_products:
@@ -437,6 +439,8 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
             )
             cutout_data_for_target["MERRMS"] = rms_cutout
             header_data_for_target["MERRMS"] = rms_header
+            header_data_for_target["MERRMS"]['TARGETX'] = rms_cutout.input_position_cutout[0]
+            header_data_for_target["MERRMS"]['TARGETY'] = rms_cutout.input_position_cutout[1]
 
         if "MERBKG" in cfg.auxillary_products:
             bkg_cutout = Cutout2D(
@@ -447,7 +451,9 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
                 mode="partial",
             )
             cutout_data_for_target["MERBKG"] = bkg_cutout
-            cutout_data_for_target["MERBKG"] = bkg_header
+            header_data_for_target["MERBKG"] = bkg_header
+            header_data_for_target["MERBKG"]['TARGETX'] = bkg_cutout.input_position_cutout[0]
+            header_data_for_target["MERBKG"]['TARGETY'] = bkg_cutout.input_position_cutout[1]
 
         if "MERPSF" in cfg.auxillary_products:
             # find pixel coordinates of target in PSF tile
@@ -473,10 +479,11 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
                 size=stamp_size,
                 wcs=psf_wcs,
                 mode="partial",
-            ).data
-
-            cutout_data_for_target["MERPSF"] = psf_cutout
+            )
+            cutout_data_for_target["MERPSF"] = psf_cutout.data
             header_data_for_target["MERPSF"] = psf_header
+            header_data_for_target["MERPSF"]['TARGETX'] = psf_cutout.input_position_cutout[0]
+            header_data_for_target["MERPSF"]['TARGETY'] = psf_cutout.input_position_cutout[1]
 
         cutout_data.append(cutout_data_for_target)
         header_data.append(header_data_for_target)
