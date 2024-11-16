@@ -390,7 +390,10 @@ def login(cfg):
         # do not commit or put in any team workspace, obviously...
         from astroquery.esa.euclid.core import EuclidClass
         Euclid = EuclidClass(environment=cfg.sas_environment)
-        Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
+        if 'credentials_file' in cfg and os.path.isfile(cfg.credentials_file):
+            Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
+        else:
+            Euclid.login()
         globals()['Euclid'] = Euclid  # hack this into everything else, janky but it works and is cleaner than passing it around
     else:
         raise ValueError('Not on DataLabs')
