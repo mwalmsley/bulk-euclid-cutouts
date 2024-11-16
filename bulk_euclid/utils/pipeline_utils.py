@@ -386,7 +386,7 @@ def login(cfg):
         # do not commit or put in any team workspace, obviously...
         from astroquery.esa.euclid.core import EuclidClass
         Euclid = EuclidClass(environment=cfg.sas_environment)
-        if os.path.isfile(cfg.credentials_file):
+        if 'credentials_file' in cfg and os.path.isfile(cfg.credentials_file):
             Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
         else:
             Euclid.login()
