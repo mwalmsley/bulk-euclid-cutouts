@@ -14,7 +14,6 @@ from astropy.io.fits.verify import VerifyWarning
 from astropy.nddata import Cutout2D
 
 from bulk_euclid.utils import morphology_utils_ou_mer as m_utils, cutout_utils
-from astroquery.esa.euclid.core import Euclid
 
 import joblib
 
@@ -62,6 +61,9 @@ def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limit
     query_str += " ORDER BY tile_index ASC"
 
     logging.debug(query_str)
+
+    if 'Euclid' not in locals() or 'Euclid' not in globals():
+        logging.critical('"Euclid" class not foun, run pipeline_utils.login(cfg) first')
     
     # async to avoid 2k max, just note it saves results somewhere on server
     job = Euclid.launch_job_async(query_str, verbose=False, background=False) 
@@ -153,6 +155,9 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     """
     query_str += closing_str
     logging.debug(query_str)
+
+    if 'Euclid' not in locals() or 'Euclid' not in globals():
+        logging.critical('"Euclid" class not foun, run pipeline_utils.login(cfg) first')
 
     # added min segmentation area to remove tiny bright artifacts
     # TODO copy to mer cuts/pipeline
