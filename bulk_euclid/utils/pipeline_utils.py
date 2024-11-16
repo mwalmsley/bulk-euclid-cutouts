@@ -18,7 +18,13 @@ from astroquery.esa.euclid.core import Euclid
 
 import joblib
 
-print('setting up query cache at ./joblib')
+logging.warning("""
+                Setting up query cache at ./joblib. 
+                Previous SQL queries for the list of all tiles, and for the list of sources within a given tile, will be re-used for speed. 
+                Delete this folder to refresh the cache and make new queries.
+                This is CRUCIAL if you switch Euclid environments e.g. from IDR (Q1) to OTF or REG.
+                """
+)
 mem = joblib.Memory('.', verbose=False)
 
 @mem.cache
@@ -140,21 +146,6 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
         AND mumax_minus_mag >= -2.6
         AND mu_max >= 15.0
         """
-
-        # AND flux_r_ext_decam_aper > 3.630780547701008
-        # AND flux_r_ext_decam_aper < 229.08676527677702
-        # AND flux_g_ext_decam_aper < 36.307805477010085
-        # AND flux_i_ext_decam_aper < 190.54607179632464
-        # AND flux_i_ext_decam_aper > 1.4454397707459257
-        # AND (flux_g_ext_decam_aper / flux_i_ext_decam_aper) > 0.01
-        # AND (flux_g_ext_decam_aper / flux_i_ext_decam_aper) < 0.19054607179632474
-        # AND (flux_g_ext_decam_aper / flux_r_ext_decam_aper) > 0.06309573444801933
-        # AND (flux_g_ext_decam_aper / flux_r_ext_decam_aper) < 0.5754399373371569
-        # """
-        # AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) < 5
-        # AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) > 1.8
-        # AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) < 3
-        # AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) > 0.6
 
     # within the tile via segmentation map id
     closing_str = f"""AND CAST(segmentation_map_id as varchar) LIKE '{tile_index}%'
