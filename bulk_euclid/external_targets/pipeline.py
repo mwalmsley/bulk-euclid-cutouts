@@ -151,7 +151,9 @@ def get_matching_tiles(
                 external_targets.loc[target_n, "tile_dec_max"] = chosen_tile['dec_max']
                 external_targets.loc[target_n, "tile_dec"] = chosen_tile['dec']
 
-
+    if 'tile_index' not in external_targets.columns:
+        logging.error('No tiles found for any targets, likely a bug - check your coordinates and FoV')
+        return None
     logging.info(f'Matched {len(external_targets)} targets to {len(external_targets["tile_index"].unique())} tiles')
     targets_with_tiles = external_targets.dropna(subset=['tile_index'])
     logging.info(f'Targets with tile matches: {len(targets_with_tiles)}')
