@@ -22,15 +22,30 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
     if 'generic' not in save_loc:
         logging.debug(f'{save_loc} must include the string "generic" for renaming each cutout format e.g. foo_generic.jpg -> foo_sw_arcsinh_vis_y.jpg')
         raise AssertionError('save_loc must include the string "generic" for renaming each cutout format e.g. foo_generic.jpg -> foo_sw_arcsinh_vis_y.jpg')
+    
+
+    # data quality checks
+
+    if np.nanmin(vis_im) < np.nanmax(vis_im):
+        logging.debug('vis band image is empty')
+        raise AssertionError('vis band image is empty')
 
     if any(['vis_y' in x for x in cfg.jpg_outputs]):
         if y_im is None:
             logging.debug('Requested y colours but no y band image available')
             raise AssertionError('No y band image available')
+        else:
+            if np.nanmin(y_im) < np.nanmax(y_im):
+                logging.debug('y band image is empty')
+                raise AssertionError('y band image is empty')
     if any(['vis_j' in x for x in cfg.jpg_outputs]) or any(['vis_y_j' in x for x in cfg.jpg_outputs]):
         if j_im is None:
             logging.debug('Requested j colours but no j band image available')
             raise AssertionError('No j band image available')
+        else:
+            if np.nanmin(j_im) < np.nanmax(j_im):
+                logging.debug('j band image is empty')
+                raise AssertionError('j band image is empty')
 
     ### GZ Euclid arcsinh processing ###
 
