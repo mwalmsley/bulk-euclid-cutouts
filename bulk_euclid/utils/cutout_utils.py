@@ -26,7 +26,7 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
 
     # data quality checks
 
-    if np.nanmin(vis_im) < np.nanmax(vis_im):
+    if np.nanmin(vis_im) >= np.nanmax(vis_im):
         logging.debug('vis band image is empty')
         raise AssertionError('vis band image is empty')
 
@@ -35,7 +35,7 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
             logging.debug('Requested y colours but no y band image available')
             raise AssertionError('No y band image available')
         else:
-            if np.nanmin(y_im) < np.nanmax(y_im):
+            if np.nanmin(y_im) >= np.nanmax(y_im):
                 logging.debug('y band image is empty')
                 raise AssertionError('y band image is empty')
     if any(['vis_j' in x for x in cfg.jpg_outputs]) or any(['vis_y_j' in x for x in cfg.jpg_outputs]):
@@ -43,7 +43,7 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
             logging.debug('Requested j colours but no j band image available')
             raise AssertionError('No j band image available')
         else:
-            if np.nanmin(j_im) < np.nanmax(j_im):
+            if np.nanmin(j_im) >= np.nanmax(j_im):
                 logging.debug('j band image is empty')
                 raise AssertionError('j band image is empty')
 
