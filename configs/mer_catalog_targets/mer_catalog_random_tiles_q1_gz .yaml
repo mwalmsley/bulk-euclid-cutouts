@@ -1,4 +1,4 @@
-base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
+base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/galaxy_zoo_euclid/v5_q1'
 name: 'mer_catalog_random_tiles_q1_full_gz'
 release_name: 'Q1_R1'
 sas_environment: 'IDR'  # or OTF
