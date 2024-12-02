@@ -148,6 +148,8 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
         AND mumax_minus_mag >= -2.6
         AND mu_max >= 15.0
         """
+    else:
+        raise ValueError(f'Unknown selection cuts {cfg.selection_cuts}')
 
     # within the tile via segmentation map id
     closing_str = f"""AND CAST(segmentation_map_id as varchar) LIKE '{tile_index}%'
