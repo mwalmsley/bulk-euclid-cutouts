@@ -63,7 +63,7 @@ def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limit
     logging.debug(query_str)
 
     if 'Euclid' not in locals() or 'Euclid' not in globals():
-        logging.critical('"Euclid" class not foun, run pipeline_utils.login(cfg) first')
+        logging.critical('"Euclid" class not found, run pipeline_utils.login(cfg) first')
     
     # async to avoid 2k max, just note it saves results somewhere on server
     job = Euclid.launch_job_async(query_str, verbose=False, background=False) 
@@ -136,9 +136,16 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     query_str += standard_quality_cuts
 
     if cfg.selection_cuts == 'galaxy_zoo':
-        logging.info('Applying Galaxy Zoo cuts')
+        logging.info('Applying pre-Q1 volunteer Galaxy Zoo cuts')
         # at least 1200px in area OR ( vis mag < 20.5 (expressed as flux) and at least 200px in area)
-        query_str += """AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
+        # query_str += """AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
+    # UPDATE - for Q1, changed to 800px. Will see how Zoobot performs on these smaller galaxies.
+    elif cfg.selection_cuts == 'galaxy_zoo_generous':
+        logging.info('Applying Q1 generous Galaxy Zoo cuts')
+        # UPDATE - for Q1, changed to 700px and NO flux cut
+        # a hard flux cut of 22.5 (matching strong lensing)? Will see how Zoobot performs on these smaller galaxies.
+        # AND (23.9 - 2.5 * LOG10(flux_segmentation)) < 22.5
+        query_str += """AND segmentation_area > 700
         """
     elif cfg.selection_cuts == 'space_warps':
         # https://euclidconsortium.slack.com/archives/C05JVCV6TA5/p1728644532577239

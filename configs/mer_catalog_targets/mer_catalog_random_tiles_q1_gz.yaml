@@ -12,12 +12,12 @@ refresh_catalogs: False
 download_method: 'datalabs_path'  # or sas
 delete_tiles: False
 debug: False
-run_async: True  # necessary for strong lens selection func
+run_async: True  # necessary for GZ selection_function
 max_retries: 3
 seed: 1
 
 # selection_cuts: space_warps
-selection_cuts: galaxy_zoo
+selection_cuts: galaxy_zoo_generous
 field_of_view: galaxy_zoo  # or number in arcseconds
 # field_of_view: 15
 
