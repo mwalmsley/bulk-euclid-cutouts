@@ -21,7 +21,6 @@ def run(cfg):
 
     logging.info('Done :)')
 
-    
 
 if __name__ == "__main__":
 
