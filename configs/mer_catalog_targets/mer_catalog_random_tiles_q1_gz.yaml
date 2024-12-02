@@ -7,7 +7,7 @@ bands: ['VIS', 'NIR_Y']
 credentials_file: '/media/user/_credentials/euclid_login.txt' # new
 
 num_tiles: 3  # all tiles
-refresh_catalogs: False
+refresh_catalogs: True
 
 download_method: 'datalabs_path'  # or sas
 delete_tiles: False

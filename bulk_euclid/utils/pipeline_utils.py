@@ -138,8 +138,8 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     if cfg.selection_cuts == 'galaxy_zoo':
         logging.info('Applying pre-Q1 volunteer Galaxy Zoo cuts')
         # at least 1200px in area OR ( vis mag < 20.5 (expressed as flux) and at least 200px in area)
-        # query_str += """AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
-    # UPDATE - for Q1, changed to 800px. Will see how Zoobot performs on these smaller galaxies.
+        query_str += """AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))"""
+        # UPDATE - for Q1, changed to 800px. Will see how Zoobot performs on these smaller galaxies.
     elif cfg.selection_cuts == 'galaxy_zoo_generous':
         logging.info('Applying Q1 generous Galaxy Zoo cuts')
         # UPDATE - for Q1, changed to 700px and NO flux cut
