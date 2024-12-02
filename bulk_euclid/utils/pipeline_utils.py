@@ -393,7 +393,7 @@ def login(cfg):
         from astroquery.esa.euclid.core import EuclidClass
         Euclid = EuclidClass(environment=cfg.sas_environment)
         if 'credentials_file' in cfg and os.path.isfile(cfg.credentials_file):
-            Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
+            Euclid.login(credentials_file=cfg.credentials_file)
         else:
             Euclid.login()
         globals()['Euclid'] = Euclid  # hack this into everything else, janky but it works and is cleaner than passing it around

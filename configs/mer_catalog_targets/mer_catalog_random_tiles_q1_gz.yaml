@@ -4,6 +4,8 @@ release_name: 'Q1_R1'
 sas_environment: 'IDR'  # or OTF
 bands: ['VIS', 'NIR_Y']
 
+credentials_file: '/media/user/_credentials/euclid_login.txt' # new
+
 num_tiles: 3  # all tiles
 refresh_catalogs: False
 
