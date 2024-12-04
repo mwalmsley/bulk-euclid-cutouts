@@ -7,7 +7,8 @@ download_method: 'datalabs_path'
 release_name: null  # allow tiles from any release. Read as None in Python.
 bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands
 
-external_targets_loc: /media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/judges_latest_ml_only_catalog_external_targets.csv
+# external_targets_loc: /media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/judges_latest_ml_only_catalog_external_targets.csv
+external_targets_loc: /media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/judges_latest_catalog_external_targets.csv
 
 auxillary_products: ['MERPSF', 'MERRMS']
 release_priority: ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', 'F-003_240612' , 'F-006', 'Q1_R1', 'REGREPROC1_R2']
