@@ -579,11 +579,16 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data:
         # print(repr(flux_header)) 
 
         # sanity check
-        # logging.info(cutout_flux.data.shape)
-        assert np.nanmin(cutout_flux.data) < np.nanmax(cutout_flux.data), f"{os.path.basename(save_loc)}: Flux in {band} data is empty, likely a SAS error"
-        flux_hdu = fits.ImageHDU(
-            data=cutout_flux.data, name=f"{band}_FLUX", header=flux_header
-        )
+        if np.nanmin(cutout_flux.data) < np.nanmax(cutout_flux.data):
+            
+            flux_hdu = fits.ImageHDU(
+                data=cutout_flux.data, name=f"{band}_FLUX", header=flux_header
+            )
+
+        else:
+            logging.warning(f"{os.path.basename(save_loc)}: Flux in {band} data is empty, likely a SAS error - saving anyway")
+
+
         hdu_list.append(flux_hdu)
         # and update the primary header
         header_hdu.header.append(
@@ -595,79 +600,97 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data:
             end=True,
         )
         which_extension +=1
-
+        
         # TODO this is a bit lazy/repetitive, could be refactored
 
         if "MERPSF" in cfg.auxillary_products:
             cutout_psf = band_data["MERPSF"]
             # psf_header = cutout_psf.wcs.to_header()
-            # psf_header['EXTNAME'] = 'MERPSF'
-            psf_header = fits.Header()  # blank, always ignored
-            psf_header.append(
+
+            if cutout_psf.min() < cutout_psf.max():
+
+                psf_header = fits.Header()  # blank, always ignored
+                psf_header.append(
+                    (
+                        "FILTER",
+                        band,
+                        "Euclid filter for PSF image",
+                    ),
+                    end=True,
+                )
+                psf_hdu = fits.ImageHDU(
+                    data=cutout_psf, name=band+"_PSF", header=psf_header  # NOT .data any more
+                )
+
+            else:
+                logging.warning(f"{os.path.basename(save_loc)}: PSF in {band} data is empty, likely a SAS error - saving anyway")
+                psf_header = fits.Header()
+                psf_hdu = fits.ImageHDU()
+
+            hdu_list.append(psf_hdu)
+            header_hdu.header.append(
                 (
-                    "FILTER",
-                    band,
-                    "Euclid filter for PSF image",
+                    f"EXT_{which_extension}",
+                    f"{band}_PSF",
+                    f"Extension name for {band} PSF",
                 ),
                 end=True,
             )
-            assert cutout_psf.min() < cutout_psf.max(), f"{os.path.basename(save_loc)}: PSF in {band} data is empty, likely a SAS error"
-            psf_hdu = fits.ImageHDU(
-                data=cutout_psf, name=band+"_PSF", header=psf_header  # NOT .data any more
-            )
-            hdu_list.append(psf_hdu)
-            header_hdu.header.append(
-            (
-                f"EXT_{which_extension}",
-                f"{band}_PSF",
-                f"Extension name for {band} PSF",
-            ),
-            end=True,
-            )
             which_extension +=1
+            
 
         if "MERRMS" in cfg.auxillary_products:
             cutout_rms = band_data["MERRMS"]
-            rms_header = target_header_data[band]["MERRMS"]
-            rms_header.update(cutout_rms.wcs.to_header())
-            # rms_header['EXTNAME'] = 'MERPSF'
-            rms_header.append(
-                (
-                    "FILTER",
-                    band,
-                    "Euclid filter for RMS image",
-                ),
-                end=True,
-            )
-            # logging.info(cutout_rms.data.shape)
-            assert cutout_rms.data.min() < cutout_rms.data.max(), f"{os.path.basename(save_loc)}: RMS in {band} data is empty, likely a SAS error"
-            rms_hdu = fits.ImageHDU(data=cutout_rms.data, name=band+"_RMS") # TODO changed
+            if cutout_rms.data.min() < cutout_rms.data.max():
+                rms_header = target_header_data[band]["MERRMS"]
+                rms_header.update(cutout_rms.wcs.to_header())
+                rms_header.append(
+                    (
+                        "FILTER",
+                        band,
+                        "Euclid filter for RMS image",
+                    ),
+                    end=True,
+                )
+                rms_hdu = fits.ImageHDU(data=cutout_rms.data, name=band+"_RMS") # TODO changed
+            else:
+                logging.warning(f"{os.path.basename(save_loc)}: RMS in {band} data is empty, likely a SAS error")
+                rms_header = fits.Header()
+                rms_hdu = fits.ImageHDU()
+
             hdu_list.append(rms_hdu)
             header_hdu.header.append(
-            (
-                f"EXT_{which_extension}",
-                f"{band}_RMS",
-                f"Extension name for {band} RMS",
-            ),
-            end=True,
+                (
+                    f"EXT_{which_extension}",
+                    f"{band}_RMS",
+                    f"Extension name for {band} RMS",
+                ),
+                end=True,
             )
             which_extension +=1
 
         if "MERBKG" in cfg.auxillary_products:
             cutout_bkg = band_data["MERBKG"]
-            bkg_header = target_header_data[band]["MERBKG"]
-            bkg_header.update(cutout_bkg.wcs.to_header())
-            # bkg_header['EXTNAME'] = 'MERBKG'
-            bkg_header.append(
-                (
-                    "FILTER",
-                    band,
-                    "Euclid filter for BKG image",
-                ),
-                end=True,
-            )
-            assert cutout_bkg.data.min() < cutout_bkg.data.max(), f"{os.path.basename(save_loc)}: BKG in {band} data is empty, likely a SAS error"
-            bkg_hdu = fits.ImageHDU(data=cutout_bkg.data, name=band+"_BKG")
+            if cutout_bkg.data.min() < cutout_bkg.data.max():
+
+                bkg_header = target_header_data[band]["MERBKG"]
+                bkg_header.update(cutout_bkg.wcs.to_header())
+                bkg_header.append(
+                    (
+                        "FILTER",
+                        band,
+                        "Euclid filter for BKG image",
+                    ),
+                    end=True,
+                )
+            
+                bkg_hdu = fits.ImageHDU(data=cutout_bkg.data, name=band+"_BKG")
+
+            else:
+                logging.warning(f"{os.path.basename(save_loc)}: BKG in {band} data is empty, likely a SAS error")
+                bkg_header = fits.Header()
+                bkg_hdu = fits.ImageHDU()
+
             hdu_list.append(bkg_hdu)
             header_hdu.header.append(
             (
