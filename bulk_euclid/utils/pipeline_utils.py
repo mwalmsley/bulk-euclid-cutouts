@@ -145,7 +145,8 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
         # UPDATE - for Q1, changed to 700px and NO flux cut
         # a hard flux cut of 22.5 (matching strong lensing)? Will see how Zoobot performs on these smaller galaxies.
         # AND (23.9 - 2.5 * LOG10(flux_segmentation)) < 22.5
-        query_str += """AND segmentation_area > 700
+        # still keep the few bright but small galaxies, for mass completeness
+        query_str += """AND segmentation_area > 700 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))  
         """
     elif cfg.selection_cuts == 'space_warps':
         # https://euclidconsortium.slack.com/archives/C05JVCV6TA5/p1728644532577239
