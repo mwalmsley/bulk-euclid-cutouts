@@ -568,14 +568,7 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data:
     for band in cfg.bands:
         band_data = target_data[band]
         cutout_flux = band_data["FLUX"]
-        flux_header = target_header_data[band]["FLUX"]
-        flux_header.update(cutout_flux.wcs.to_header())
-        # flux_header['EXTNAME'] = 'FLUX'
-        # flux_header.set('EXTNAME', 'FLUX')
-        flux_header.append(
-            ("FILTER", band, "Euclid filter for flux image"),
-            end=True,
-        )
+
         # print(repr(flux_header)) 
 
         # sanity check
@@ -584,9 +577,16 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data:
             flux_hdu = fits.ImageHDU(
                 data=cutout_flux.data, name=f"{band}_FLUX", header=flux_header
             )
-
+            flux_header = target_header_data[band]["FLUX"]
+            flux_header.update(cutout_flux.wcs.to_header())
+            flux_header.append(
+                    ("FILTER", band, "Euclid filter for flux image"),
+                    end=True,
+                )
         else:
             logging.warning(f"{os.path.basename(save_loc)}: Flux in {band} data is empty, likely a SAS error - saving anyway")
+            flux_header = fits.Header()
+            flux_hdu = fits.ImageHDU()
 
 
         hdu_list.append(flux_hdu)
