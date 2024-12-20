@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     # config_loc = 'configs/external_targets/external_targets_master_list.yaml'
     # config_loc = 'configs/external_targets/q1_lenses.yaml'  # targets from discovery engine etc
-    config_loc = 'configs/strong_lensing_candidates_outside_discovery_engine_q1_v1.yaml'   # targets from outside engine
+    config_loc = 'configs/external_targets/strong_lensing_candidates_outside_discovery_engine_q1.yaml'   # targets from outside engine
     cfg = OmegaConf.load(config_loc)
 
     cfg.log_file = cfg.base_dir + f'/{cfg.name}_{time.time()}.log'
