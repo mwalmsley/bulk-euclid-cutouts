@@ -1,0 +1,36 @@
+# download GZ Euclid images, jpg only, for inspection
+# will later set up another download run for all validated candidates outside Q1
+
+
+base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline'
+# name: 'external_targets_master_list_q1'
+# sas_environment: 'IDR'
+# download_method: 'datalabs_path'  # or sas
+name: 'external_targets_gz_euclid'
+sas_environment: 'OTF'
+download_method: 'sas'
+
+release_name: null  # allow tiles from any release. Read as None in Python.
+bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands
+
+external_targets_loc: /media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/strong_lensing_candidates_outside_discovery_engine_gz_euclid.csv
+
+auxillary_products: []
+release_priority: ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', 'F-003_240612' , 'F-006', 'Q1_R1', 'REGREPROC1_R2']
+delete_tiles: True
+
+jpg_outputs: ['sw_mtf_vis_only', 'sw_mtf_vis_y', 'sw_mtf_vis_j', 'sw_mtf_vis_y_j', 'sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_arcsinh_vis_j', 'sw_arcsinh_vis_y_j']
+fits_outputs: false
+overwrite_jpg: false
+overwrite_fits: false
+jpg_quality: 98
+use_fits_origin_for_jpg: true
+
+# ignore these
+
+download_dir: !
+tile_dir: !
+cutout_dir: !
+fits_dir: !
+jpg_dir: !
+sanity_dir: !
