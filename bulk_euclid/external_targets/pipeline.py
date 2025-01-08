@@ -185,7 +185,7 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
     """
     unique_tiles = targets_with_tiles["tile_index"].unique()
     logging.info('Auxillary products requested: {}'.format(cfg.auxillary_products))
-    
+
     for tile_n, tile_index in enumerate(unique_tiles):
         logging.info(f'Tile {tile_index}, {tile_n} of {len(unique_tiles)}')
         try:
@@ -251,6 +251,9 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
     flux_tile_metadata = pipeline_utils.get_tiles_in_survey(
         tile_index=tile_index, bands=cfg.bands, release_name=cfg.release_name
     )
+
+    dict_of_locs = {}
+
     # download all the flux tiles with that index
     if cfg.download_method == 'datalabs_path':
         flux_tile_metadata['file_loc'] = flux_tile_metadata['datalabs_path'] + '/' + flux_tile_metadata['file_name']
@@ -258,14 +261,14 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
         flux_tile_metadata = pipeline_utils.save_euclid_products(
             flux_tile_metadata, download_dir=cfg.tile_dir
         )
+    for _, flux_tile in flux_tile_metadata.iterrows():
+        dict_of_locs[flux_tile["filter_name"]] = {"FLUX": flux_tile["file_loc"]}  # will add other keys laters
 
-    dict_of_locs = {}
 
-    # download all auxillary data for that tile
+    # also download all auxillary data for that tile
     if cfg.auxillary_products == []:
         logging.info('No auxillary data requested, only downloading flux')
         these_aux_locs = {}
-
     else:
         logging.info('Downloading auxillary data for tile {}'.format(tile_index))
         for _, flux_tile in flux_tile_metadata.iterrows():
@@ -281,14 +284,13 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
                 )
             these_aux_locs = dict(
                 zip(
-                    auxillary_tile_metadata["product_type_sas"],
-                    auxillary_tile_metadata["file_loc"],
+                    auxillary_tile_metadata["product_type_sas"],  # e.g. MERPSF
+                    auxillary_tile_metadata["file_loc"],  # path to downloaded file
                 )
             )
-        dict_of_locs[flux_tile["filter_name"]] = {
-            "FLUX": flux_tile["file_loc"],
-            **these_aux_locs,
-        }
+            # add tracking of the auxillary data to existing dict, previously with only FLUX key
+            # now like {FLUX: path, MERPSF: path, MERRMS: path, MERBKG: path}
+            dict_of_locs[flux_tile["filter_name"]].update(**these_aux_locs) 
 
     logging.debug(f"Downloaded flux+auxillary tiles: {dict_of_locs}")
     logging.info('Downloaded all data for tile {}'.format(tile_index))
