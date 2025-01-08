@@ -184,6 +184,8 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
         e: Download error (e.g. when SAS is temporarily down)
     """
     unique_tiles = targets_with_tiles["tile_index"].unique()
+    logging.info('Auxillary products requested: {}'.format(cfg.auxillary_products))
+    
     for tile_n, tile_index in enumerate(unique_tiles):
         logging.info(f'Tile {tile_index}, {tile_n} of {len(unique_tiles)}')
         try:
@@ -260,24 +262,29 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
     dict_of_locs = {}
 
     # download all auxillary data for that tile
-    logging.info('Downloading all data for tile {}'.format(tile_index))
-    for _, flux_tile in flux_tile_metadata.iterrows():
-        # could have used tile_index for this search, but we want to restrict to some bands only
-        auxillary_tile_metadata = pipeline_utils.get_auxillary_tiles(
-            flux_tile["mosaic_product_oid"], auxillary_products=cfg.auxillary_products
-        )
-        if cfg.download_method == 'datalabs_path':
-            auxillary_tile_metadata['file_loc'] = auxillary_tile_metadata['datalabs_path'] + '/' + auxillary_tile_metadata['file_name']
-        else:
-            auxillary_tile_metadata = pipeline_utils.save_euclid_products(
-                auxillary_tile_metadata, download_dir=cfg.tile_dir
+    if cfg.auxillary_products == []:
+        logging.info('No auxillary data requested, only downloading flux')
+        these_aux_locs = {}
+
+    else:
+        logging.info('Downloading auxillary data for tile {}'.format(tile_index))
+        for _, flux_tile in flux_tile_metadata.iterrows():
+            # could have used tile_index for this search, but we want to restrict to some bands only
+            auxillary_tile_metadata = pipeline_utils.get_auxillary_tiles(
+                flux_tile["mosaic_product_oid"], auxillary_products=cfg.auxillary_products
             )
-        these_aux_locs = dict(
-            zip(
-                auxillary_tile_metadata["product_type_sas"],
-                auxillary_tile_metadata["file_loc"],
+            if cfg.download_method == 'datalabs_path':
+                auxillary_tile_metadata['file_loc'] = auxillary_tile_metadata['datalabs_path'] + '/' + auxillary_tile_metadata['file_name']
+            else:
+                auxillary_tile_metadata = pipeline_utils.save_euclid_products(
+                    auxillary_tile_metadata, download_dir=cfg.tile_dir
+                )
+            these_aux_locs = dict(
+                zip(
+                    auxillary_tile_metadata["product_type_sas"],
+                    auxillary_tile_metadata["file_loc"],
+                )
             )
-        )
         dict_of_locs[flux_tile["filter_name"]] = {
             "FLUX": flux_tile["file_loc"],
             **these_aux_locs,
