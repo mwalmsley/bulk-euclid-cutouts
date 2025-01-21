@@ -4,6 +4,7 @@ import os
 import warnings
 import hashlib
 
+from omegaconf import OmegaConf
 import numpy as np
 import pandas as pd
 from astropy.io import fits
@@ -401,7 +402,10 @@ def login(cfg):
         # do not commit or put in any team workspace, obviously...
         from astroquery.esa.euclid.core import EuclidClass
         Euclid = EuclidClass(environment=cfg.sas_environment)
-        if 'credentials_file' in cfg.keys() and os.path.isfile(cfg.credentials_file):
+        if OmegaConf.key_exists(cfg, "credentials_file"):
+            logging.info(f'Logging in with credentials file {cfg.credentials_file}')
+            # if os.path.isfile(cfg.credentials_file):
+            assert os.path.isfile(cfg.credentials_file), f'Credentials file not found at {cfg.credentials_file}'
             Euclid.login(credentials_file=cfg.credentials_file)
         else:
             logging.info('No credentials file found, logging in with username and password')
