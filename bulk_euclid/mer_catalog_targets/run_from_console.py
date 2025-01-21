@@ -29,6 +29,8 @@ if __name__ == "__main__":
     config_loc = 'configs/mer_catalog_targets/mer_catalog_random_tiles_q1_gz.yaml'
 
     cfg = OmegaConf.load(config_loc)
+    print(cfg.credentials_file)
+    exit()
 
     cfg.log_file = cfg.base_dir + f'/pipeline_{cfg.name}_{time.time()}.log'
 
