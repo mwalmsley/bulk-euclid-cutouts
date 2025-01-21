@@ -28,8 +28,10 @@ def run(cfg):
 
 if __name__ == "__main__":
 
-    config_loc = 'configs/external_targets/external_targets_master_list.yaml'
-    # config_loc = 'configs/external_targets/wide_targets.yaml'
+    # config_loc = 'configs/external_targets/external_targets_master_list.yaml'
+    # config_loc = 'configs/external_targets/q1_lenses.yaml'  # targets from discovery engine etc
+    # config_loc = 'configs/external_targets/strong_lensing_candidates_outside_discovery_engine_q1.yaml'   # targets from outside engine (and still in q1)
+    config_loc = 'configs/external_targets/external_targets_gz_euclid.yaml'   # gz euclid only (tags+votes), everywhere, before judge inspection (images only)
     cfg = OmegaConf.load(config_loc)
 
     cfg.log_file = cfg.base_dir + f'/{cfg.name}_{time.time()}.log'

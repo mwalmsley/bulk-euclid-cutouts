@@ -1,0 +1,41 @@
+base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/galaxy_zoo_euclid/v5_q1'
+name: 'mer_catalog_random_tiles_q1_full_gz'
+release_name: 'Q1_R1'
+sas_environment: 'IDR'  # or OTF
+bands: ['VIS', 'NIR_Y']
+
+credentials_file: '/media/user/_credentials/euclid_login.txt' # new
+
+num_tiles: 0  # all tiles
+refresh_catalogs: True
+
+download_method: 'datalabs_path'  # or sas
+delete_tiles: False
+debug: False
+run_async: True  # necessary for GZ selection_function
+max_retries: 3
+seed: 1
+
+# selection_cuts: space_warps
+selection_cuts: galaxy_zoo_generous
+field_of_view: galaxy_zoo  # or number in arcseconds
+# field_of_view: 15
+
+jpg_outputs: [
+  'gz_arcsinh_vis_only', 'gz_arcsinh_vis_y', 'gz_arcsinh_vis_lsb',   # typical GZ images
+  'sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_mtf_vis_only', 'sw_mtf_vis_y']  # and the similar SW ones as well (LAB+MTF especially might be useful)
+fits_outputs: false
+overwrite_jpg: false
+overwrite_fits: false
+jpg_quality: 98
+use_fits_origin_for_jpg: true
+
+# ignore these
+download_dir: !
+tile_dir: !
+catalog_dir: !
+cutout_dir: !
+jpg_dir: !
+fits_dir: !
+sanity_dir: !
+log_file: !
