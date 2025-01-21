@@ -15,7 +15,18 @@ from astropy.nddata import Cutout2D
 
 from bulk_euclid.utils import morphology_utils_ou_mer as m_utils, cutout_utils
 
+import joblib
 
+logging.warning("""
+                Setting up query cache at ./joblib. 
+                Previous SQL queries for the list of all tiles, and for the list of sources within a given tile, will be re-used for speed. 
+                Delete this folder to refresh the cache and make new queries.
+                This is CRUCIAL if you switch Euclid environments e.g. from IDR (Q1) to OTF or REG.
+                """
+)
+mem = joblib.Memory('.', verbose=False)
+
+@mem.cache
 def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
 
     # TODO move release name into survey property, once happy with what it means, if it is per survey?
@@ -50,6 +61,9 @@ def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limit
     query_str += " ORDER BY tile_index ASC"
 
     logging.debug(query_str)
+
+    if 'Euclid' not in locals() or 'Euclid' not in globals():
+        logging.critical('"Euclid" class not foun, run pipeline_utils.login(cfg) first')
     
     # async to avoid 2k max, just note it saves results somewhere on server
     job = Euclid.launch_job_async(query_str, verbose=False, background=False) 
@@ -88,6 +102,7 @@ def get_tile_extents_fov(tiles: pd.DataFrame) -> pd.DataFrame:
     return tiles
 
 
+@mem.cache
 def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     # apply our final selection criteria
 
@@ -134,27 +149,15 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
         AND mu_max >= 15.0
         """
 
-        # AND flux_r_ext_decam_aper > 3.630780547701008
-        # AND flux_r_ext_decam_aper < 229.08676527677702
-        # AND flux_g_ext_decam_aper < 36.307805477010085
-        # AND flux_i_ext_decam_aper < 190.54607179632464
-        # AND flux_i_ext_decam_aper > 1.4454397707459257
-        # AND (flux_g_ext_decam_aper / flux_i_ext_decam_aper) > 0.01
-        # AND (flux_g_ext_decam_aper / flux_i_ext_decam_aper) < 0.19054607179632474
-        # AND (flux_g_ext_decam_aper / flux_r_ext_decam_aper) > 0.06309573444801933
-        # AND (flux_g_ext_decam_aper / flux_r_ext_decam_aper) < 0.5754399373371569
-        # """
-        # AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) < 5
-        # AND (flux_g_ext_decam_aper - flux_i_ext_decam_aper) > 1.8
-        # AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) < 3
-        # AND (flux_g_ext_decam_aper - flux_r_ext_decam_aper) > 0.6
-
     # within the tile via segmentation map id
     closing_str = f"""AND CAST(segmentation_map_id as varchar) LIKE '{tile_index}%'
     ORDER BY object_id ASC
     """
     query_str += closing_str
     logging.debug(query_str)
+
+    if 'Euclid' not in locals() or 'Euclid' not in globals():
+        logging.critical('"Euclid" class not foun, run pipeline_utils.login(cfg) first')
 
     # added min segmentation area to remove tiny bright artifacts
     # TODO copy to mer cuts/pipeline
@@ -210,6 +213,7 @@ def save_euclid_product(product_filename, download_dir) -> str:
     return output_loc
 
 
+@mem.cache
 def get_auxillary_tiles(mosaic_product_oid, auxillary_products=['MERPSF', 'MERRMS', 'MERBKG']):
 
     for aux in auxillary_products:
@@ -330,7 +334,7 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
                     create_jpgs_within_pipeline(cfg, galaxy, cutout_by_band)
 
             except AssertionError as e:
-                print(f'skipping galaxy {galaxy["object_id"]} in tile {galaxy["tile_index"]} due to \n{e}')
+                logging.debug(f'skipping galaxy {galaxy["object_id"]} in tile {galaxy["tile_index"]} due to \n{e}')
 
             
         if cfg.fits_outputs:
@@ -386,7 +390,10 @@ def login(cfg):
         # do not commit or put in any team workspace, obviously...
         from astroquery.esa.euclid.core import EuclidClass
         Euclid = EuclidClass(environment=cfg.sas_environment)
-        Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
+        if 'credentials_file' in cfg and os.path.isfile(cfg.credentials_file):
+            Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
+        else:
+            Euclid.login()
         globals()['Euclid'] = Euclid  # hack this into everything else, janky but it works and is cleaner than passing it around
     else:
         raise ValueError('Not on DataLabs')

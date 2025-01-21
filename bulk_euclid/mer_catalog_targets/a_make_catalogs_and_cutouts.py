@@ -1,6 +1,5 @@
 import os
 import logging
-# from tqdm.notebook import tqdm # TODO ask Kristin to add?
 
 from omegaconf import OmegaConf
 import numpy as np
@@ -17,13 +16,16 @@ def run(cfg):
 
     tiles = select_tiles(cfg, tiles)
     
-    # logging.info(tiles.columns.values)
-    # logging.info(tiles.head())
     logging.info(tiles['release_name'].value_counts())
 
+    tile_indices = tiles['tile_index'].unique()
 
-    for tile_n, tile_index in enumerate(tiles['tile_index'].unique()):
-        logging.info(f'tile {tile_index}: {tile_n} of {len(tiles)}')
+    # hardcoded: remove a few bad tiles which currently have very little data in Q1
+    bad_tile_indices = [102018211, 102160873, 102021021]
+    tile_indices = [t for t in tile_indices if t not in bad_tile_indices]
+
+    for tile_n, tile_index in enumerate(tile_indices):
+        logging.info(f'tile {tile_index}: {tile_n} of {len(tile_indices)}')
         try:
             tile_catalog = download_tile_and_catalog(cfg, tiles, tile_index)
 
@@ -68,18 +70,11 @@ def create_folders(cfg: OmegaConf):
 
 
 def get_tile_catalog(cfg: OmegaConf):
-    # currently only south and wide have any data
-
-    # see pipeline_utils
-    # survey = pipeline_utils.WIDE
-
     tiles = pipeline_utils.get_tiles_in_survey(bands=cfg.bands, release_name=cfg.release_name)  # F-003_240321 recently appeared
     
     logging.info(tiles['instrument_name'].value_counts())
     logging.info(tiles['release_name'].value_counts())
     assert not tiles.duplicated(subset=['ra', 'dec', 'instrument_name', 'filter_name']).any()
-
-    # logging.info(f'Tiles after restricting to southern area: {len(tiles)}')
 
     # visual sanity check
     plt.scatter(tiles['ra'], tiles['dec'], s=2., color='r', label='Tile centers')
@@ -95,16 +90,10 @@ def get_tile_catalog(cfg: OmegaConf):
 def select_tiles(cfg, tiles) -> pd.DataFrame:
     rng = np.random.default_rng(cfg.seed)
 
-    # tiles.groupby('tile_index')['filter_name'].unique().value_counts()
     # filter name will only include the cfg.bands, due to the query in get_tiles_in_survey
     is_missing_bands = tiles.pivot(index='tile_index', columns='filter_name', values='file_name').isna().any(axis=1) # series like {tile_index: is_missing_bands}. file_name not used.
     possible_indices = is_missing_bands[~is_missing_bands].index  # flip to get indices with all bands, then get index
     logging.info(f'Num. of tiles with all bands: {len(possible_indices)}')
-
-    # vis_tiles = tiles.query('filter_name == "VIS"')
-    # y_tiles = tiles.query('filter_name == "NIR_Y"')
-    # possible_indices = list(set(vis_tiles['tile_index']).intersection(set(y_tiles['tile_index'])))
-    # logging.info(f'Num. of tiles with all required bands ({cfg.bands}): {len(possible_indices)}')
 
     if cfg.num_tiles > 0:
         logging.info(f'Randomly subselecting {cfg.num_tiles} tiles')

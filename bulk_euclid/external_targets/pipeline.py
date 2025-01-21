@@ -9,6 +9,7 @@ For each tile, download that tile, and use cutout2d to slice out the relevant fi
 
 import logging
 import os
+import shutil
 
 import numpy as np
 from omegaconf import OmegaConf
@@ -38,8 +39,10 @@ def run(cfg: OmegaConf):
     create_folders(cfg)
     pipeline_utils.login(cfg)
 
-    external_targets = pd.read_csv(cfg.external_targets_loc)
+    required_cols = ['id_str', 'target_ra', 'target_dec', 'target_field_of_view', 'category']
+    external_targets = pd.read_csv(cfg.external_targets_loc, usecols=required_cols)
 
+    logging.info(external_targets['category'].value_counts())
 
     # NOW we go!
     # matching each target with the best tile
@@ -48,8 +51,14 @@ def run(cfg: OmegaConf):
     )  
     logging.info('Targets per release: \n{}'.format(targets_with_tiles['release_name'].value_counts()))
     logging.info('{} unqiue tiles for {} targets'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles)))
+    logging.info(targets_with_tiles['category'].value_counts())
+    targets_with_tiles.to_csv(cfg.download_dir + '/targets_with_tiles.csv', index=False)
+
+    # targets_with_tiles = targets_with_tiles.sample(2, random_state=42)  # for testing
 
     make_cutouts(cfg, targets_with_tiles)
+
+    make_archive_for_download(cfg)
 
     logging.info("External targets pipeline complete")
 
@@ -79,7 +88,8 @@ def get_matching_tiles(
         bands=["VIS"], release_name=cfg.release_name
     )
     assert len(tiles) > 0
-    tiles.to_csv("temp_tiles.csv")  # for debugging
+    logging.info(tiles['release_name'].value_counts())
+    # tiles.to_csv("temp_tiles.csv")  # for debugging
 
     # add tile FoV
     # adds cols ['ra_min', 'ra_max', 'dec_min', 'dec_max'] by unpacking the "fov" tile metadata column
@@ -141,7 +151,9 @@ def get_matching_tiles(
                 external_targets.loc[target_n, "tile_dec_max"] = chosen_tile['dec_max']
                 external_targets.loc[target_n, "tile_dec"] = chosen_tile['dec']
 
-
+    if 'tile_index' not in external_targets.columns:
+        logging.error('No tiles found for any targets, likely a bug - check your coordinates and FoV')
+        return None
     logging.info(f'Matched {len(external_targets)} targets to {len(external_targets["tile_index"].unique())} tiles')
     targets_with_tiles = external_targets.dropna(subset=['tile_index'])
     logging.info(f'Targets with tile matches: {len(targets_with_tiles)}')
@@ -238,9 +250,12 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
         tile_index=tile_index, bands=cfg.bands, release_name=cfg.release_name
     )
     # download all the flux tiles with that index
-    flux_tile_metadata = pipeline_utils.save_euclid_products(
-        flux_tile_metadata, download_dir=cfg.tile_dir
-    )
+    if cfg.download_method == 'datalabs_path':
+        flux_tile_metadata['file_loc'] = flux_tile_metadata['datalabs_path'] + '/' + flux_tile_metadata['file_name']
+    else:
+        flux_tile_metadata = pipeline_utils.save_euclid_products(
+            flux_tile_metadata, download_dir=cfg.tile_dir
+        )
 
     dict_of_locs = {}
 
@@ -251,9 +266,12 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
         auxillary_tile_metadata = pipeline_utils.get_auxillary_tiles(
             flux_tile["mosaic_product_oid"], auxillary_products=cfg.auxillary_products
         )
-        auxillary_tile_metadata = pipeline_utils.save_euclid_products(
-            auxillary_tile_metadata, download_dir=cfg.tile_dir
-        )
+        if cfg.download_method == 'datalabs_path':
+            auxillary_tile_metadata['file_loc'] = auxillary_tile_metadata['datalabs_path'] + '/' + auxillary_tile_metadata['file_name']
+        else:
+            auxillary_tile_metadata = pipeline_utils.save_euclid_products(
+                auxillary_tile_metadata, download_dir=cfg.tile_dir
+            )
         these_aux_locs = dict(
             zip(
                 auxillary_tile_metadata["product_type_sas"],
@@ -311,12 +329,14 @@ def save_cutouts_for_all_targets_in_that_tile(cfg: OmegaConf, dict_of_locs: dict
             cfg.fits_dir, str(target["category"]), str(target["id_str"]) + ".fits"
         )
         jpg_save_loc = os.path.join(
-            cfg.jpg_dir, str(target["category"]), str(target["id_str"]) + ".jpg"
+            cfg.jpg_dir, str(target["category"]), 'generic', str(target["id_str"]) + "_generic.jpg"  # generic will be replaced
         )
         try:
             if cfg.fits_outputs:
+                logging.debug('Saving fits for single galaxy')
                 save_multifits_cutout(cfg, target_data, target_header_data, fits_save_loc)
             if cfg.jpg_outputs:
+                logging.debug('Saving jpg for single galaxy')
                 save_jpg_cutout(cfg, target_data, jpg_save_loc)
         except AssertionError as e:
             logging.critical(f"Error saving cutout for target {target['id_str']}")
@@ -395,6 +415,8 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
         # logging.info('WCS: {}'.format(flux_wcs))
         # logging.info(f"Flux center: {target_coord}")
         # logging.info(f"Flux center pixels: {target_pixels}")
+        # logging.info(target_coord)
+        # logging.info(target['target_field_of_view'])
         flux_cutout = Cutout2D(
             data=flux_data,
             position=target_coord,
@@ -405,6 +427,8 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
         )
         cutout_data_for_target["FLUX"] = flux_cutout
         header_data_for_target["FLUX"] = flux_header
+        header_data_for_target["FLUX"]['TARGETX'] = flux_cutout.input_position_cutout[0]
+        header_data_for_target["FLUX"]['TARGETY'] = flux_cutout.input_position_cutout[1]
         
 
         if "MERRMS" in cfg.auxillary_products:
@@ -417,6 +441,8 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
             )
             cutout_data_for_target["MERRMS"] = rms_cutout
             header_data_for_target["MERRMS"] = rms_header
+            header_data_for_target["MERRMS"]['TARGETX'] = rms_cutout.input_position_cutout[0]
+            header_data_for_target["MERRMS"]['TARGETY'] = rms_cutout.input_position_cutout[1]
 
         if "MERBKG" in cfg.auxillary_products:
             bkg_cutout = Cutout2D(
@@ -427,7 +453,9 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
                 mode="partial",
             )
             cutout_data_for_target["MERBKG"] = bkg_cutout
-            cutout_data_for_target["MERBKG"] = bkg_header
+            header_data_for_target["MERBKG"] = bkg_header
+            header_data_for_target["MERBKG"]['TARGETX'] = bkg_cutout.input_position_cutout[0]
+            header_data_for_target["MERBKG"]['TARGETY'] = bkg_cutout.input_position_cutout[1]
 
         if "MERPSF" in cfg.auxillary_products:
             # find pixel coordinates of target in PSF tile
@@ -453,10 +481,11 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
                 size=stamp_size,
                 wcs=psf_wcs,
                 mode="partial",
-            ).data
-
-            cutout_data_for_target["MERPSF"] = psf_cutout
+            )
+            cutout_data_for_target["MERPSF"] = psf_cutout.data
             header_data_for_target["MERPSF"] = psf_header
+            header_data_for_target["MERPSF"]['TARGETX'] = psf_cutout.input_position_cutout[0]
+            header_data_for_target["MERPSF"]['TARGETY'] = psf_cutout.input_position_cutout[1]
 
         cutout_data.append(cutout_data_for_target)
         header_data.append(header_data_for_target)
@@ -467,8 +496,9 @@ def get_cutout_data_for_band(cfg: OmegaConf, dict_of_locs_for_band: dict, target
 
 def save_jpg_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
 
-    if not os.path.isdir(os.path.dirname(save_loc)):
-        os.mkdir(os.path.dirname(save_loc))
+    # makedirs later instead
+    # if not os.path.isdir(os.path.dirname(save_loc)):
+    #     os.mkdir(os.path.dirname(save_loc))
 
     assert 'VIS' in target_data.keys()
     vis_im: np.ndarray = target_data['VIS']['FLUX'].data
@@ -482,6 +512,12 @@ def save_jpg_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         j_im: np.ndarray = target_data['NIR_J']['FLUX'].data
     else:
         j_im = None
+
+    expected_save_locs = [save_loc.replace('generic', output_format) for output_format in cfg.jpg_outputs]
+    logging.debug(expected_save_locs)
+    if all([os.path.isfile(loc) for loc in expected_save_locs]) and not cfg.overwrite_jpg:
+        logging.debug(f"All jpg already exist for this galaxy, skipping: {save_loc}")
+        return
 
     cutout_utils.save_jpg_cutouts(cfg, save_loc, vis_im, y_im, j_im)
 
@@ -676,47 +712,64 @@ def create_folders(cfg: OmegaConf):
 
     return cfg
 
+def make_archive_for_download(cfg: OmegaConf):
+    # list subdirectories within cfg.jpg_dir
+    categories = [f for f in os.listdir(cfg.jpg_dir) if os.path.isdir(os.path.join(cfg.jpg_dir, f))]
+
+    logging.info('Archiving cutouts')
+    if cfg.jpg_outputs:
+        for category in categories:
+            # .../cutouts/jpg/known_lens_candidate/sw_arcsinh_vis_only/EUCLJ095929.92+021352.1_sw_arcsinh_vis_only.jpg
+            shutil.make_archive(cfg.cutout_dir + f'_jpg_{category}', 'tar', root_dir=cfg.jpg_dir + '/' + category)
+            logging.info(f'Archived {category} jpg cutouts')
+        logging.info('Archived all jpg cutouts')
+    if cfg.fits_outputs:
+        for category in categories:
+            shutil.make_archive(cfg.cutout_dir + f'_fits_{category}', 'tar', root_dir=cfg.fits_dir + '/' + category)
+            logging.info(f'Archived {category} fits cutouts')
+        logging.info('Archived fits cutouts')
 
 
-def cutout_psf_manually(psf_grid, x_center, y_center, cutout_size):
-    #cutout is the size of the image cutout to search for the PSFs in that space
-    x_start = int(round(x_center - cutout_size / 2))
-    x_end = x_start + cutout_size
-    y_start = int(round(y_center - cutout_size / 2))
-    y_end = y_start + cutout_size
 
-    # avoid edge effects (possibly not needed)
-    if x_start < 0:
-        x_start = 0
-    if x_end > psf_grid.shape[1]:
-        x_end = psf_grid.shape[1]
-    if y_start < 0:
-        y_start = 0
-    if y_end > psf_grid.shape[0]:
-        y_end = psf_grid.shape[0]
-    # logging.debug(f'before edge: {y_start} {y_end}, {x_start} {x_end}')
+# def cutout_psf_manually(psf_grid, x_center, y_center, cutout_size):
+#     #cutout is the size of the image cutout to search for the PSFs in that space
+#     x_start = int(round(x_center - cutout_size / 2))
+#     x_end = x_start + cutout_size
+#     y_start = int(round(y_center - cutout_size / 2))
+#     y_end = y_start + cutout_size
 
-    # make the slice
+#     # avoid edge effects (possibly not needed)
+#     if x_start < 0:
+#         x_start = 0
+#     if x_end > psf_grid.shape[1]:
+#         x_end = psf_grid.shape[1]
+#     if y_start < 0:
+#         y_start = 0
+#     if y_end > psf_grid.shape[0]:
+#         y_end = psf_grid.shape[0]
+#     # logging.debug(f'before edge: {y_start} {y_end}, {x_start} {x_end}')
 
-    # logging.debug(f'first: {y_start} {y_end}, {x_start} {x_end}')
-    cutout = psf_grid[y_start:y_end, x_start:x_end]
+#     # make the slice
 
-    # find the maxima
-    max_y_local, max_x_local = np.unravel_index(np.argmax(cutout), cutout.shape)
-    max_x_global = x_start + max_x_local
-    max_y_global = y_start + max_y_local
-    brightest_pixels = [max_x_global, max_y_global]
+#     # logging.debug(f'first: {y_start} {y_end}, {x_start} {x_end}')
+#     cutout = psf_grid[y_start:y_end, x_start:x_end]
 
-    # update x_center and y_center to the actual brightest pixels
-    x_center = brightest_pixels[0]
-    y_center = brightest_pixels[1]
+#     # find the maxima
+#     max_y_local, max_x_local = np.unravel_index(np.argmax(cutout), cutout.shape)
+#     max_x_global = x_start + max_x_local
+#     max_y_global = y_start + max_y_local
+#     brightest_pixels = [max_x_global, max_y_global]
 
-    # make the slice AGAIN
-    x_start = int(x_center - cutout_size / 2)
-    x_end = int(x_center + cutout_size / 2)
-    y_start = int(y_center - cutout_size / 2)
-    y_end = int(y_center + cutout_size / 2)
-    # logging.debug(f'second: {y_start} {y_end}, {x_start} {x_end}')
-    cutout = psf_grid[y_start:y_end, x_start:x_end]
+#     # update x_center and y_center to the actual brightest pixels
+#     x_center = brightest_pixels[0]
+#     y_center = brightest_pixels[1]
 
-    return cutout
+#     # make the slice AGAIN
+#     x_start = int(x_center - cutout_size / 2)
+#     x_end = int(x_center + cutout_size / 2)
+#     y_start = int(y_center - cutout_size / 2)
+#     y_end = int(y_center + cutout_size / 2)
+#     # logging.debug(f'second: {y_start} {y_end}, {x_start} {x_end}')
+#     cutout = psf_grid[y_start:y_end, x_start:x_end]
+
+#     return cutout
