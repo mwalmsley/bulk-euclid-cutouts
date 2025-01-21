@@ -402,14 +402,15 @@ def login(cfg):
         # do not commit or put in any team workspace, obviously...
         from astroquery.esa.euclid.core import EuclidClass
         Euclid = EuclidClass(environment=cfg.sas_environment)
-        if not OmegaConf.is_missing(cfg, "credentials_file"):
+        logging.info(cfg)
+        if OmegaConf.is_missing(cfg, "credentials_file"):
+            logging.info('No credentials file specified, logging in with username and password')
+            Euclid.login()
+        else:
             logging.info(f'Logging in with credentials file {cfg.credentials_file}')
             # if os.path.isfile(cfg.credentials_file):
             assert os.path.isfile(cfg.credentials_file), f'Credentials file not found at {cfg.credentials_file}'
             Euclid.login(credentials_file=cfg.credentials_file)
-        else:
-            logging.info('No credentials file found, logging in with username and password')
-            Euclid.login()
         globals()['Euclid'] = Euclid  # hack this into everything else, janky but it works and is cleaner than passing it around
     else:
         raise ValueError('Not on DataLabs')
