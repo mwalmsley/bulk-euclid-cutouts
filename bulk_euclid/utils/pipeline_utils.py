@@ -402,7 +402,7 @@ def login(cfg):
         # do not commit or put in any team workspace, obviously...
         from astroquery.esa.euclid.core import EuclidClass
         Euclid = EuclidClass(environment=cfg.sas_environment)
-        if OmegaConf.key_exists(cfg, "credentials_file"):
+        if not OmegaConf.is_missing(cfg, "credentials_file"):
             logging.info(f'Logging in with credentials file {cfg.credentials_file}')
             # if os.path.isfile(cfg.credentials_file):
             assert os.path.isfile(cfg.credentials_file), f'Credentials file not found at {cfg.credentials_file}'
