@@ -1,5 +1,5 @@
-base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/galaxy_zoo_euclid/v5_q1'
-name: 'mer_catalog_random_tiles_q1_full_gz'
+base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/galaxy_zoo_euclid/q1_v6'
+name: 'q1_v6'
 release_name: 'Q1_R1'
 sas_environment: 'IDR'  # or OTF
 bands: ['VIS', 'NIR_Y']
@@ -22,7 +22,7 @@ field_of_view: galaxy_zoo  # or number in arcseconds
 # field_of_view: 15
 
 jpg_outputs: [
-  'gz_arcsinh_vis_only', 'gz_arcsinh_vis_y', 'gz_arcsinh_vis_lsb',   # typical GZ images
+  #'gz_arcsinh_vis_only', 'gz_arcsinh_vis_y', 'gz_arcsinh_vis_lsb',   # typical GZ images
   'sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_mtf_vis_only', 'sw_mtf_vis_y']  # and the similar SW ones as well (LAB+MTF especially might be useful)
 fits_outputs: false
 overwrite_jpg: false
