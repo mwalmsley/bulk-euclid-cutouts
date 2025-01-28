@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     # config_loc = 'configs/mer_catalog_targets/mer_catalog_random_tiles_q1.yaml'
     # config_loc = 'configs/v4_post_euclid_challenge.yaml'
-    config_loc = 'configs/mer_catalog_targets/mer_catalog_random_tiles_q1_gz.yaml'
+    config_loc = 'configs/mer_catalog_targets/q1_v6.yaml'
 
     cfg = OmegaConf.load(config_loc)
 
