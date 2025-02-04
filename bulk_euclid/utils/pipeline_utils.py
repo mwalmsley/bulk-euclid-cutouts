@@ -6,6 +6,7 @@ import hashlib
 
 # from omegaconf import OmegaConf
 from omegaconf.errors import ConfigAttributeError
+from omegaconf.listconfig import ListConfig
 
 import numpy as np
 import pandas as pd
@@ -234,7 +235,7 @@ def save_euclid_product(product_filename, download_dir) -> str:
 @mem.cache
 def get_auxillary_tiles(mosaic_product_oid, auxillary_products: list):
 
-    assert isinstance(auxillary_products, list), 'auxillary_products must be a list, is {} ({})'.format(auxillary_products, type(auxillary_products))
+    assert isinstance(auxillary_products, list) or isinstance(auxillary_products, ListConfig), 'auxillary_products must be a list, is {} ({})'.format(auxillary_products, type(auxillary_products))
 
     for aux in auxillary_products:
         assert aux in ['MERPSF', 'MERRMS', 'MERBKG', 'MERFLG'], f'Unknown or unsupported auxillary product {aux}'
