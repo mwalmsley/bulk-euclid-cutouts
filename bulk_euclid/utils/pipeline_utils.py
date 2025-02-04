@@ -4,7 +4,9 @@ import os
 import warnings
 import hashlib
 
-from omegaconf import OmegaConf
+# from omegaconf import OmegaConf
+from omegaconf.errors import ConfigAttributeError
+
 import numpy as np
 import pandas as pd
 from astropy.io import fits
@@ -403,14 +405,14 @@ def login(cfg):
         from astroquery.esa.euclid.core import EuclidClass
         Euclid = EuclidClass(environment=cfg.sas_environment)
         logging.info(cfg)
-        if OmegaConf.is_missing(cfg, "credentials_file"):
-            logging.info('No credentials file specified, logging in with username and password')
-            Euclid.login()
-        else:
+        try:
             logging.info(f'Logging in with credentials file {cfg.credentials_file}')
-            # if os.path.isfile(cfg.credentials_file):
             assert os.path.isfile(cfg.credentials_file), f'Credentials file not found at {cfg.credentials_file}'
             Euclid.login(credentials_file=cfg.credentials_file)
+        except ConfigAttributeError:
+        # if OmegaConf.is_missing(cfg, "credentials_file"):  # this actually only catches "???", not simply no key
+            logging.info('No cfg.credentials_file, logging in with username and password')
+            Euclid.login()
         globals()['Euclid'] = Euclid  # hack this into everything else, janky but it works and is cleaner than passing it around
     else:
         raise ValueError('Not on DataLabs')
