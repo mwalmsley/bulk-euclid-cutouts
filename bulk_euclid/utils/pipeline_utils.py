@@ -4,6 +4,9 @@ import os
 import warnings
 import hashlib
 
+# from omegaconf import OmegaConf
+from omegaconf.errors import ConfigAttributeError
+
 import numpy as np
 import pandas as pd
 from astropy.io import fits
@@ -63,7 +66,7 @@ def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limit
     logging.debug(query_str)
 
     if 'Euclid' not in locals() or 'Euclid' not in globals():
-        logging.critical('"Euclid" class not foun, run pipeline_utils.login(cfg) first')
+        logging.critical('"Euclid" class not found, run pipeline_utils.login(cfg) first')
     
     # async to avoid 2k max, just note it saves results somewhere on server
     job = Euclid.launch_job_async(query_str, verbose=False, background=False) 
@@ -136,10 +139,17 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     query_str += standard_quality_cuts
 
     if cfg.selection_cuts == 'galaxy_zoo':
-        logging.info('Applying Galaxy Zoo cuts')
+        logging.info('Applying pre-Q1 volunteer Galaxy Zoo cuts')
         # at least 1200px in area OR ( vis mag < 20.5 (expressed as flux) and at least 200px in area)
-        query_str += """AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))
-        """
+        query_str += """AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))"""
+        # UPDATE - for Q1, changed to 800px. Will see how Zoobot performs on these smaller galaxies.
+    elif cfg.selection_cuts == 'galaxy_zoo_generous':
+        logging.info('Applying Q1 generous Galaxy Zoo cuts')
+        # UPDATE - for Q1, changed to 700px and NO flux cut
+        # a hard flux cut of 22.5 (matching strong lensing)? Will see how Zoobot performs on these smaller galaxies.
+        # AND (23.9 - 2.5 * LOG10(flux_segmentation)) < 22.5
+        # still keep the few bright but small galaxies, for mass completeness
+        query_str += """AND (segmentation_area > 700 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))"""
     elif cfg.selection_cuts == 'space_warps':
         # https://euclidconsortium.slack.com/archives/C05JVCV6TA5/p1728644532577239
         logging.info('Applying lens candidate cuts')
@@ -148,6 +158,8 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
         AND mumax_minus_mag >= -2.6
         AND mu_max >= 15.0
         """
+    else:
+        raise ValueError(f'Unknown selection cuts {cfg.selection_cuts}')
 
     # within the tile via segmentation map id
     closing_str = f"""AND CAST(segmentation_map_id as varchar) LIKE '{tile_index}%'
@@ -214,7 +226,9 @@ def save_euclid_product(product_filename, download_dir) -> str:
 
 
 @mem.cache
-def get_auxillary_tiles(mosaic_product_oid, auxillary_products=['MERPSF', 'MERRMS', 'MERBKG']):
+def get_auxillary_tiles(mosaic_product_oid, auxillary_products: list):
+
+    assert isinstance(auxillary_products, list), 'auxillary_products must be a list'
 
     for aux in auxillary_products:
         assert aux in ['MERPSF', 'MERRMS', 'MERBKG', 'MERFLG'], f'Unknown or unsupported auxillary product {aux}'
@@ -390,9 +404,14 @@ def login(cfg):
         # do not commit or put in any team workspace, obviously...
         from astroquery.esa.euclid.core import EuclidClass
         Euclid = EuclidClass(environment=cfg.sas_environment)
-        if 'credentials_file' in cfg and os.path.isfile(cfg.credentials_file):
-            Euclid.login(credentials_file='/media/user/_credentials/euclid_login.txt')
-        else:
+        logging.info(cfg)
+        try:
+            logging.info(f'Logging in with credentials file {cfg.credentials_file}')
+            assert os.path.isfile(cfg.credentials_file), f'Credentials file not found at {cfg.credentials_file}'
+            Euclid.login(credentials_file=cfg.credentials_file)
+        except ConfigAttributeError:
+        # if OmegaConf.is_missing(cfg, "credentials_file"):  # this actually only catches "???", not simply no key
+            logging.info('No cfg.credentials_file, logging in with username and password')
             Euclid.login()
         globals()['Euclid'] = Euclid  # hack this into everything else, janky but it works and is cleaner than passing it around
     else:

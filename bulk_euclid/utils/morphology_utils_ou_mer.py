@@ -192,7 +192,10 @@ def adjust_dynamic_range(flux, q=100, clip=99.85):
 def to_uint8(im, clip_below_zero=True):
     if clip_below_zero:
         im = np.clip(im, 0, None)
-    im = (im + im.min()) / (im.min() + im.max())
+    im_min = np.nanmin(im)
+    im_max = np.nanmax(im)
+    assert im_min < im_max, f'Image min {im_min} >= max {im_max}, likely all data is zero or NAN i.e. missing'
+    im = (im + im_min) / (im_min + im_max)
     return (255 * im).astype(np.uint8)
 
 
