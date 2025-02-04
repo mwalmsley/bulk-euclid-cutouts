@@ -65,9 +65,15 @@ def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limit
 
     logging.debug(query_str)
 
-    if 'Euclid' not in locals() or 'Euclid' not in globals():
+    # this doesn't work as expected and I don't know why
+    # it always fails to find Euclid
+    # if 'Euclid' not in locals() or 'Euclid' not in globals():
+    try:
+        Euclid
+    except NameError:
         logging.critical('"Euclid" class not found, run pipeline_utils.login(cfg) first')
     
+
     # async to avoid 2k max, just note it saves results somewhere on server
     job = Euclid.launch_job_async(query_str, verbose=False, background=False) 
     assert job is not None, 'Query failed with: \n' + query_str
@@ -228,7 +234,7 @@ def save_euclid_product(product_filename, download_dir) -> str:
 @mem.cache
 def get_auxillary_tiles(mosaic_product_oid, auxillary_products: list):
 
-    assert isinstance(auxillary_products, list), 'auxillary_products must be a list'
+    assert isinstance(auxillary_products, list), 'auxillary_products must be a list, is {}'.format(auxillary_products)
 
     for aux in auxillary_products:
         assert aux in ['MERPSF', 'MERRMS', 'MERBKG', 'MERFLG'], f'Unknown or unsupported auxillary product {aux}'
