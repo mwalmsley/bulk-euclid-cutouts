@@ -17,7 +17,7 @@ Help wanted. Let's build a pipeline that works for many projects. Contact Mike W
 
 ## Quick Install/Run Instructions on Datalabs
 
-Create a GitHub personal access token and save it somewhere. You will need it to clone this private repo.
+Create a GitHub personal access token and save it somewhere. You will need it to clone this private repo (see more details on [the Google doc](https://docs.google.com/document/d/10KrelkVQgckFmqHIqVzZ-22oPIKe-uIE_0laMHSl3Rs/edit?usp=sharing)).
 
 Create a Datalab with the Euclid environment
 
