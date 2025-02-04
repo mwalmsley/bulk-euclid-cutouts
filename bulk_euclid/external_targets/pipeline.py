@@ -582,16 +582,16 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data:
 
         # sanity check
         if np.nanmin(cutout_flux.data) < np.nanmax(cutout_flux.data):
-            
-            flux_hdu = fits.ImageHDU(
-                data=cutout_flux.data, name=f"{band}_FLUX", header=flux_header
-            )
             flux_header = target_header_data[band]["FLUX"]
             flux_header.update(cutout_flux.wcs.to_header())
             flux_header.append(
                     ("FILTER", band, "Euclid filter for flux image"),
                     end=True,
                 )
+            flux_hdu = fits.ImageHDU(
+                data=cutout_flux.data, name=f"{band}_FLUX", header=flux_header
+            )
+
         else:
             logging.warning(f"{os.path.basename(save_loc)}: Flux in {band} data is empty, likely a SAS error - saving anyway")
             flux_header = fits.Header()
