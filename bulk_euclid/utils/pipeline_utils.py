@@ -126,9 +126,13 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     if cfg.sas_environment == 'IDR':
         vis_flux_col = 'flux_vis_1fwhm_aper'  # now renamed with 1FWHM etc
         ext_cols = ''  # not yet available
+    elif cfg.sas_environment == 'PDR':
+        vis_flux_col = 'flux_vis_1fwhm_aper'
+        ext_cols = ', flux_g_ext_decam_1fwhm_aper, flux_i_ext_decam_1fwhm_aper, flux_r_ext_decam_1fwhm_aper'
     else:
         vis_flux_col = 'flux_vis_aper'
         ext_cols = ', flux_g_ext_decam_aper, flux_i_ext_decam_aper, flux_r_ext_decam_aper'
+        
     query_str = f"""
     SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_detection_total, {vis_flux_col}, mumax_minus_mag, mu_max, ellipticity, kron_radius, segmentation_map_id {ext_cols}
     FROM catalogue.mer_catalogue
@@ -295,6 +299,9 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
     tile_data = {}
     for band in cfg.bands:
         tile_data[band] = fits.getdata(tile_galaxies[f'{band.lower()}_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
+        if cfg.add_bkg:
+            bkg_data = fits.getdata(tile_galaxies[f'{band.lower()}_bkg_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
+            tile_data[band] = tile_data[band] + bkg_data
     header = fits.getheader(tile_galaxies[f'{cfg.bands[0].lower()}_loc'].iloc[0])
     # vis_loc = tile_galaxies['vis_tile'].iloc[0]
     # nisp_loc = tile_galaxies['y_tile'].iloc[0]

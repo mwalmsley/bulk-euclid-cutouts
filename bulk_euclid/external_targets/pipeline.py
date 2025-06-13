@@ -264,6 +264,8 @@ def download_all_data_at_tile_index(cfg: OmegaConf, tile_index: int) -> dict:
     for _, flux_tile in flux_tile_metadata.iterrows():
         dict_of_locs[flux_tile["filter_name"]] = {"FLUX": flux_tile["file_loc"]}  # will add other keys laters
 
+    if cfg.add_bkg and 'MERBKG' not in cfg.auxillary_products:
+        cfg.auxillary_products.append('MERBKG')  # add BKG if not already requested
 
     # also download all auxillary data for that tile
     if cfg.auxillary_products == []:
@@ -521,6 +523,13 @@ def save_jpg_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
         j_im: np.ndarray = target_data['NIR_J']['FLUX'].data
     else:
         j_im = None
+
+    if cfg.add_bkg:
+        vis_im = vis_im + target_data['VIS']['MERBKG'].data
+        if y_im is not None:
+            y_im = y_im + target_data['NIR_Y']['MERBKG'].data
+        if j_im is not None:
+            j_im = j_im + target_data['NIR_J']['MERBKG'].data
 
     expected_save_locs = [save_loc.replace('generic', output_format) for output_format in cfg.jpg_outputs]
     logging.debug(expected_save_locs)

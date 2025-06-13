@@ -135,6 +135,12 @@ def download_tile_and_catalog(cfg, tiles_to_download: pd.DataFrame, tile_index: 
     for band in cfg.bands:
         tile_metadata_to_copy[f'{band.lower()}_loc'] = downloaded_tiles.query(f'filter_name == "{band}"')['file_loc'].squeeze()
 
+        if cfg.add_bkg:
+            mosaic_product_oid = downloaded_tiles.query(f'tile_index == {tile_index} & filter_name == "{band}"')['mosaic_product_oid']
+            bkg_tiles = pipeline_utils.get_auxillary_tiles(mosaic_product_oid.iloc[0], auxillary_products = ['MERBKG'])
+            bkg_tile_loc = bkg_tiles.iloc[0]['datalabs_path'] + '/' + bkg_tiles.iloc[0]['file_name']
+            tile_metadata_to_copy[f'{band.lower()}_bkg_loc'] = bkg_tile_loc
+
     tile_catalog = get_and_save_tile_catalog(cfg, tile_index, tile_metadata_to_copy)
     return tile_catalog
 

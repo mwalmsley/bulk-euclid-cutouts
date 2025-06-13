@@ -9,6 +9,7 @@ max_retries: 1  # retry failed tile downloads
 selection_cuts: galaxy_zoo  # or lens_candidates
 base_dir: '/media/home/my_workspace/tmp'  # to tinker without sharing the results
 name: 'example_run'
+add_bkg: false  # add subtracted background to the cutouts
 
 # these are set by the code
 download_dir: !
