@@ -1,10 +1,12 @@
-base_dir: '/media/user/euclid-cutouts'
-name: 'v1'
-release_name: 'Q1_R1'
-sas_environment: 'PDR'  
+# rr2 version of hayley_v1.yaml (q1)
+
+base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/galaxy_zoo_euclid/rr2_gz2_v1'
+name: 'rr2_gz2_v1'
+release_name: 'REGREPROC2_R1'
+sas_environment: 'REG'  
 bands: ['VIS', 'NIR_Y']
 
-credentials_file: '/media/user/cred.txt' 
+credentials_file: '/media/user/_credentials/euclid_login.txt' # new
 
 num_tiles: 0  # all tiles
 refresh_catalogs: False
