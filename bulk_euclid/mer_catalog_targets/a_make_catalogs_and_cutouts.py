@@ -74,6 +74,7 @@ def get_tile_catalog(cfg: OmegaConf):
     
     logging.info(tiles['instrument_name'].value_counts())
     logging.info(tiles['release_name'].value_counts())
+    tiles.to_csv(cfg.sanity_dir + '/tiles_temp.csv', index=False)
     assert not tiles.duplicated(subset=['ra', 'dec', 'instrument_name', 'filter_name']).any()
 
     # visual sanity check
