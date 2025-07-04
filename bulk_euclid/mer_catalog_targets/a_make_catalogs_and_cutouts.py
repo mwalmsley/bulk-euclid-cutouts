@@ -21,8 +21,10 @@ def run(cfg):
     tile_indices = tiles['tile_index'].unique()
 
     # hardcoded: remove a few bad tiles which currently have very little data in Q1
-    bad_tile_indices = [102018211, 102160873, 102021021]
-    tile_indices = [t for t in tile_indices if t not in bad_tile_indices]
+    if cfg.release_name == 'Q1_R1':
+        logging.info('Removing bad tiles for Q1_R1')
+        bad_tile_indices = [102018211, 102160873, 102021021]
+        tile_indices = [t for t in tile_indices if t not in bad_tile_indices]
 
     for tile_n, tile_index in enumerate(tile_indices):
         logging.info(f'tile {tile_index}: {tile_n} of {len(tile_indices)}')
@@ -70,11 +72,13 @@ def create_folders(cfg: OmegaConf):
 
 
 def get_tile_catalog(cfg: OmegaConf):
+    # TODO replace with glob
     tiles = pipeline_utils.get_tiles_in_survey(bands=cfg.bands, release_name=cfg.release_name)  # F-003_240321 recently appeared
     
-    logging.info(tiles['instrument_name'].value_counts())
-    logging.info(tiles['release_name'].value_counts())
+    logging.info(tiles['instrument_name'].value_counts())  # included in folder or tilename
+    logging.info(tiles['release_name'].value_counts())  # implicit from folder
     tiles.to_csv(cfg.sanity_dir + '/tiles_temp.csv', index=False)
+    # RA and Dec of tile are not actually used, only here for sanity check - could touch to open with WCS, but easier to drop
     assert not tiles.duplicated(subset=['ra', 'dec', 'instrument_name', 'filter_name']).any()
 
     # visual sanity check
@@ -89,6 +93,9 @@ def get_tile_catalog(cfg: OmegaConf):
 
 
 def select_tiles(cfg, tiles) -> pd.DataFrame:
+
+    # tiles needs columns: ['tile_index', 'filter_name', 'file_name', 'release_name', 'mosaic_product_oid']
+
     rng = np.random.default_rng(cfg.seed)
 
     # filter name will only include the cfg.bands, due to the query in get_tiles_in_survey
