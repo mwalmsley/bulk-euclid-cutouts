@@ -16,9 +16,7 @@ def run(cfg):
     pipeline_utils.login(cfg)
     cfg = create_folders(cfg)
 
-    tiles = find_available_tiles(cfg)
-
-
+    tiles = pipeline_utils.find_available_tiles(cfg)
 
     logging.info(f'Tiles to make cutouts from: {len(tiles)}')
     for tile_n, tile in enumerate(tiles):
@@ -58,54 +56,6 @@ def create_folders(cfg: OmegaConf):
 
     return cfg
 
-# setting up like nested json db, with this schema
-
-def get_path_if_exists(search_str: str) -> str:
-    """Check if a path exists, return it if it does, else return None."""
-    try:
-        return list(glob.glob(search_str))[0]
-    except IndexError:
-        return None
-
-def find_available_tiles(cfg: OmegaConf):
-    # TODO SAS now replaced with glob
-    # tiles = pipeline_utils.get_tiles_in_survey(bands=cfg.bands, release_name=cfg.release_name)  # F-003_240321 recently appeared
-
-    if cfg.release_name == 'Q1_R1':
-        release_dir = '/media/data/home/euclid_q1/Q1_R1'
-    else:
-        raise ValueError('Release name not recognised for tile search: {}'.format(cfg.release_name))
-
-    # all subfolders in the release_dir, each name is a tile_index
-    tile_indices = [ int(os.path.basename(f.path)) for f in os.scandir(release_dir + '/MER') if f.is_dir() ]
-    tile_indices = sorted(tile_indices)
-
-    tiles = []
-    for tile_index in tile_indices:
-        tile = pipeline_utils.Tile(tile_index=tile_index, release_name=cfg.release_name)
-        tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_{tile_index}.fits')
-        # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
-        for (instrument, band) in [('VIS', 'VIS'), ('NISP', 'NISP_Y'), ('NISP', 'NISP_J'), ('NISP', 'NISP_H')]:  # could add EXT here
-            mosaic = pipeline_utils.Mosaic(band=band)
-            mosaic.instrument = instrument
-            mosaic.BGMOD = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band}_{tile_index}-*.fits')
-            mosaic.BGSUB = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGSUB-{band}_{tile_index}-*.fits')
-            mosaic.RMS = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_RMS-{band}_{tile_index}-*.fits')
-        
-            # for now, only use if all required data products exist
-            if all([mosaic.__dict__[key] is not None for key in [cfg.data_products]]):  # e.g. BGSUB, BGMOD, RMS
-                tile.__dict__[band] = mosaic
-            else:
-                logging.warning(f'Skipping mosaic as not all data products exist, for tile {tile_index}, instrument {instrument}, band {band}: {mosaic}')
-        tiles.append(tile)
-
-    if len(tiles) == 0:
-        logging.error('No tiles found, exiting')
-        return
-    
-    if len(tiles) > cfg.max_tiles:
-        logging.info(f'Randomly subselecting {cfg.max_tiles} tiles')
-        tiles = np.random.choice(tiles, cfg.max_tiles, replace=False).tolist()
 
     # RA and Dec of tile are not actually used, only here for sanity check - could touch to open with WCS, but easier to drop
     # assert not tiles.duplicated(subset=['ra', 'dec', 'instrument_name', 'filter_name']).any()
