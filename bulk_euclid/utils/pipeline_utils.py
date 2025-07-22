@@ -93,7 +93,7 @@ def find_available_tiles(cfg: OmegaConf):
             mosaic.RMS = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_RMS-{band}_{tile_index}-*.fits')
         
             # for now, only use if all required data products exist
-            if all([getattr(mosaic, key, False) for key in [cfg.data_products]]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy.
+            if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy.
                 setattr(tile, band, mosaic)
             else:
                 logging.warning(f'Skipping mosaic as not all data products exist, for tile {tile_index}, instrument {instrument}, band {band}: {mosaic}')
