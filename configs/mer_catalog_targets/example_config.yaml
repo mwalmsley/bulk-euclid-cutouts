@@ -1,17 +1,31 @@
-release_name: F-006  # the latest Wide survey data on OTF
-num_tiles: 4
-refresh_catalogs: True  # always overwrite/redownload catalogs
-seed: 1
-delete_tiles: False  # set True to clean up tiles as we go
-debug: True  # currently does nothing
-run_async: False  # use async sql queries in SAS. Useful for downloading more than 2k galaxies per tile.
-max_retries: 1  # retry failed tile downloads
-selection_cuts: galaxy_zoo  # or lens_candidates
-base_dir: '/media/home/my_workspace/tmp'  # to tinker without sharing the results
-name: 'example_run'
-add_bkg: false  # add subtracted background to the cutouts
+base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/debug'
+name: 'example_config'
+release_name: 'Q1_R1'
+sas_environment: 'IDR'  # or OTF
+bands: ['VIS', 'NIR_Y']
+data_products: ['BGSUB']  # 'BGMOD', 'RMS'
 
-# these are set by the code
+credentials_file: '/media/user/_credentials/euclid_login.txt'
+max_tiles: 2  # 0 for all tiles
+refresh_catalogs: True
+# debug: False
+seed: 1
+
+# selection_cuts: space_warps
+selection_cuts: galaxy_zoo_generous
+field_of_view: galaxy_zoo  # or number in arcseconds
+# field_of_view: 15
+
+jpg_outputs: [
+  #'gz_arcsinh_vis_only', 'gz_arcsinh_vis_y', 'gz_arcsinh_vis_lsb',   # typical GZ images
+  'sw_arcsinh_vis_only', 'sw_arcsinh_vis_y', 'sw_mtf_vis_only', 'sw_mtf_vis_y']  # and the similar SW ones as well (LAB+MTF especially might be useful)
+fits_outputs: false
+overwrite_jpg: false
+overwrite_fits: false
+jpg_quality: 98
+use_fits_origin_for_jpg: true
+
+# ignore these
 download_dir: !
 tile_dir: !
 catalog_dir: !
@@ -20,4 +34,3 @@ jpg_dir: !
 fits_dir: !
 sanity_dir: !
 log_file: !
-

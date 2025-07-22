@@ -30,7 +30,33 @@ logging.warning("""
 )
 mem = joblib.Memory('.', verbose=False)
 
-@mem.cache
+
+@dataclass
+class Mosaic:
+    band: str # e.g. VIS, NISP_Y, NISP_J, NISP_H
+    instrument: str = None  # e.g. NISP, VIS
+    # hate caps but it's convention
+    BGMOD: str = None
+    BGSUB: str = None
+    RMS: str = None
+    # TODO PSF
+
+@dataclass
+class Tile:
+    tile_index: int
+    # ra: float
+    # dec: float
+    release_name: str
+    # hate caps but it's convention
+    VIS: Mosaic = None
+    NISP_Y: Mosaic = None
+    NISP_J: Mosaic = None
+    NISP_H: Mosaic = None
+    mer_final_catalog: str = None
+    # mer_morphology_catalog: str = None
+
+
+# @mem.cache
 def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
 
     # TODO move release name into survey property, once happy with what it means, if it is per survey?
@@ -113,8 +139,9 @@ def get_tile_extents_fov(tiles: pd.DataFrame) -> pd.DataFrame:
 
 
 @mem.cache
-def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
+def find_relevant_sources_in_tile(cfg, df: pd.DataFrame) -> pd.DataFrame:
     # apply our final selection criteria
+    # df should be mer catalogue for that tile
 
     """
     segmentation map id query is like:
@@ -132,84 +159,55 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     else:
         vis_flux_col = 'flux_vis_aper'
         ext_cols = ', flux_g_ext_decam_aper, flux_i_ext_decam_aper, flux_r_ext_decam_aper'
-        
-    query_str = f"""
-    SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_detection_total, {vis_flux_col}, mumax_minus_mag, mu_max, ellipticity, kron_radius, segmentation_map_id {ext_cols}
-    FROM catalogue.mer_catalogue
-    """
 
-    # non-negative vis flux
-    # no cross-match to gaia stars
-    # detected in vis
-    # not "spurious" (very similar to detected in vis)
-    standard_quality_cuts = f"""WHERE {vis_flux_col} > 0
-    AND gaia_id IS NULL
-    AND vis_det=1
-    AND spurious_prob < 0.2
-    """
-    query_str += standard_quality_cuts
+    # only relevant columns
+    relevant_cols = ['object_id', 'right_ascension', 'declination', 'gaia_id', 'segmentation_area', 'flux_segmentation', 'flux_detection_total', vis_flux_col, 'mumax_minus_mag', 'mu_max', 'ellipticity', 'kron_radius', 'segmentation_map_id', ext_cols]
+    df = df[relevant_cols]    
+
+    # apply as pandas cuts
+    df = df.query(vis_flux_col + ' > 0')  # non-negative vis flux
+    # df = df.query('gaia_id.isnull()')  # no cross-match to gaia stars TODO replace urgently
+    df = df.query('vis_det == 1')  # detected in vis
+    df = df.query('spurious_prob < 0.2')  # not "spurious" (very similar to detected in vis)
 
     if cfg.selection_cuts == 'galaxy_zoo':
         logging.info('Applying pre-Q1 volunteer Galaxy Zoo cuts')
+        above_min_area = df['segmentation_area'] > 1200  # at least 1200px in area
+        above_min_flux = (df['flux_segmentation'] > 22.90867652) & (df['segmentation_area'] > 200)
+        df = df[above_min_area | above_min_flux]  # keep galaxies that are either large enough or bright enough
         # at least 1200px in area OR ( vis mag < 20.5 (expressed as flux) and at least 200px in area)
-        query_str += """AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))"""
-        # UPDATE - for Q1, changed to 800px. Will see how Zoobot performs on these smaller galaxies.
+        # UPDATE - for Q1, changed to 700px. Will see how Zoobot performs on these smaller galaxies.
     elif cfg.selection_cuts == 'galaxy_zoo_generous':
         logging.info('Applying Q1 generous Galaxy Zoo cuts')
         # UPDATE - for Q1, changed to 700px and NO flux cut
         # a hard flux cut of 22.5 (matching strong lensing)? Will see how Zoobot performs on these smaller galaxies.
         # AND (23.9 - 2.5 * LOG10(flux_segmentation)) < 22.5
         # still keep the few bright but small galaxies, for mass completeness
-        query_str += """AND (segmentation_area > 700 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))"""
+        above_min_area = df['segmentation_area'] > 700  # at least 700px in area
+        above_min_flux = (df['flux_segmentation'] > 22.90867652) & (df['segmentation_area'] > 200)
+        df = df[above_min_area | above_min_flux]  # keep galaxies that are either large enough or bright enough
     elif cfg.selection_cuts == 'space_warps':
         # https://euclidconsortium.slack.com/archives/C05JVCV6TA5/p1728644532577239
         logging.info('Applying lens candidate cuts')
-        query_str += """AND segmentation_area > 200
-        AND flux_detection_total >= 3.63078
-        AND mumax_minus_mag >= -2.6
-        AND mu_max >= 15.0
-        """
+        df = df.query('segmentation_area > 200')  
+        df = df.query('flux_detection_total >= 3.63078')  # flux detection total, not segmentation
+        df = df.query('mumax_minus_mag >= -2.6')  # mumax minus mag, not mu_max
+        df = df.query('mu_max >= 15.0')  # mu_max, not mumax minus mag
     else:
         raise ValueError(f'Unknown selection cuts {cfg.selection_cuts}')
 
     # within the tile via segmentation map id
-    closing_str = f"""AND CAST(segmentation_map_id as varchar) LIKE '{tile_index}%'
-    ORDER BY object_id ASC
-    """
-    query_str += closing_str
-    logging.debug(query_str)
+    tile_index = df['segmentation_map_id'].apply(lambda x: x[:9])
 
-    if 'Euclid' not in locals() or 'Euclid' not in globals():
-        logging.critical('"Euclid" class not foun, run pipeline_utils.login(cfg) first')
-
-    # added min segmentation area to remove tiny bright artifacts
-    # TODO copy to mer cuts/pipeline
-    retries = 0
-    df = None
-    while retries < cfg.max_retries:
-        try:
-            if cfg.run_async:
-                job = Euclid.launch_job_async(query_str, background=False)
-                df = job.get_results().to_pandas()
-            else:
-                job = Euclid.launch_job(query_str)
-                df = job.get_results().to_pandas()
-                assert len(df) < 2000, 'Hit query limit, set run_async=True'
-            break
-        except AttributeError as e:
-            logging.info(e)
-            logging.info(f'Retrying, {retries}')
-        retries += 1
-    if df is None:
-        raise ValueError(f'Query failed after retries: {query_str}')
-    
-
-    logging.info(f"Found {len(df)} query results")
-    
-    df['tile_index'] = tile_index
+    # for convenience
     df['mag_segmentation'] = -2.5 * np.log10(df['flux_segmentation']) + 23.9  # for convenience
+    df['tile_index'] = tile_index  # add tile index column
 
-    return df.reset_index(drop=True)
+    df = df.sort_values(by='object_id')  # sort by object id, for consistency
+    df = df.reset_index(drop=True)
+    logging.info(f"Found {len(df)} relevant sources")
+
+    return df
 
 
 def download_mosaics(tile_index: int, tiles: pd.DataFrame, download_dir: str) -> pd.DataFrame:
@@ -290,24 +288,29 @@ def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, o
     return os.path.join(base_dir, subdir, filename_without_format + '.' + output_format)
 
 
-def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
+def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
     # assumes the tile has been downloaded and catalogued
     # assumes tile_galaxies includes all/only the bands to load and potentially include
     # print(tile_galaxies.columns.values)
     
-    logging.info('loading bands for tile')
-    tile_data = {}
-    for band in cfg.bands:
-        tile_data[band] = fits.getdata(tile_galaxies[f'{band.lower()}_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
-        if cfg.add_bkg:
-            bkg_data = fits.getdata(tile_galaxies[f'{band.lower()}_bkg_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
-            tile_data[band] = tile_data[band] + bkg_data
-    header = fits.getheader(tile_galaxies[f'{cfg.bands[0].lower()}_loc'].iloc[0])
+    # logging.info('loading bands for tile')
+    # tile_data = {}
+    # for band in cfg.bands:
+    #     tile_data[band] = fits.getdata(tile_galaxies[f'{band.lower()}_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
+    #     if cfg.add_bkg:
+    #         bkg_data = fits.getdata(tile_galaxies[f'{band.lower()}_bkg_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
+    #         tile_data[band] = tile_data[band] + bkg_data
+
+
+    # header = fits.getheader(tile_galaxies[f'{cfg.bands[0].lower()}_loc'].iloc[0])
+    # assume we always have VIS and use BGSUB tile as our reference for WCS etc
+    header = fits.getheader(tile.VIS.BGSUB)
+
     # vis_loc = tile_galaxies['vis_tile'].iloc[0]
     # nisp_loc = tile_galaxies['y_tile'].iloc[0]
-    logging.info('tile loaded')
+    # logging.info('tile loaded')
     
-    tile_galaxies = tile_galaxies.reset_index(drop=True)
+    # tile_galaxies = tile_galaxies.reset_index(drop=True)
     
     tile_wcs = WCS(header)
 
@@ -332,14 +335,14 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
             if cfg.field_of_view == 'galaxy_zoo':
                 # TODO this bit should use Cutout2D instead
                 galaxy.index = galaxy.index.str.upper()  # for the radius estimate
-                cutout_by_band[band] = m_utils.extract_cutout_from_array(tile_data[band], galaxy, buff=0, allow_radius_estimate=True)
+                cutout_by_band[band] = m_utils.extract_cutout_from_array(tile.__dict__[band], galaxy, buff=0, allow_radius_estimate=True)
                 galaxy.index = galaxy.index.str.lower()
             else:
                 if cfg.field_of_view == 'space_warps':
                     cfg.field_of_view = 20  # arcsec
                 assert isinstance(cfg.field_of_view, float) or isinstance(cfg.field_of_view, int)
                 # TODO once Cutout2D throughout, I can preserve the header, for now, do .data instead
-                cutout_by_band[band] = Cutout2D(tile_data[band], (x_center, y_center), cfg.field_of_view * u.arcsec, wcs=tile_wcs).data 
+                cutout_by_band[band] = Cutout2D(tile.__dict__[band], (x_center, y_center), cfg.field_of_view * u.arcsec, wcs=tile_wcs).data 
 
         
         if cfg.jpg_outputs:  # anything in this list
