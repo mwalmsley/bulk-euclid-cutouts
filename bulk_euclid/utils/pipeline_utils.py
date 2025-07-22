@@ -91,12 +91,15 @@ def find_available_tiles(cfg: OmegaConf):
         tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
         tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
         # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
-        for (instrument, band) in [('VIS', 'VIS'), ('NISP', 'NIR-Y'), ('NISP', 'NIR-J'), ('NISP', 'NIR-H')]:  # could add EXT here
+        for (instrument, band) in [('VIS', 'VIS'), ('NISP', 'NIR_Y'), ('NISP', 'NIR_J'), ('NISP', 'NIR_H')]:  # could add EXT here
+            band_w_hyphen = band.replace('_', '-')  # python can't use hyphens in variable names
             mosaic = Mosaic(band=band)
             mosaic.instrument = instrument
-            mosaic.BGMOD = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band}_TILE{tile_index}-*.fits')
-            mosaic.BGSUB = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGSUB-MOSAIC-{band}_TILE{tile_index}-*.fits')
-            mosaic.RMS = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_MOSAIC-{band}-RMS_TILE{tile_index}-*.fits')
+
+            # TODO band doesn't line up
+            mosaic.BGMOD = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band_w_hyphen}_TILE{tile_index}-*.fits')
+            mosaic.BGSUB = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGSUB-MOSAIC-{band_w_hyphen}_TILE{tile_index}-*.fits')
+            mosaic.RMS = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_MOSAIC-{band_w_hyphen}-RMS_TILE{tile_index}-*.fits')
         
             # for now, only use if all required data products exist
             if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy.
