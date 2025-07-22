@@ -63,6 +63,7 @@ class Tile:
 def get_path_if_exists(search_str: str) -> str:
     """Check if a path exists, return it if it does, else return None."""
     try:
+        logging.info('Checking if path exists: {}'.format(search_str))
         return list(glob.glob(search_str))[0]
     except IndexError:
         return None
@@ -79,6 +80,11 @@ def find_available_tiles(cfg: OmegaConf):
     # all subfolders in the release_dir, each name is a tile_index
     tile_indices = [ int(os.path.basename(f.path)) for f in os.scandir(release_dir + '/MER') if f.is_dir() ]
     tile_indices = sorted(tile_indices)
+    logging.info(f'Found {len(tile_indices)} tiles e.g. {tile_indices[0]}')
+
+    if len(tile_indices) > cfg.max_tiles:
+        logging.info(f'Randomly subselecting {cfg.max_tiles} tiles')
+        tile_indices = np.random.choice(tile_indices, cfg.max_tiles, replace=False).tolist()
 
     tiles = []
     for tile_index in tile_indices:
@@ -102,10 +108,7 @@ def find_available_tiles(cfg: OmegaConf):
     if len(tiles) == 0:
         logging.error('No tiles found, exiting')
         return
-    
-    if len(tiles) > cfg.max_tiles:
-        logging.info(f'Randomly subselecting {cfg.max_tiles} tiles')
-        tiles = np.random.choice(tiles, cfg.max_tiles, replace=False).tolist()
+
 
 
 # # @mem.cache
