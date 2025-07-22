@@ -71,7 +71,7 @@ def find_available_tiles(cfg: OmegaConf):
     # tiles = pipeline_utils.get_tiles_in_survey(bands=cfg.bands, release_name=cfg.release_name)  # F-003_240321 recently appeared
 
     if cfg.release_name == 'Q1_R1':
-        release_dir = '/media/data/home/euclid_q1/Q1_R1'
+        release_dir = '/media/home/data/euclid_q1/Q1_R1'
     else:
         raise ValueError('Release name not recognised for tile search: {}'.format(cfg.release_name))
 
