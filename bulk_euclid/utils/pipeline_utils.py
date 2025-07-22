@@ -3,6 +3,7 @@ import logging
 import os
 import warnings
 import hashlib
+from dataclasses import dataclass
 
 # from omegaconf import OmegaConf
 from omegaconf.errors import ConfigAttributeError
