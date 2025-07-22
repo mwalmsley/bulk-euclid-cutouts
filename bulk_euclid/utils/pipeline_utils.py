@@ -35,7 +35,7 @@ mem = joblib.Memory('.', verbose=False)
 
 @dataclass
 class Mosaic:
-    band: str # e.g. VIS, NISP_Y, NISP_J, NISP_H
+    band: str # e.g. VIS, NIR_Y, NIR_J, NIR_H
     instrument: str = None  # e.g. NISP, VIS
     # hate caps but it's convention
     BGMOD: str = None
@@ -51,9 +51,9 @@ class Tile:
     release_name: str
     # hate caps but it's convention
     VIS: Mosaic = None
-    NISP_Y: Mosaic = None
-    NISP_J: Mosaic = None
-    NISP_H: Mosaic = None
+    NIR_Y: Mosaic = None
+    NIR_J: Mosaic = None
+    NIR_H: Mosaic = None
     mer_final_catalog: str = None
     # mer_morphology_catalog: str = None
 
@@ -63,9 +63,9 @@ class Tile:
 def get_path_if_exists(search_str: str) -> str:
     """Check if a path exists, return it if it does, else return None."""
     try:
-        logging.info('Checking if path exists: {}'.format(search_str))
         return list(glob.glob(search_str))[0]
     except IndexError:
+        logging.info('Path not found: {}'.format(search_str))
         return None
 
 def find_available_tiles(cfg: OmegaConf):
@@ -91,7 +91,7 @@ def find_available_tiles(cfg: OmegaConf):
         tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
         tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_{tile_index}.fits')
         # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
-        for (instrument, band) in [('VIS', 'VIS'), ('NISP', 'NISP_Y'), ('NISP', 'NISP_J'), ('NISP', 'NISP_H')]:  # could add EXT here
+        for (instrument, band) in [('VIS', 'VIS'), ('NISP', 'NIR_Y'), ('NISP', 'NIR_J'), ('NISP', 'NIR_H')]:  # could add EXT here
             mosaic = Mosaic(band=band)
             mosaic.instrument = instrument
             mosaic.BGMOD = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band}_TILE{tile_index}-*.fits')
