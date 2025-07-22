@@ -94,9 +94,9 @@ def find_available_tiles(cfg: OmegaConf):
         for (instrument, band) in [('VIS', 'VIS'), ('NISP', 'NISP_Y'), ('NISP', 'NISP_J'), ('NISP', 'NISP_H')]:  # could add EXT here
             mosaic = Mosaic(band=band)
             mosaic.instrument = instrument
-            mosaic.BGMOD = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band}_{tile_index}-*.fits')
-            mosaic.BGSUB = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGSUB-{band}_{tile_index}-*.fits')
-            mosaic.RMS = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_RMS-{band}_{tile_index}-*.fits')
+            mosaic.BGMOD = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band}_TILE{tile_index}-*.fits')
+            mosaic.BGSUB = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGSUB-MOSAIC-{band}_TILE{tile_index}-*.fits')
+            mosaic.RMS = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_MOSAIC-{band}-RMS_TILE{tile_index}-*.fits')
         
             # for now, only use if all required data products exist
             if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy.
