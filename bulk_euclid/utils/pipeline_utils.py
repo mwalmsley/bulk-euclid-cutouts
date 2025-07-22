@@ -107,7 +107,9 @@ def find_available_tiles(cfg: OmegaConf):
 
     if len(tiles) == 0:
         logging.error('No tiles found, exiting')
-        return
+        exit(1)
+    
+    return tiles
 
 
 
