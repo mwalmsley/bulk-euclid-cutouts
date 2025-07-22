@@ -91,7 +91,7 @@ def find_available_tiles(cfg: OmegaConf):
         tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
         tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_{tile_index}.fits')
         # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
-        for (instrument, band) in [('VIS', 'VIS'), ('NISP', 'NIR_Y'), ('NISP', 'NIR_J'), ('NISP', 'NIR_H')]:  # could add EXT here
+        for (instrument, band) in [('VIS', 'VIS'), ('NISP', 'NIR-Y'), ('NISP', 'NIR-J'), ('NISP', 'NIR-H')]:  # could add EXT here
             mosaic = Mosaic(band=band)
             mosaic.instrument = instrument
             mosaic.BGMOD = get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band}_TILE{tile_index}-*.fits')
