@@ -1,7 +1,7 @@
 
 credentials_file: '/media/user/_credentials/euclid_login.txt'
 
-base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/galaxy_zoo_euclid/rr2_gz2_v1'
+base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/galaxy_zoo_euclid/rr2_gz_v1'
 name: 'rr2_gz_v1'
 release_name: 'RR2_R1' 
 bands: ['VIS', 'NIR_Y']
