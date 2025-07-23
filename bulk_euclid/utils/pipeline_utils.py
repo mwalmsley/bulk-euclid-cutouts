@@ -167,7 +167,7 @@ def find_relevant_sources_in_tile(cfg, df: pd.DataFrame) -> pd.DataFrame:
     # df = df.query('gaia_id.isnull()')  # no cross-match to gaia stars - now replaced
     # https://euclid.esac.esa.int/dr/q1/dpdd/merdpd/mermorphologycookbook.html#point-like-probability
     # use point_like_prob to reject stars instead
-    df = df.query('point_like_prob < 0.5')  
+    df = df[(df['POINT_LIKE_PROB'] < 0.5) | (df['SEGMENTATION_AREA'] > 10000)]  # point-like is nan for very small objects (should reject) and very large (should keep)
     df = df.query('vis_det == 1')  # detected in vis
     df = df.query('spurious_prob < 0.2')  # not "spurious" (very similar to detected in vis)
 

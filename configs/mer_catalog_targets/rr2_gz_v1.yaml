@@ -8,7 +8,7 @@ bands: ['VIS', 'NIR_Y']
 data_products: ['BGSUB']  # 'BGMOD', 'RMS'
 add_bkg: False
 
-max_tiles: 2  # 0 for all tiles
+max_tiles: 0  # 0 for all tiles
 refresh_catalogs: False
 
 seed: 1
@@ -17,7 +17,7 @@ selection_cuts: galaxy_zoo_generous
 field_of_view: galaxy_zoo
 
 jpg_outputs: [
-  'sw_mtf_vis_y'
+  'sw_mtf_vis_y', 'gz_arcsinh_vis_y'
   ]   # minimal, for ML
 
 fits_outputs: false
