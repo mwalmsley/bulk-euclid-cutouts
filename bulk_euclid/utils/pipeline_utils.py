@@ -255,7 +255,7 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
 
     for i, galaxy in tile_galaxies.iterrows():
         
-        if i % 100 == 0:
+        if i % 1000 == 0:
             logging.info(f'galaxy {i} of {len(tile_galaxies)}')
                   
         c = SkyCoord(galaxy['right_ascension'], galaxy['declination'], frame='icrs', unit="deg")
