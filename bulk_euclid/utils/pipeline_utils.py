@@ -146,19 +146,21 @@ def find_relevant_sources_in_tile(cfg, df: pd.DataFrame) -> pd.DataFrame:
     WHERE CAST(segmentation_map_id as varchar) LIKE '102020107%'
     """
 
-    if cfg.sas_environment == 'IDR':
-        vis_flux_col = 'flux_vis_1fwhm_aper'  # now renamed with 1FWHM etc
-        ext_cols = []  # not yet available
-    elif cfg.sas_environment == 'PDR':
-        vis_flux_col = 'flux_vis_1fwhm_aper'
-        ext_cols = ['flux_g_ext_decam_1fwhm_aper', 'flux_i_ext_decam_1fwhm_aper', 'flux_r_ext_decam_1fwhm_aper']
-    else:
-        vis_flux_col = 'flux_vis_aper'
-        ext_cols = ['flux_g_ext_decam_aper', 'flux_i_ext_decam_aper', 'flux_r_ext_decam_aper']
+    # if cfg.cfg.release_name in ['Q1_R1', 'RR2_R1']:
+    vis_flux_col = 'flux_vis_1fwhm_aper'  # now renamed with 1FWHM etc
+        # ext_cols = []  # not yet available
+    # elif cfg.sas_environment == 'PDR':
+        # vis_flux_col = 'flux_vis_1fwhm_aper'
+        # ext_cols = ['flux_g_ext_decam_1fwhm_aper', 'flux_i_ext_decam_1fwhm_aper', 'flux_r_ext_decam_1fwhm_aper']
+    # else:
+        # vis_flux_col = 'flux_vis_aper'
+        # ext_cols = ['flux_g_ext_decam_aper', 'flux_i_ext_decam_aper', 'flux_r_ext_decam_aper']
 
     # only relevant columns
-    relevant_cols = ['object_id', 'right_ascension', 'declination', 'gaia_id', 'segmentation_area', 'flux_segmentation', 'flux_detection_total', vis_flux_col, 'mumax_minus_mag', 'mu_max', 'ellipticity', 'kron_radius', 'segmentation_map_id', 'vis_det', 'spurious_prob'] + ext_cols
-    df = df[relevant_cols]
+    required_cols = ['object_id', 'right_ascension', 'declination', 'gaia_id', 'segmentation_area', 'flux_segmentation', 'flux_detection_total', vis_flux_col, 'mumax_minus_mag', 'mu_max', 'ellipticity', 'kron_radius', 'segmentation_map_id', 'vis_det', 'spurious_prob']
+    # optional_cols = ext_cols
+    # df = df[relevant_cols]
+    assert all([col in df.columns for col in required_cols]), f'Missing columns in dataframe: {set(required_cols) - set(df.columns)}'
 
     # apply as pandas cuts
     df = df.query(vis_flux_col + ' > 0')  # non-negative vis flux
