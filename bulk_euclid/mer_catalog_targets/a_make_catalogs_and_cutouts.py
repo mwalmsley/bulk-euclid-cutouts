@@ -39,12 +39,13 @@ def create_folders(cfg: OmegaConf):
     cfg.cutout_dir = cfg.download_dir + '/cutouts'
     cfg.jpg_dir = cfg.cutout_dir + '/jpg'
     cfg.fits_dir = cfg.cutout_dir + '/fits'
-
+    
     cfg.sanity_dir = cfg.download_dir + '/sanity'
 
     logging.info(f'Saving to {cfg.download_dir}')
-    assert os.path.exists(os.path.dirname(cfg.download_dir))
+    assert os.path.exists(os.path.dirname(cfg.base_dir))
     for d in [
+        cfg.base_dir,
         cfg.download_dir,
         cfg.tile_dir, 
         cfg.catalog_dir,
@@ -105,6 +106,8 @@ def make_volunteer_cutouts(cfg: OmegaConf, tile: pipeline_utils.Tile):
     if (not os.path.isfile(tile_catalog_loc)) or cfg.refresh_catalogs:
 
         all_tile_sources = Table.read(tile.mer_final_catalog).to_pandas()
+        # all columns are upper, make lower
+        all_tile_sources.columns = all_tile_sources.columns.str.lower()
         relevant_tile_sources = pipeline_utils.find_relevant_sources_in_tile(cfg, df=all_tile_sources)
         logging.info(relevant_tile_sources[['right_ascension', 'declination']].mean())
 

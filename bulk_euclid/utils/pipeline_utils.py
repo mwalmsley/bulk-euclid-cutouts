@@ -59,7 +59,6 @@ class Observation:
     BGSUB: Optional[Mosaic] = None
     RMS: Optional[Mosaic] = None
     PSF: Optional[Mosaic] = None  # catalog psf
-    PSF: Mosaic = None  # catalog psf
 
 @dataclass
 class Tile:
