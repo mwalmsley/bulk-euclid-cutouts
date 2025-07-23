@@ -91,6 +91,8 @@ def find_available_tiles(cfg: OmegaConf):
 
     if cfg.release_name == 'Q1_R1':
         release_dir = '/media/home/data/euclid_q1/Q1_R1'
+    elif cfg.release_name == 'RR2_R1':
+        release_dir = '/media/home/data/euclid_reg/REGREPROC2_R1'
     else:
         raise ValueError('Release name not recognised for tile search: {}'.format(cfg.release_name))
 
