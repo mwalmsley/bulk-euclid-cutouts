@@ -158,7 +158,7 @@ def estimate_source_r_max(source: pd.Series):
     # make source keys lower case to match the catalog
     source = source.str.lower()
     coefs = {'log_segmentation_area': 0.506900163942416, 'ellipticity': 0.2405883433225405, 'log_kron_radius': 0.11148176647655159}
-    log_r_max_estimate = intercept + sum(source[key] * coefs[key] for key in coefs.keys())
+    log_r_max_estimate = intercept + sum([source[key] * coefs[key] for key in coefs.keys()])
     return 10 ** log_r_max_estimate
 
 
