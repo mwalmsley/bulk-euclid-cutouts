@@ -38,14 +38,22 @@ mem = joblib.Memory('.', verbose=False)
 @dataclass
 class Mosaic:
     path: str
-    data: Optional[np.ndarray] = None  # will be loaded from path
+    _data: Optional[np.ndarray] = None  # hidden attr, loaded on demand and then stored
 
-    def __post_init__(self):
-        # hopefully this doesn't trigger a super slow datalabs read, if so, switch to a lazy load
-    
+    # def __post_init__(self):
+        # this would be better but it triggers a super slow datalabs first read
+
+    @property # public attr for accessing _data
+    def data(self):
+        if self.path and not hasattr(self, '_data'):
+            self.load()
+        return getattr(self, '_data', None)
+
+    def load(self):
+        # triggers datalabs read
         if self.path:
             assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
-            self.data = load_observation_fits(self.path)
+            self._data = load_observation_fits(self.path)
         # else:
             # logging.warning('Mosaic path is empty, no data loaded')
 
@@ -234,14 +242,6 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
     # assumes the tile has been downloaded and catalogued
     # assumes tile_galaxies includes all/only the bands to load and potentially include
     # print(tile_galaxies.columns.values)
-    
-    logging.info('Updating Tile/Observation fields from paths to data')
-
-    # for 
-
-    # tile_data = {}
-    # for band in cfg.bands:
-    #     tile_data[band] = fits.getdata(tile_galaxies[f'{band.lower()}_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
 
 
     #     if cfg.add_bkg:
@@ -249,15 +249,10 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
     #         tile_data[band] = tile_data[band] + bkg_data
 
 
-    # header = fits.getheader(tile_galaxies[f'{cfg.bands[0].lower()}_loc'].iloc[0])
     # assume we always have VIS and use BGSUB tile as our reference for WCS etc
     header = fits.getheader(tile.VIS.BGSUB.path)
 
-    # vis_loc = tile_galaxies['vis_tile'].iloc[0]
-    # nisp_loc = tile_galaxies['y_tile'].iloc[0]
-    # logging.info('tile loaded')
     
-    # tile_galaxies = tile_galaxies.reset_index(drop=True)
     
     tile_wcs = WCS(header)
 
@@ -282,14 +277,14 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
             if cfg.field_of_view == 'galaxy_zoo':
                 # TODO this bit should use Cutout2D instead
                 galaxy.index = galaxy.index.str.upper()  # for the radius estimate
-                cutout_by_band[band] = m_utils.extract_cutout_from_array(tile.__dict__[band], galaxy, buff=0, allow_radius_estimate=True)
+                cutout_by_band[band] = m_utils.extract_cutout_from_array(tile.__dict__[band].data, galaxy, buff=0, allow_radius_estimate=True)
                 galaxy.index = galaxy.index.str.lower()
             else:
                 if cfg.field_of_view == 'space_warps':
                     cfg.field_of_view = 20  # arcsec
                 assert isinstance(cfg.field_of_view, float) or isinstance(cfg.field_of_view, int)
                 # TODO once Cutout2D throughout, I can preserve the header, for now, do .data instead
-                cutout_by_band[band] = Cutout2D(tile.__dict__[band], (x_center, y_center), cfg.field_of_view * u.arcsec, wcs=tile_wcs).data 
+                cutout_by_band[band] = Cutout2D(tile.__dict__[band].data, (x_center, y_center), cfg.field_of_view * u.arcsec, wcs=tile_wcs).data
 
         
         if cfg.jpg_outputs:  # anything in this list
