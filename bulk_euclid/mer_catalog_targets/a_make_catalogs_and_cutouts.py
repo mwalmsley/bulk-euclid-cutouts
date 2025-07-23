@@ -110,6 +110,7 @@ def make_volunteer_cutouts(cfg: OmegaConf, tile: pipeline_utils.Tile):
         all_tile_sources.columns = all_tile_sources.columns.str.lower()
         relevant_tile_sources = pipeline_utils.find_relevant_sources_in_tile(cfg, df=all_tile_sources)
         logging.info(relevant_tile_sources[['right_ascension', 'declination']].mean())
+        relevant_tile_sources.to_csv(tile_catalog_loc, index=False)
 
     else:
         logging.info(f'Catalog already exists at {tile_catalog_loc}, loading')
