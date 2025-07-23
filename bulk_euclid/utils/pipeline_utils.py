@@ -164,7 +164,10 @@ def find_relevant_sources_in_tile(cfg, df: pd.DataFrame) -> pd.DataFrame:
 
     # apply as pandas cuts
     df = df.query(vis_flux_col + ' > 0')  # non-negative vis flux
-    # df = df.query('gaia_id.isnull()')  # no cross-match to gaia stars TODO replace urgently
+    # df = df.query('gaia_id.isnull()')  # no cross-match to gaia stars - now replaced
+    # https://euclid.esac.esa.int/dr/q1/dpdd/merdpd/mermorphologycookbook.html#point-like-probability
+    # use point_like_prob to reject stars instead
+    df = df.query('point_like_prob < 0.5')  
     df = df.query('vis_det == 1')  # detected in vis
     df = df.query('spurious_prob < 0.2')  # not "spurious" (very similar to detected in vis)
 
