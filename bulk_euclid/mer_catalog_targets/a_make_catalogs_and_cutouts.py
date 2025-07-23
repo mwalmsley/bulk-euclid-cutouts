@@ -57,6 +57,70 @@ def create_folders(cfg: OmegaConf):
     return cfg
 
 
+def tile_passes_filters(tile, cfg):
+    """
+    Check if a tile passes the filters set in the configuration.
+    """
+    # Check if the tile has all mosaics for all required bands
+    for band in cfg.bands:
+        band_mosaics = tile[band]
+        if band_mosaics is None: 
+            logging.warning(f'Tile {tile["tile_index"]} is missing band {band}')
+            return False
+        
+        # no need to check all required data products, already done in find_available_tiles
+        # if any(band_mosaics.empty:
+        #     logging.warning(f'Tile {tile["tile_index"]} has empty mosaics for band {band}')
+        #     return False
+
+    
+    # hardcoded: remove a few bad tiles which currently have very little data in Q1
+    if cfg.release_name == 'Q1_R1':
+        logging.info('Removing bad tiles for Q1_R1')
+        bad_tile_indices = [102018211, 102160873, 102021021]
+        if tile.tile_index in bad_tile_indices:
+            logging.warning(f'Tile {tile["tile_index"]} is in the list of bad tiles, skipping')
+            return False
+
+    return True
+
+
+def add_cutout_paths(cfg, catalog):
+    # will be used like .jpg -> output_name.jpg later
+    if cfg.jpg_outputs:
+        # e.g. jpg_loc/generic/102159774/102159774_123456_generic.jpg
+        catalog['jpg_loc_generic'] = catalog.apply(
+            lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix='generic', oneway_hash=False), axis=1)
+   
+    if cfg.fits_outputs:  # true or false, unlike jpg_loc:
+        catalog['fits_loc'] = catalog.apply(
+            lambda x: pipeline_utils.get_cutout_loc(cfg.fits_dir, x, output_format='fits.gz', version_suffix=None, oneway_hash=False), axis=1)
+
+
+def make_volunteer_cutouts(cfg: OmegaConf, tile: pipeline_utils.Tile):
+
+    logging.info(f'Tile {tile.tile_index}')
+    tile_catalog_loc = cfg.catalog_dir + f'/{tile.tile_index}_mer_catalog.csv'
+
+    if (not os.path.isfile(tile_catalog_loc)) or cfg.refresh_catalogs:
+
+        all_tile_sources = Table.read(tile.mer_final_catalog).to_pandas()
+        relevant_tile_sources = pipeline_utils.find_relevant_sources_in_tile(cfg, df=all_tile_sources)
+        logging.info(relevant_tile_sources[['right_ascension', 'declination']].mean())
+
+    else:
+        logging.info(f'Catalog already exists at {tile_catalog_loc}, loading')
+        relevant_tile_sources = pd.read_csv(tile_catalog_loc)
+
+    add_cutout_paths(cfg, relevant_tile_sources)
+    pipeline_utils.save_cutouts(cfg, relevant_tile_sources)
+
+
+
+
+
+
+
     # RA and Dec of tile are not actually used, only here for sanity check - could touch to open with WCS, but easier to drop
     # assert not tiles.duplicated(subset=['ra', 'dec', 'instrument_name', 'filter_name']).any()
 
@@ -68,7 +132,7 @@ def create_folders(cfg: OmegaConf):
     # # unlike the tiles, which are in SAS (albeit wrongly indexed), the MER catalogs are only available in SAS for a small corner of the Wide survey
     # plt.savefig(cfg.sanity_dir + '/tile_centers.png')
 
-    return tiles
+    # return tiles
 
 
 # def select_tiles(cfg, tiles) -> pd.DataFrame:
@@ -96,33 +160,6 @@ def create_folders(cfg: OmegaConf):
 
 #     return tiles_to_use
 
-
-def tile_passes_filters(tile, cfg):
-    """
-    Check if a tile passes the filters set in the configuration.
-    """
-    # Check if the tile has all mosaics for all required bands
-    for band in cfg.bands:
-        band_mosaics = tile[band]
-        if band_mosaics is None: 
-            logging.warning(f'Tile {tile["tile_index"]} is missing band {band}')
-            return False
-        
-        # no need to check all required data products, already done in find_available_tiles
-        # if any(band_mosaics.empty:
-        #     logging.warning(f'Tile {tile["tile_index"]} has empty mosaics for band {band}')
-        #     return False
-
-    
-    # hardcoded: remove a few bad tiles which currently have very little data in Q1
-    if cfg.release_name == 'Q1_R1':
-        logging.info('Removing bad tiles for Q1_R1')
-        bad_tile_indices = [102018211, 102160873, 102021021]
-        if tile.tile_index in bad_tile_indices:
-            logging.warning(f'Tile {tile["tile_index"]} is in the list of bad tiles, skipping')
-            return False
-
-    return True
 
 
 # def download_tile_and_catalog(cfg, tiles_to_download: pd.DataFrame, tile_index: int):
@@ -159,37 +196,6 @@ def tile_passes_filters(tile, cfg):
 #     return tile_catalog
 
 
-
-def add_cutout_paths(cfg, catalog):
-    # will be used like .jpg -> output_name.jpg later
-    if cfg.jpg_outputs:
-        # e.g. jpg_loc/generic/102159774/102159774_123456_generic.jpg
-        catalog['jpg_loc_generic'] = catalog.apply(
-            lambda x: pipeline_utils.get_cutout_loc(cfg.jpg_dir, x, output_format='jpg', version_suffix='generic', oneway_hash=False), axis=1)
-   
-    if cfg.fits_outputs:  # true or false, unlike jpg_loc:
-        catalog['fits_loc'] = catalog.apply(
-            lambda x: pipeline_utils.get_cutout_loc(cfg.fits_dir, x, output_format='fits.gz', version_suffix=None, oneway_hash=False), axis=1)
-
-
-def make_volunteer_cutouts(cfg: OmegaConf, tile: pipeline_utils.Tile):
-
-
-        logging.info(f'Tile {tile.tile_index}')
-        tile_catalog_loc = cfg.catalog_dir + f'/{tile.tile_index}_mer_catalog.csv'
-
-        if (not os.path.isfile(tile_catalog_loc)) or cfg.refresh_catalogs:
-
-            all_tile_sources = Table.read(tile.mer_final_catalog).to_pandas()
-            relevant_tile_sources = pipeline_utils.find_relevant_sources_in_tile(cfg, df=all_tile_sources)
-            logging.info(relevant_tile_sources[['right_ascension', 'declination']].mean())
-
-        else:
-            logging.info(f'Catalog already exists at {tile_catalog_loc}, loading')
-            relevant_tile_sources = pd.read_csv(tile_catalog_loc)
-
-        add_cutout_paths(cfg, relevant_tile_sources)
-        pipeline_utils.save_cutouts(cfg, relevant_tile_sources)
 
 
 # pretty much cannot locally debug, requires datalabs
