@@ -191,7 +191,7 @@ def find_relevant_sources_in_tile(cfg, df: pd.DataFrame) -> pd.DataFrame:
         raise ValueError(f'Unknown selection cuts {cfg.selection_cuts}')
 
     # within the tile via segmentation map id
-    tile_index = df['segmentation_map_id'].apply(lambda x: x[:9])
+    tile_index = df['segmentation_map_id'].apply(lambda x: str(x)[:9])
 
     # for convenience
     df['mag_segmentation'] = -2.5 * np.log10(df['flux_segmentation']) + 23.9  # for convenience
