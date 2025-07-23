@@ -146,17 +146,17 @@ def find_relevant_sources_in_tile(cfg, df: pd.DataFrame) -> pd.DataFrame:
 
     if cfg.sas_environment == 'IDR':
         vis_flux_col = 'flux_vis_1fwhm_aper'  # now renamed with 1FWHM etc
-        ext_cols = ''  # not yet available
+        ext_cols = []  # not yet available
     elif cfg.sas_environment == 'PDR':
         vis_flux_col = 'flux_vis_1fwhm_aper'
-        ext_cols = ', flux_g_ext_decam_1fwhm_aper, flux_i_ext_decam_1fwhm_aper, flux_r_ext_decam_1fwhm_aper'
+        ext_cols = ['flux_g_ext_decam_1fwhm_aper', 'flux_i_ext_decam_1fwhm_aper', 'flux_r_ext_decam_1fwhm_aper']
     else:
         vis_flux_col = 'flux_vis_aper'
-        ext_cols = ', flux_g_ext_decam_aper, flux_i_ext_decam_aper, flux_r_ext_decam_aper'
+        ext_cols = ['flux_g_ext_decam_aper', 'flux_i_ext_decam_aper', 'flux_r_ext_decam_aper']
 
     # only relevant columns
-    relevant_cols = ['object_id', 'right_ascension', 'declination', 'gaia_id', 'segmentation_area', 'flux_segmentation', 'flux_detection_total', vis_flux_col, 'mumax_minus_mag', 'mu_max', 'ellipticity', 'kron_radius', 'segmentation_map_id', ext_cols]
-    df = df[relevant_cols]    
+    relevant_cols = ['object_id', 'right_ascension', 'declination', 'gaia_id', 'segmentation_area', 'flux_segmentation', 'flux_detection_total', vis_flux_col, 'mumax_minus_mag', 'mu_max', 'ellipticity', 'kron_radius', 'segmentation_map_id'] + ext_cols
+    df = df[relevant_cols]
 
     # apply as pandas cuts
     df = df.query(vis_flux_col + ' > 0')  # non-negative vis flux
