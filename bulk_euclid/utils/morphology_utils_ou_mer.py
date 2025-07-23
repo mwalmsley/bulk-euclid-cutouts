@@ -156,7 +156,7 @@ def get_cutout_mosaic_coordinates(mosaic, source, buff, allow_radius_estimate=Fa
 def estimate_source_r_max(source: pd.Series):
     intercept = -0.35048866
     # make source keys lower case to match the catalog
-    source = source.str.lower()
+    # source = source.str.lower()
     coefs = {'log_segmentation_area': 0.506900163942416, 'ellipticity': 0.2405883433225405, 'log_kron_radius': 0.11148176647655159}
     log_r_max_estimate = intercept + sum([source[key] * coefs[key] for key in coefs.keys()])
     assert not np.isnan(log_r_max_estimate), f'NaN in log_r_max_estimate for source {source}'
