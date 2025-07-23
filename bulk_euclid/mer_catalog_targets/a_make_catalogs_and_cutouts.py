@@ -13,7 +13,7 @@ from bulk_euclid.utils import pipeline_utils
 
 
 def run(cfg):
-    pipeline_utils.login(cfg)
+    # pipeline_utils.login(cfg)
     cfg = create_folders(cfg)
 
     tiles = pipeline_utils.find_available_tiles(cfg)
