@@ -101,7 +101,7 @@ def find_available_tiles(cfg: OmegaConf):
     tile_indices = sorted(tile_indices)
     logging.info(f'Found {len(tile_indices)} tiles e.g. {tile_indices[0]}')
 
-    if len(tile_indices) > cfg.max_tiles:
+    if cfg.max_tiles and len(tile_indices) > cfg.max_tiles:
         logging.info(f'Randomly subselecting {cfg.max_tiles} tiles')
         tile_indices = np.random.choice(tile_indices, cfg.max_tiles, replace=False).tolist()
 
