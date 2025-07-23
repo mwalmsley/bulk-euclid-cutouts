@@ -237,16 +237,11 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
     # print(tile_galaxies.columns.values)
 
 
-    #     if cfg.add_bkg:
-    #         bkg_data = fits.getdata(tile_galaxies[f'{band.lower()}_bkg_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
-    #         tile_data[band] = tile_data[band] + bkg_data
 
 
     # assume we always have VIS and use BGSUB tile as our reference for WCS etc
     header = fits.getheader(tile.VIS.BGSUB.path)
 
-    
-    
     tile_wcs = WCS(header)
 
     for i, galaxy in tile_galaxies.iterrows():
@@ -267,20 +262,34 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
         cutout_by_band = {}
         for band in cfg.bands:  
 
-            # e.g. tile.NIR_Y.BGSUB.data
-            band_data = tile.__dict__[band].BGSUB.data
+            # create the flux array
 
-            if cfg.field_of_view == 'galaxy_zoo':
+            # background-subtracted flux
+            # e.g. tile.NIR_Y.BGSUB.data
+            flux = tile.__dict__[band].BGSUB.data
+            if cfg.add_bkg:  # twice as long to make cutouts and very very small effect for sources smaller than a few tens of arcsec
+                subtracted_bkg = tile.__dict__[band].BGMOD.data
+                flux = flux + subtracted_bkg
+
+            # set field of view for the slice from the flux array
+
+            if cfg.field_of_view == 'galaxy_zoo':  # use segmentation map sizing
                 # TODO this bit should use Cutout2D instead
-                galaxy.index = galaxy.index.str.upper()  # for the radius estimate
-                cutout_by_band[band] = m_utils.extract_cutout_from_array(band_data, galaxy, buff=0, allow_radius_estimate=True)
-                galaxy.index = galaxy.index.str.lower()
-            else:
-                if cfg.field_of_view == 'space_warps':
-                    cfg.field_of_view = 20  # arcsec
+                # galaxy.index = galaxy.index.str.upper()  # for the radius estimate
+                # cutout_by_band[band] = m_utils.extract_cutout_from_array(flux, galaxy, buff=0, allow_radius_estimate=True)
+                # galaxy.index = galaxy.index.str.lower()
+                source_r_max = m_utils.estimate_source_r_max(galaxy)
+                field_of_view = source_r_max * 2  # arcsec, twice the radius
+                
+            elif cfg.field_of_view == 'space_warps':  # use standard fixed sizing of 20 arcsec
+                field_of_view = 20  # arcsec
+            else:  # assume cfg.field_of_view is a number
                 assert isinstance(cfg.field_of_view, float) or isinstance(cfg.field_of_view, int)
-                # TODO once Cutout2D throughout, I can preserve the header, for now, do .data instead
-                cutout_by_band[band] = Cutout2D(band_data, (x_center, y_center), cfg.field_of_view * u.arcsec, wcs=tile_wcs).data
+                field_of_view = cfg.field_of_view  # arcsec
+                
+            # TODO I could preserve the header, for now, do .data instead
+            # use cutout2D to apply the slice
+            cutout_by_band[band] = Cutout2D(flux, (x_center, y_center), field_of_view * u.arcsec, wcs=tile_wcs).data
 
         
         if cfg.jpg_outputs:  # anything in this list
@@ -290,10 +299,6 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
             # e.g. jpg_loc/generic/102159774/102159774_123456_generic.jpg
 
             try:
-                # if i == 0:
-                #     cutout_subdir = os.path.dirname(generic_loc)
-                #     if not os.path.isdir(cutout_subdir):
-                #         os.makedirs(cutout_subdir)
                 
                 # we expect to find the outputs here, see cutout_utils.py
                 # skip if all exist and not overwriting. If any missing, don't skip.
