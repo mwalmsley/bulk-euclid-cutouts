@@ -265,19 +265,22 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
         galaxy['log_kron_radius'] = np.log10(galaxy['kron_radius'])
 
         cutout_by_band = {}
-        for band in cfg.bands:
+        for band in cfg.bands:  
+
+            # e.g. tile.NIR_Y.BGSUB.data
+            band_data = tile.__dict__[band].BGSUB.data
 
             if cfg.field_of_view == 'galaxy_zoo':
                 # TODO this bit should use Cutout2D instead
                 galaxy.index = galaxy.index.str.upper()  # for the radius estimate
-                cutout_by_band[band] = m_utils.extract_cutout_from_array(tile.__dict__[band].data, galaxy, buff=0, allow_radius_estimate=True)
+                cutout_by_band[band] = m_utils.extract_cutout_from_array(band_data, galaxy, buff=0, allow_radius_estimate=True)
                 galaxy.index = galaxy.index.str.lower()
             else:
                 if cfg.field_of_view == 'space_warps':
                     cfg.field_of_view = 20  # arcsec
                 assert isinstance(cfg.field_of_view, float) or isinstance(cfg.field_of_view, int)
                 # TODO once Cutout2D throughout, I can preserve the header, for now, do .data instead
-                cutout_by_band[band] = Cutout2D(tile.__dict__[band].data, (x_center, y_center), cfg.field_of_view * u.arcsec, wcs=tile_wcs).data
+                cutout_by_band[band] = Cutout2D(band_data, (x_center, y_center), cfg.field_of_view * u.arcsec, wcs=tile_wcs).data
 
         
         if cfg.jpg_outputs:  # anything in this list
