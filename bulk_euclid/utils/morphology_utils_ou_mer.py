@@ -267,3 +267,25 @@ def load_wcs_from_file(filename):
     # Parse the WCS keywords in the primary HDU
     w = wcs.WCS(hdulist[0].header)
     return w
+
+
+# def estimate_source_r_max_old(source):
+#     intercept = -0.35048866
+#     coefs = {'LOG_SEGMENTATION_AREA': 0.506900163942416, 'ELLIPTICITY': 0.2405883433225405, 'LOG_KRON_RADIUS': 0.11148176647655159}
+#     log_r_max_estimate = intercept + source['LOG_SEGMENTATION_AREA'] * coefs['LOG_SEGMENTATION_AREA'] + source['ELLIPTICITY'] * coefs['ELLIPTICITY'] + source['LOG_KRON_RADIUS'] * coefs['LOG_KRON_RADIUS']
+#     return 10 ** log_r_max_estimate
+
+if __name__ == '__main__':
+    
+    galaxy = pd.Series({
+        'segmentation_area': 32.0,
+        'ellipticity': 0.299203,
+        'kron_radius': 11.333019
+    })
+    galaxy['log_segmentation_area'] = np.log10(galaxy['segmentation_area'])
+    galaxy['log_kron_radius'] = np.log10(galaxy['kron_radius'])
+
+    for col in galaxy.index:
+        galaxy[col.upper()] = galaxy[col]
+
+    print(estimate_source_r_max(galaxy), estimate_source_r_max_old(galaxy))

@@ -279,17 +279,19 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
                 # cutout_by_band[band] = m_utils.extract_cutout_from_array(flux, galaxy, buff=0, allow_radius_estimate=True)
                 # galaxy.index = galaxy.index.str.lower()
                 source_r_max = m_utils.estimate_source_r_max(galaxy)
-                field_of_view = source_r_max * 2  # arcsec, twice the radius
+                # source_r_max is half cutout width in pixels
+                # so source_r_max * 2 / 10 is cutout width in arcsec
+                field_of_view = source_r_max * 0.2 * u.arcsec  
                 
             elif cfg.field_of_view == 'space_warps':  # use standard fixed sizing of 20 arcsec
-                field_of_view = 20  # arcsec
+                field_of_view = 20 * u.arcsec
             else:  # assume cfg.field_of_view is a number
                 assert isinstance(cfg.field_of_view, float) or isinstance(cfg.field_of_view, int)
-                field_of_view = cfg.field_of_view  # arcsec
+                field_of_view = cfg.field_of_view  * u.arcsec
                 
             # TODO I could preserve the header, for now, do .data instead
             # use cutout2D to apply the slice
-            cutout_by_band[band] = Cutout2D(flux, (x_center, y_center), field_of_view * u.arcsec, wcs=tile_wcs).data
+            cutout_by_band[band] = Cutout2D(flux, (x_center, y_center), field_of_view, wcs=tile_wcs).data
 
         
         if cfg.jpg_outputs:  # anything in this list
