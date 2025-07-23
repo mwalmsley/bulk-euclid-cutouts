@@ -116,7 +116,7 @@ def make_volunteer_cutouts(cfg: OmegaConf, tile: pipeline_utils.Tile):
         relevant_tile_sources = pd.read_csv(tile_catalog_loc)
 
     add_cutout_paths(cfg, relevant_tile_sources)
-    pipeline_utils.save_cutouts(cfg, relevant_tile_sources)
+    pipeline_utils.save_cutouts(cfg, tile, relevant_tile_sources)
 
 
 
