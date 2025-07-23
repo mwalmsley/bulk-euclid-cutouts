@@ -153,10 +153,12 @@ def get_cutout_mosaic_coordinates(mosaic, source, buff, allow_radius_estimate=Fa
     return x_center, y_center, r1, r2, c1, c2
 
 
-def estimate_source_r_max(source):
+def estimate_source_r_max(source: pd.Series):
     intercept = -0.35048866
-    coefs = {'LOG_SEGMENTATION_AREA': 0.506900163942416, 'ELLIPTICITY': 0.2405883433225405, 'LOG_KRON_RADIUS': 0.11148176647655159}
-    log_r_max_estimate = intercept + source['LOG_SEGMENTATION_AREA'] * coefs['LOG_SEGMENTATION_AREA'] + source['ELLIPTICITY'] * coefs['ELLIPTICITY'] + source['LOG_KRON_RADIUS'] * coefs['LOG_KRON_RADIUS']
+    # make source keys lower case to match the catalog
+    source = source.str.lower()
+    coefs = {'log_segmentation_area': 0.506900163942416, 'ellipticity': 0.2405883433225405, 'log_kron_radius': 0.11148176647655159}
+    log_r_max_estimate = intercept + sum(source[key] * coefs[key] for key in coefs.keys())
     return 10 ** log_r_max_estimate
 
 
