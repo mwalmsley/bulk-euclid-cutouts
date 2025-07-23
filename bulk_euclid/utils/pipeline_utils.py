@@ -45,17 +45,11 @@ class Mosaic:
 
     @property # public attr for accessing _data
     def data(self):
-        if self.path and not hasattr(self, '_data'):
-            self.load()
-        return getattr(self, '_data', None)
-
-    def load(self):
-        # triggers datalabs read
-        if self.path:
+        if self.path and self._data is None:
             assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
             self._data = load_observation_fits(self.path)
-        # else:
-            # logging.warning('Mosaic path is empty, no data loaded')
+        return self._data
+
 
 @dataclass
 class Observation:
