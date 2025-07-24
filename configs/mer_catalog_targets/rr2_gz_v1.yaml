@@ -8,7 +8,7 @@ bands: ['VIS', 'NIR_Y']
 data_products: ['BGSUB']  # 'BGMOD', 'RMS'
 add_bkg: False
 
-max_tiles: null
+max_tiles: 100
 refresh_catalogs: False
 
 seed: 1
