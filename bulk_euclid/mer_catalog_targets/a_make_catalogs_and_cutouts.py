@@ -19,14 +19,23 @@ def run(cfg):
     tiles = pipeline_utils.find_available_tiles(cfg)
 
     logging.info(f'Tiles to make cutouts from: {len(tiles)}')
-    for tile_n, tile in enumerate(tiles[55:]):
-        logging.info(f'tile {tile.tile_index}: {tile_n} of {len(tiles)}')
+
+
+    # tiles = tiles[55:] # temp debug
+
+    tiles = sorted(tiles, key=lambda x: x.tile_index)  # sort by tile index, so that the order is deterministic
+
+    while len(tiles) > 0:
+        tile = tiles.pop()
+
+        logging.info(f'tile {tile.tile_index}, plus {len(tiles)} left')
         try:
             make_volunteer_cutouts(cfg, tile)
-
         except AssertionError as e:
             logging.warning('Skipping tile {} due to fatal error'.format(tile.tile_index))
             logging.warning(e)
+
+        del tile  # free memory explicitly
 
     logging.info('Cutout creation complete')
     
