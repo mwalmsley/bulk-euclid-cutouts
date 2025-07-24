@@ -19,7 +19,7 @@ def run(cfg):
     tiles = pipeline_utils.find_available_tiles(cfg)
 
     logging.info(f'Tiles to make cutouts from: {len(tiles)}')
-    for tile_n, tile in enumerate(tiles):
+    for tile_n, tile in enumerate(tiles[20:]):
         logging.info(f'tile {tile.tile_index}: {tile_n} of {len(tiles)}')
         try:
             make_volunteer_cutouts(cfg, tile)
@@ -115,6 +115,10 @@ def make_volunteer_cutouts(cfg: OmegaConf, tile: pipeline_utils.Tile):
     else:
         logging.info(f'Catalog already exists at {tile_catalog_loc}, loading')
         relevant_tile_sources = pd.read_csv(tile_catalog_loc)
+
+    if relevant_tile_sources.empty:
+        logging.warning(f'Tile {tile.tile_index} has no relevant sources, skipping cutouts')
+        return
 
     add_cutout_paths(cfg, relevant_tile_sources)
     pipeline_utils.save_cutouts(cfg, tile, relevant_tile_sources)

@@ -21,7 +21,7 @@ jpg_outputs: [
   ]   # minimal, for ML
 
 fits_outputs: false
-overwrite_jpg: true
+overwrite_jpg: false
 overwrite_fits: false
 jpg_quality: 98
 use_fits_origin_for_jpg: true
