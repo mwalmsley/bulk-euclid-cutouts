@@ -19,7 +19,7 @@ def run(cfg):
     tiles = pipeline_utils.find_available_tiles(cfg)
 
     logging.info(f'Tiles to make cutouts from: {len(tiles)}')
-    for tile_n, tile in enumerate(tiles[20:]):
+    for tile_n, tile in enumerate(tiles[55:]):
         logging.info(f'tile {tile.tile_index}: {tile_n} of {len(tiles)}')
         try:
             make_volunteer_cutouts(cfg, tile)
