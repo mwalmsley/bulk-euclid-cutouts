@@ -25,7 +25,7 @@ Open a terminal via Jupyter (NOT within a notebook). Navigate to the folder into
 
     git clone git@github.com:mwalmsley/bulk-euclid-cutouts.git
     cd bulk-euclid-cutouts
-    git checkout external-targets
+    git checkout dev  # optional
 
 Install a few missing dependencies (omegaconf, sklearn)
 

@@ -26,14 +26,14 @@ import joblib
 
 logging.warning("""
                 Setting up query cache at ./joblib. 
-                Previous SQL queries for the list of all tiles, and for the list of sources within a given tile, will be re-used for speed. 
                 Delete this folder to refresh the cache and make new queries.
-                This is CRUCIAL if you switch Euclid environments e.g. from IDR (Q1) to OTF or REG.
+                This is CRUCIAL if the underlying data changes, e.g. new tiles are added.
                 """
 )
 mem = joblib.Memory('.', verbose=False)
 
 
+# setting up like nested json db, with this schema
 
 @dataclass
 class Mosaic:
@@ -49,7 +49,6 @@ class Mosaic:
             assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
             self._data = load_observation_fits(self.path)
         return self._data
-
 
 @dataclass
 class Observation:
@@ -75,8 +74,7 @@ class Tile:
     # mer_morphology_catalog: str = None
 
 
-# setting up like nested json db, with this schema
-
+@mem.cache # again we assume the release directory changes rarely, so caching is fine
 def get_path_if_exists(search_str: str) -> str:
     """Check if a path exists, return it if it does, else return None."""
     try:
@@ -107,24 +105,7 @@ def find_available_tiles(cfg: OmegaConf):
 
     tiles = []
     for tile_index in tile_indices:
-        tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
-        tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
-        # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
-        for (instrument, band) in [('VIS', 'VIS'), ('NISP', 'NIR_Y'), ('NISP', 'NIR_J'), ('NISP', 'NIR_H')]:  # could add EXT here
-            band_w_hyphen = band.replace('_', '-')  # python can't use hyphens in variable names
-            mosaic = Observation(band=band)
-            mosaic.instrument = instrument
-
-            mosaic.BGMOD = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band_w_hyphen}_TILE{tile_index}-*.fits'))
-            mosaic.BGSUB = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGSUB-MOSAIC-{band_w_hyphen}_TILE{tile_index}-*.fits'))
-            mosaic.RMS = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_MOSAIC-{band_w_hyphen}-RMS_TILE{tile_index}-*.fits'))
-            mosaic.PSF = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_CATALOG-PSF-{band_w_hyphen}_TILE{tile_index}-*.fits'))
-
-            # for now, only use if all required data products exist
-            if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy.
-                setattr(tile, band, mosaic)
-            else:
-                logging.warning(f'Skipping mosaic as not all data products exist, for tile {tile_index}, instrument {instrument}, band {band}: {mosaic}')
+        tile = create_tile_object(cfg, release_dir, tile_index)
         tiles.append(tile)
 
     if len(tiles) == 0:
@@ -134,6 +115,28 @@ def find_available_tiles(cfg: OmegaConf):
     logging.info('Tile list created with {} tiles'.format(len(tiles)))
     
     return tiles
+
+@mem.cache  # we assume the release directory changes rarely, so caching is fine
+def create_tile_object(cfg, release_dir, tile_index):
+    tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
+    tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
+        # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
+    for (instrument, band) in [('VIS', 'VIS'), ('NISP', 'NIR_Y'), ('NISP', 'NIR_J'), ('NISP', 'NIR_H')]:  # could add EXT here
+        band_w_hyphen = band.replace('_', '-')  # python can't use hyphens in variable names
+        mosaic = Observation(band=band)
+        mosaic.instrument = instrument
+
+        mosaic.BGMOD = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band_w_hyphen}_TILE{tile_index}-*.fits'))
+        mosaic.BGSUB = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGSUB-MOSAIC-{band_w_hyphen}_TILE{tile_index}-*.fits'))
+        mosaic.RMS = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_MOSAIC-{band_w_hyphen}-RMS_TILE{tile_index}-*.fits'))
+        mosaic.PSF = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_CATALOG-PSF-{band_w_hyphen}_TILE{tile_index}-*.fits'))
+
+            # for now, only use if all required data products exist
+        if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy.
+            setattr(tile, band, mosaic)
+        else:
+            logging.warning(f'Skipping mosaic as not all data products exist, for tile {tile_index}, instrument {instrument}, band {band}: {mosaic}')
+    return tile
 
 
 
@@ -235,18 +238,13 @@ def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, o
 
 
 def load_observation_fits(mosaic_path: str, header: bool = False) -> np.ndarray:
+    logging.debug(f'Loading mosaic from {mosaic_path}')
     return fits.getdata(mosaic_path, header=header, memmap=False, decompress_in_memory=False)  # type: ignore
     # https://docs.astropy.org/en/latest/io/fits/api/files.html
     # memmap allows access to small segments without loading the whole file into memory
     # decompress_in_memory probably has no effect on uncompressed .fits? 
 
 def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
-    # assumes the tile has been downloaded and catalogued
-    # assumes tile_galaxies includes all/only the bands to load and potentially include
-    # print(tile_galaxies.columns.values)
-
-
-
 
     # assume we always have VIS and use BGSUB tile as our reference for WCS etc
     header = fits.getheader(tile.VIS.BGSUB.path)
@@ -255,7 +253,7 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
 
     for i, galaxy in tile_galaxies.iterrows():
         
-        if i % 1000 == 0:
+        if i % 1000 == 0 or i == 1 or i == 2:  # useful for checking how long it takes to load mosaics
             logging.info(f'galaxy {i} of {len(tile_galaxies)}')
                   
         c = SkyCoord(galaxy['right_ascension'], galaxy['declination'], frame='icrs', unit="deg")
@@ -283,10 +281,6 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
             # set field of view for the slice from the flux array
 
             if cfg.field_of_view == 'galaxy_zoo':  # use segmentation map sizing
-                # TODO this bit should use Cutout2D instead
-                # galaxy.index = galaxy.index.str.upper()  # for the radius estimate
-                # cutout_by_band[band] = m_utils.extract_cutout_from_array(flux, galaxy, buff=0, allow_radius_estimate=True)
-                # galaxy.index = galaxy.index.str.lower()
                 source_r_max = m_utils.estimate_source_r_max(galaxy)
                 # source_r_max is half cutout width in pixels
                 # so source_r_max * 2 / 10 is cutout width in arcsec
