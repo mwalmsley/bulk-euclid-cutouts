@@ -209,6 +209,10 @@ def find_relevant_sources_in_tile(cfg, df: pd.DataFrame) -> pd.DataFrame:
     df['mag_segmentation'] = -2.5 * np.log10(df['flux_segmentation']) + 23.9  # for convenience
     df['tile_index'] = tile_index  # add tile index column
 
+    if df.empty:
+        logging.warning('No relevant sources found in tile, returning empty DataFrame')
+        return df
+
     df = df.sort_values(by='object_id')  # sort by object id, for consistency
     df = df.reset_index(drop=True)
     logging.info(f"Found {len(df)} relevant sources")
