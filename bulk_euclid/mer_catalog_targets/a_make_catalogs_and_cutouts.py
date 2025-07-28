@@ -114,6 +114,9 @@ def make_volunteer_cutouts(cfg: OmegaConf, tile: pipeline_utils.Tile):
         # all columns are upper, make lower
         all_tile_sources.columns = all_tile_sources.columns.str.lower()
         relevant_tile_sources = pipeline_utils.find_relevant_sources_in_tile(cfg, df=all_tile_sources)
+        if relevant_tile_sources.empty:
+            logging.warning(f'Tile {tile.tile_index} has no relevant sources, skipping cutouts')
+            return
         logging.info(relevant_tile_sources[['right_ascension', 'declination']].mean())
         add_cutout_paths(cfg, relevant_tile_sources)  # add save locs here, useful later
         relevant_tile_sources.to_csv(tile_catalog_loc, index=False)
@@ -121,10 +124,9 @@ def make_volunteer_cutouts(cfg: OmegaConf, tile: pipeline_utils.Tile):
     else:
         logging.info(f'Catalog already exists at {tile_catalog_loc}, loading')
         relevant_tile_sources = pd.read_csv(tile_catalog_loc)
-
-    if relevant_tile_sources.empty:
-        logging.warning(f'Tile {tile.tile_index} has no relevant sources, skipping cutouts')
-        return
+        if relevant_tile_sources.empty:
+            logging.warning(f'Tile {tile.tile_index} has no relevant sources, skipping cutouts')
+            return
 
     add_cutout_paths(cfg, relevant_tile_sources)  # update save locs just in case
     pipeline_utils.save_cutouts(cfg, tile, relevant_tile_sources)
