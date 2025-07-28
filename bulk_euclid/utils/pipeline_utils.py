@@ -212,6 +212,7 @@ def find_relevant_sources_in_tile(cfg, df: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values(by='object_id')  # sort by object id, for consistency
     df = df.reset_index(drop=True)
     logging.info(f"Found {len(df)} relevant sources")
+    logging.info(f'First galaxy: {df.iloc[0]["object_id"]}, tile {df.iloc[0]["tile_index"]}')
 
     return df
 
@@ -256,7 +257,7 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
     for i, galaxy in tile_galaxies.iterrows():
         
         if i % 1000 == 0 or i == 1 or i == 2:  # useful for checking how long it takes to load mosaics
-            logging.info(f'galaxy {i} of {len(tile_galaxies)}')
+            logging.info(f'galaxy {i} of {len(tile_galaxies)}, {galaxy["object_id"]} in tile {tile.tile_index}')
                   
         c = SkyCoord(galaxy['right_ascension'], galaxy['declination'], frame='icrs', unit="deg")
         x_center, y_center = tile_wcs.world_to_pixel(c)
