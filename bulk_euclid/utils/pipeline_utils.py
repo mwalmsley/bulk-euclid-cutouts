@@ -280,6 +280,7 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
 
             # set field of view for the slice from the flux array
 
+            logging.debug('Getting FoV')
             if cfg.field_of_view == 'galaxy_zoo':  # use segmentation map sizing
                 source_r_max = m_utils.estimate_source_r_max(galaxy)
                 # source_r_max is half cutout width in pixels
@@ -294,6 +295,7 @@ def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
                 
             # TODO I could preserve the header, for now, do .data instead
             # use cutout2D to apply the slice
+            logging.debug(f'Creating cutout for {band} band with field of view {field_of_view}')
             cutout_by_band[band] = Cutout2D(flux, (x_center, y_center), field_of_view, wcs=tile_wcs).data
 
         

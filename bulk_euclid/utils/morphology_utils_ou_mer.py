@@ -159,7 +159,7 @@ def estimate_source_r_max(source: pd.Series):
     # source = source.str.lower()
     coefs = {'log_segmentation_area': 0.506900163942416, 'ellipticity': 0.2405883433225405, 'log_kron_radius': 0.11148176647655159}
     log_r_max_estimate = intercept + sum([source[key] * coefs[key] for key in coefs.keys()])
-    assert not np.isnan(log_r_max_estimate), f'NaN in log_r_max_estimate for source {source}'
+    assert not np.isnan(log_r_max_estimate), f'NaN in log_r_max_estimate for source {source["log_segmentation_area"]}, {source["ellipticity"]}, {source["log_kron_radius"]}'
     return 10 ** log_r_max_estimate
 
 
