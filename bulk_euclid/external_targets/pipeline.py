@@ -182,13 +182,11 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
         e: Download error (e.g. when SAS is temporarily down)
     """
     unique_tiles = targets_with_tiles["tile_index"].unique()
-    # logging.info('Auxillary products requested: {}'.format(cfg.auxillary_products))
+    logging.info('Data products requested: {}'.format(cfg.data_products))
 
     for tile_n, tile_index in enumerate(unique_tiles):
         logging.info(f'Tile {tile_index}, {tile_n} of {len(unique_tiles)}')
         try:
-            # dict_of_locs = download_all_data_at_tile_index(cfg, tile_index)
-            # logging.debug(f"Downloaded: {dict_of_locs}")
 
             tile = pipeline_utils.create_tile_object(cfg, tile_index)
 
