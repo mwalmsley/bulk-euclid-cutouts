@@ -424,24 +424,24 @@ def save_jpg_cutout(cfg: OmegaConf, target_data: dict, save_loc: str):
     #     os.mkdir(os.path.dirname(save_loc))
 
     assert 'VIS' in target_data.keys()
-    vis_im: np.ndarray = target_data['VIS']['FLUX'].data
+    vis_im: np.ndarray = target_data['VIS']['BGSUB'].data
 
     if 'NIR_Y' in target_data.keys():
-        y_im: np.ndarray = target_data['NIR_Y']['FLUX'].data
+        y_im: np.ndarray = target_data['NIR_Y']['BGSUB'].data
     else:
         y_im = None
 
     if 'NIR_J' in target_data.keys():
-        j_im: np.ndarray = target_data['NIR_J']['FLUX'].data
+        j_im: np.ndarray = target_data['NIR_J']['BGSUB'].data
     else:
         j_im = None
 
     if cfg.add_bkg:
-        vis_im = vis_im + target_data['VIS']['MERBKG'].data
+        vis_im = vis_im + target_data['VIS']['BGMOD'].data
         if y_im is not None:
-            y_im = y_im + target_data['NIR_Y']['MERBKG'].data
+            y_im = y_im + target_data['NIR_Y']['BGMOD'].data
         if j_im is not None:
-            j_im = j_im + target_data['NIR_J']['MERBKG'].data
+            j_im = j_im + target_data['NIR_J']['BGMOD'].data
 
     expected_save_locs = [save_loc.replace('generic', output_format) for output_format in cfg.jpg_outputs]
     logging.debug(expected_save_locs)
