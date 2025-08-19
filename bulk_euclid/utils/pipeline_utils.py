@@ -39,16 +39,26 @@ mem = joblib.Memory('.', verbose=False)
 class Mosaic:
     path: str
     _data: Optional[np.ndarray] = None  # hidden attr, loaded on demand and then stored
+    _header: Optional[fits.Header] = None  # similarly
 
     # def __post_init__(self):
         # this would be better but it triggers a super slow datalabs first read
 
     @property # public attr for accessing _data
     def data(self):
-        if self.path and self._data is None:
-            assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
-            self._data = load_observation_fits(self.path)
+        if self._data is None:
+            self.load()
         return self._data
+    
+    @property
+    def header(self):
+        if self._header is None:
+            self.load()
+        return self._header
+    
+    def load(self):
+        assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
+        self._data, self._header = load_observation_fits(self.path, header=True)  # may as well always load header
 
 @dataclass
 class Observation:
