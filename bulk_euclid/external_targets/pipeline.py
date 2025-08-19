@@ -294,21 +294,22 @@ def get_cutout_data_for_band(cfg: OmegaConf, observation: pipeline_utils.Observa
     Returns:
         list: of dicts, one per target. Each dict has keys like "BGSUB", "MERPSF", "MERRMS", "MERBKG", and values of Cutout2D instances.
     """
-    flux_data, flux_header = fits.getdata(observation.BGSUB, header=True)
+    flux_loc = observation.BGSUB.path
+    flux_data, flux_header = fits.getdata(flux_loc, header=True)
     flux_wcs = WCS(flux_header)
 
     if "RMS" in cfg.data_products:
-        rms_loc = observation.RMS
+        rms_loc = observation.RMS.path
         rms_data, rms_header = fits.getdata(rms_loc, header=True)
         rms_wcs = WCS(rms_header)
 
     if "BGMOD" in cfg.data_products:
-        bkg_loc = observation.BGMOD
+        bkg_loc = observation.BGMOD.path
         bkg_data, bkg_header = fits.getdata(bkg_loc, header=True)
         bkg_wcs = WCS(bkg_header)
 
     if "PSF" in cfg.data_products:
-        psf_loc = observation.PSF
+        psf_loc = observation.PSF.path
         psf_tile, psf_header = fits.getdata(psf_loc, ext=1, header=True)
         stamp_size = psf_header["STMPSIZE"]
         psf_table = Table.read(fits.open(psf_loc)[2]).to_pandas()
