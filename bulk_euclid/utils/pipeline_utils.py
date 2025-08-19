@@ -87,25 +87,11 @@ def find_available_tiles(cfg: OmegaConf):
 
     # tiles = pipeline_utils.get_tiles_in_survey(bands=cfg.bands, release_name=cfg.release_name)  # F-003_240321 recently appeared
 
-    if cfg.release_name == 'Q1_R1':
-        release_dir = '/media/home/data/euclid_q1/Q1_R1'
-    elif cfg.release_name == 'RR2_R1':
-        release_dir = '/media/home/data/euclid_reg/REGREPROC2_R1'
-    else:
-        raise ValueError('Release name not recognised for tile search: {}'.format(cfg.release_name))
-
-    # all subfolders in the release_dir, each name is a tile_index
-    tile_indices = [ int(os.path.basename(f.path)) for f in os.scandir(release_dir + '/MER') if f.is_dir() ]
-    tile_indices = sorted(tile_indices)
-    logging.info(f'Found {len(tile_indices)} tiles e.g. {tile_indices[0]}')
-
-    if cfg.max_tiles and len(tile_indices) > cfg.max_tiles:
-        logging.info(f'Randomly subselecting {cfg.max_tiles} tiles')
-        tile_indices = np.random.choice(tile_indices, cfg.max_tiles, replace=False).tolist()
+    tile_indices = get_tile_indices_in_release(cfg)
 
     tiles = []
     for tile_index in tile_indices:
-        tile = create_tile_object(cfg, release_dir, tile_index)
+        tile = create_tile_object(cfg, tile_index)
         tiles.append(tile)
 
     if len(tiles) == 0:
@@ -116,8 +102,34 @@ def find_available_tiles(cfg: OmegaConf):
     
     return tiles
 
+
+def get_tile_indices_in_release(cfg):
+    release_dir = get_datalabs_release_dir(cfg)
+
+    # all subfolders in the release_dir, each name is a tile_index
+    tile_indices = [ int(os.path.basename(f.path)) for f in os.scandir(release_dir + '/MER') if f.is_dir() ]
+    tile_indices = sorted(tile_indices)
+    logging.info(f'Found {len(tile_indices)} tiles e.g. {tile_indices[0]}')
+
+    if cfg.max_tiles and len(tile_indices) > cfg.max_tiles:
+        logging.info(f'Randomly subselecting {cfg.max_tiles} tiles')
+        tile_indices = np.random.choice(tile_indices, cfg.max_tiles, replace=False).tolist()
+    return tile_indices
+
+@mem.cache  # almost never changes
+def get_datalabs_release_dir(cfg):
+    if cfg.release_name == 'Q1_R1':
+        release_dir = '/media/home/data/euclid_q1/Q1_R1'
+    elif cfg.release_name == 'RR2_R1':
+        release_dir = '/media/home/data/euclid_reg/REGREPROC2_R1'
+    else:
+        raise ValueError('Release name not recognised for tile search: {}'.format(cfg.release_name))
+    return release_dir
+
 @mem.cache  # we assume the release directory changes rarely, so caching is fine
-def create_tile_object(cfg, release_dir, tile_index):
+def create_tile_object(cfg, tile_index):
+
+    release_dir = get_datalabs_release_dir(cfg)
     tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
     tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
         # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
