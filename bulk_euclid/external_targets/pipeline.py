@@ -159,6 +159,11 @@ def get_matching_tile_indices(ra: np.ndarray, dec: np.ndarray, healpix_array: np
     hp_object_indices = healpy.pixelfunc.ang2pix(healpy.order2nside(moc_order), hp_theta, hp_phi, nest=True)
 
     tile_index: np.ndarray = healpix_array[hp_object_indices]
+
+    # sometimes the tile index is big endian and datalabs is little endian, byte swap to ensure little endian
+    if tile_index.dtype == np.dtype('>i4'):
+        tile_index = tile_index.byteswap().newbyteorder()
+
     return tile_index
 
     # get all VIS tiles in that release (e.g. F-006 for Wide)
