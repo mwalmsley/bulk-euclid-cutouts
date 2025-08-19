@@ -58,7 +58,7 @@ class Mosaic:
     
     def load(self):
         assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
-        self._data, self._header = load_observation_fits(self.path, header=True)  # may as well always load header
+        self._data, self._header = load_observation_fits(self.path)  # may as well always load header
 
 @dataclass
 class Observation:
@@ -264,11 +264,12 @@ def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, o
     return os.path.join(base_dir, subdir, filename_without_format + '.' + output_format)
 
 
-def load_observation_fits(mosaic_path: str, header: bool = False) -> np.ndarray:
+def load_observation_fits(mosaic_path: str) -> tuple[np.ndarray, fits.Header]:
+    # annoyingly this does not work for PSF
     logging.debug(f'Loading mosaic {os.path.basename(mosaic_path)} from {mosaic_path}')
-    mosaic = fits.getdata(mosaic_path, header=header, memmap=False, decompress_in_memory=False)  # type: ignore
+    (mosaic, header) = fits.getdata(mosaic_path, header=True, memmap=False, decompress_in_memory=False)  # type: ignore
     logging.debug(f'Loaded mosaic {os.path.basename(mosaic_path)}, shape: {mosaic.shape}')
-    return mosaic
+    return mosaic, header
     # https://docs.astropy.org/en/latest/io/fits/api/files.html
     # memmap allows access to small segments without loading the whole file into memory
     # decompress_in_memory probably has no effect on uncompressed .fits? 
