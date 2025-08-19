@@ -12,12 +12,13 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
     # see lensing_cutout_colours.ipynb for a minimal example
 
     # flip to match fits if requested
-    if cfg.use_fits_origin_for_jpg:
-        vis_im = np.flipud(vis_im)
-        if y_im is not None:
-            y_im = np.flipud(y_im)
-        if j_im is not None:
-            j_im = np.flipud(j_im)
+    # NOW DEPRECATED as Cutout2D seems to do this consistently with fits files
+    # if cfg.use_fits_origin_for_jpg:
+    #     vis_im = np.flipud(vis_im)
+    #     if y_im is not None:
+    #         y_im = np.flipud(y_im)
+    #     if j_im is not None:
+    #         j_im = np.flipud(j_im)
 
     if 'generic' not in save_loc:
         logging.debug(f'{save_loc} must include the string "generic" for renaming each cutout format e.g. foo_generic.jpg -> foo_sw_arcsinh_vis_y.jpg')
