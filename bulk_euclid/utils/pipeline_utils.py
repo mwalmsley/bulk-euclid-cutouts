@@ -372,6 +372,31 @@ def create_simple_fits(cfg, galaxy, cutout_by_band):
         fits.HDUList(hdu_list).writeto(galaxy['fits_loc'], overwrite=True)
 
 
+def create_folders(cfg: OmegaConf):
+    cfg.download_dir = cfg.base_dir + '/' + cfg.name
+    cfg.tile_dir = cfg.download_dir + '/tiles'
+    cfg.catalog_dir = cfg.download_dir + '/catalogs'
+
+    cfg.cutout_dir = cfg.download_dir + '/cutouts'
+    cfg.jpg_dir = cfg.cutout_dir + '/jpg'
+    cfg.fits_dir = cfg.cutout_dir + '/fits'
+    
+    cfg.sanity_dir = cfg.download_dir + '/sanity'
+
+    logging.info(f'Saving to {cfg.download_dir}')
+    assert os.path.exists(os.path.dirname(cfg.base_dir))
+    for d in [
+        cfg.base_dir,
+        cfg.download_dir,
+        cfg.tile_dir, 
+        cfg.catalog_dir,
+        cfg.jpg_dir,
+        cfg.sanity_dir 
+        ]:
+        if not os.path.exists(d):
+            os.makedirs(d)
+
+    return cfg
 
 
 

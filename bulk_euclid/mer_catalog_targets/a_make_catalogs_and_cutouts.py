@@ -13,7 +13,7 @@ from bulk_euclid.utils import pipeline_utils
 
 
 def run(cfg):
-    cfg = create_folders(cfg)
+    cfg = pipeline_utils.create_folders(cfg)
 
     tiles = pipeline_utils.find_available_tiles(cfg)
 
@@ -36,31 +36,6 @@ def run(cfg):
     logging.info('Cutout creation complete')
     
 
-def create_folders(cfg: OmegaConf):
-    cfg.download_dir = cfg.base_dir + '/' + cfg.name
-    cfg.tile_dir = cfg.download_dir + '/tiles'
-    cfg.catalog_dir = cfg.download_dir + '/catalogs'
-
-    cfg.cutout_dir = cfg.download_dir + '/cutouts'
-    cfg.jpg_dir = cfg.cutout_dir + '/jpg'
-    cfg.fits_dir = cfg.cutout_dir + '/fits'
-    
-    cfg.sanity_dir = cfg.download_dir + '/sanity'
-
-    logging.info(f'Saving to {cfg.download_dir}')
-    assert os.path.exists(os.path.dirname(cfg.base_dir))
-    for d in [
-        cfg.base_dir,
-        cfg.download_dir,
-        cfg.tile_dir, 
-        cfg.catalog_dir,
-        cfg.jpg_dir,
-        cfg.sanity_dir 
-        ]:
-        if not os.path.exists(d):
-            os.makedirs(d)
-
-    return cfg
 
 
 def tile_passes_filters(tile, cfg):

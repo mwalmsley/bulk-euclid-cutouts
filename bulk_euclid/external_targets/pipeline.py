@@ -11,6 +11,7 @@ import logging
 import os
 import shutil
 
+import healpy
 import numpy as np
 from omegaconf import OmegaConf
 import pandas as pd
@@ -24,6 +25,14 @@ from astropy.table import Table
 
 from bulk_euclid.utils import pipeline_utils, cutout_utils
 
+# create_folders can be shared
+
+# naming of cutouts should be specific to input style
+
+# choosing of tiles is specific to input style (either all, or specified/read)
+
+# loading and saving a list of coordinates from a tile should be shared
+
 
 def run(cfg: OmegaConf):
     """
@@ -36,19 +45,32 @@ def run(cfg: OmegaConf):
     """
     logging.info("Starting external targets pipeline")
 
-    create_folders(cfg)
-    pipeline_utils.login(cfg)
+    pipeline_utils.create_folders(cfg)
 
     required_cols = ['id_str', 'target_ra', 'target_dec', 'target_field_of_view', 'category']
-    external_targets = pd.read_csv(cfg.external_targets_loc, usecols=required_cols)
+    external_targets = pd.read_csv(cfg.external_targets_loc)
+    assert all(col in external_targets.columns for col in required_cols), "Missing required columns in external_targets"
 
     logging.info(external_targets['category'].value_counts())
 
-    # NOW we go!
-    # matching each target with the best tile
-    targets_with_tiles = get_matching_tiles(
-        cfg, external_targets
-    )  
+
+    # is tile_index is included in external targets csv, use those tiles
+    if 'tile_index' in external_targets.columns:
+        logging.info('Using tile_index from external targets')
+        # this will be used to look up which tiles to use
+        # e.g. {'tile_index': [1, 2, 3], 'id_str': ['target1', 'target2', 'target3'], ...}
+        targets_with_tiles = external_targets.dropna(subset=['tile_index'])
+        assert len(targets_with_tiles) > 0, "No targets with tile_index, likely a bug"
+    else:
+        # otherwise, look up which tiles to use via healpix MER tile/coordinate file
+        logging.info('No tile_index in external targets, looking up tiles by coordinates')
+
+        targets_with_tiles = get_matching_tiles(
+            cfg, external_targets
+        )  
+
+
+
     logging.info('Targets per release: \n{}'.format(targets_with_tiles['release_name'].value_counts()))
     logging.info('{} unqiue tiles for {} targets'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles)))
     logging.info(targets_with_tiles['category'].value_counts())
@@ -61,6 +83,7 @@ def run(cfg: OmegaConf):
     make_archive_for_download(cfg)
 
     logging.info("External targets pipeline complete")
+    
 
 
 def get_matching_tiles(
@@ -82,78 +105,15 @@ def get_matching_tiles(
         pd.DataFrame: with columns ['tile_index', 'id_str', 'target_ra', 'target_dec', 'target_field_of_view']
     """
 
-    # get all VIS tiles in that release (e.g. F-006 for Wide)
-    # we'll get all the other bands and auxillary data later. Here we just need the tile index.
-    tiles = pipeline_utils.get_tiles_in_survey(
-        bands=["VIS"], release_name=cfg.release_name
+    logging.info('Loading healpix tile lookup from {}'.format(cfg.healpix_loc))
+    healpix_array = healpy.read_map('tile_index_map.v1.2.fits.gz', nest=True)
+
+    external_targets['tile_index'] = get_matching_tile_indices(
+        external_targets['target_ra'].values,
+        external_targets['target_dec'].values,
+        healpix_array
     )
-    assert len(tiles) > 0
-    logging.info(tiles['release_name'].value_counts())
-    # tiles.to_csv("temp_tiles.csv")  # for debugging
 
-    # add tile FoV
-    # adds cols ['ra_min', 'ra_max', 'dec_min', 'dec_max'] by unpacking the "fov" tile metadata column
-    tiles = pipeline_utils.get_tile_extents_fov(tiles)
-
-    # use KDTree to quickly find the closest tile to each target
-    tile_kdtree = KDTree(tiles[["ra", "dec"]].values)  # coordinates of the tile centers
-
-    # e.g. ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', 'F-003_240612' , 'F-006']
-    if cfg.release_priority is None:
-        release_priority_key = None
-    else:
-        release_priority_key = dict(zip(cfg.release_priority, range(len(cfg.release_priority))))
-        # e.g. {'CALBLOCK_PV-005_R2': 0, 'CALBLOCK_PV-005_R3': 1, ...}
-
-    logging.info('Begin target/tile cross-match')
-    for target_n, target in external_targets.iterrows():
-        # query for all tiles within one degree of target
-        close_tile_indices = tile_kdtree.query_radius(target[['target_ra', 'target_dec']].values.reshape(1, -1), r=1)[0]  # 0 for first row, all results
-        close_tiles = tiles.iloc[close_tile_indices]
-
-        if len(close_tiles) > 0:
-
-            safety_margin = 0.01 # degrees
-
-            # check which close tiles are actually within the FoV
-            # this will fail for tiles on the RA flip boundary, but none yet TODO
-            within_ra = (
-                close_tiles["ra_min"] + safety_margin < target["target_ra"] ) & (
-                target["target_ra"] < close_tiles["ra_max"] - safety_margin
-            )
-            within_dec = (
-                close_tiles["dec_min"] + safety_margin < target["target_dec"] ) & (
-                target["target_dec"] < close_tiles["dec_max"] - safety_margin
-            )
-            close_tiles = close_tiles[within_ra & within_dec]
-
-            if len(close_tiles) > 0:
-                # we have at least one tile within the FoV, which should we use?
-
-                if release_priority_key is None:  
-                    # user did not set a priority order for the tiles in cfg.release_priority
-                    # just pick the first tile that's within the FoV
-                    chosen_tile = close_tiles.iloc[0]
-                else:
-                    # pick in order of release priority
-                    # if the release is not recognised, it gets a priority of -1 (lowest)
-                    # higher priority is a higher number (higher index in cfg.release_priority)
-                    # after sorting (ascending) by release priority, pick the last one for tile with the highest priority
-                    close_tiles['priority'] = close_tiles['release_name'].apply(lambda x: release_priority_key.get(x, -1))
-                    chosen_tile = close_tiles.sort_values(by='priority').iloc[-1]
-                external_targets.loc[target_n, "tile_index"] = chosen_tile["tile_index"]
-                # useful for debugging
-                external_targets.loc[target_n, "release_name"] = chosen_tile['release_name']
-                external_targets.loc[target_n, "tile_ra"] = chosen_tile['ra']
-                external_targets.loc[target_n, "tile_ra_min"] = chosen_tile['ra_min']
-                external_targets.loc[target_n, "tile_ra_max"] = chosen_tile['ra_max']
-                external_targets.loc[target_n, "tile_dec_min"] = chosen_tile['dec_min']
-                external_targets.loc[target_n, "tile_dec_max"] = chosen_tile['dec_max']
-                external_targets.loc[target_n, "tile_dec"] = chosen_tile['dec']
-
-    if 'tile_index' not in external_targets.columns:
-        logging.error('No tiles found for any targets, likely a bug - check your coordinates and FoV')
-        return None
     logging.info(f'Matched {len(external_targets)} targets to {len(external_targets["tile_index"].unique())} tiles')
     targets_with_tiles = external_targets.dropna(subset=['tile_index'])
     logging.info(f'Targets with tile matches: {len(targets_with_tiles)}')
@@ -166,7 +126,111 @@ def get_matching_tiles(
     # clean up index
     targets_with_tiles = targets_with_tiles.reset_index(drop=True)
 
-    return targets_with_tiles
+    return targets_with_tiles   
+
+
+def get_matching_tile_indices(ra: np.ndarray, dec: np.ndarray, healpix_array: np.ndarray) -> np.ndarray:
+    """
+    Prototype function from D. Sluse to get tile index for a given coord based on an healpix_file
+    based on https://gitlab.euclid-sgs.uk/PF-MER/MER_DA/-/blob/develop/MER_DA/python/MER_DA/MER_HPObjectSelection.py?ref_type=heads#L170
+    Tile info. based on healpix: -tiling v1.2 -
+    https://euclid.roe.ac.uk/projects/mer_pf/wiki/Tiling#Healpix-maps-for-Wide-Field-V12-tiling
+    Healpix file 1.2 available on the redmine
+    Args:
+        ra: np.array of ra in deg (likely output of target['target_ra'].values (for one specific target))
+        dec: np.array dec in deg (likely output of target['target_deg'].values (for one specific target))
+        healpix_array: np.array w. healpix indices = output of `healpy.read_map('tile_index_map.v1.2.fits.gz', nest=True)`
+
+    Returns: np.array - tile indices
+
+    """
+    # convert Ra/Dec from [dec] to [rad]
+    # !MER uses math.pi instead np.pi
+    #hp_theta = np.pi/2. - dec/180.*np.pi
+    hp_theta = np.pi/2. - dec/180.*np.pi
+    hp_phi   = ra/180.*np.pi
+
+    # get the healpix indices for all objects
+    moc_order = 13    # /!\ HARD-CODED BUT there is a setup in MER code; Should remain 13 forever according to M.Kuemmel
+    hp_object_indices = healpy.pixelfunc.ang2pix(healpy.order2nside(moc_order), hp_theta, hp_phi, nest=True)
+
+    tile_index: np.ndarray = healpix_array[hp_object_indices]
+    return tile_index
+
+    # get all VIS tiles in that release (e.g. F-006 for Wide)
+    # we'll get all the other bands and auxillary data later. Here we just need the tile index.
+    # tiles = pipeline_utils.get_tiles_in_survey(
+    #     bands=["VIS"], release_name=cfg.release_name
+    # )
+    # assert len(tiles) > 0
+    # logging.info(tiles['release_name'].value_counts())
+    # # tiles.to_csv("temp_tiles.csv")  # for debugging
+
+    # # add tile FoV
+    # # adds cols ['ra_min', 'ra_max', 'dec_min', 'dec_max'] by unpacking the "fov" tile metadata column
+    # tiles = pipeline_utils.get_tile_extents_fov(tiles)
+
+    # # use KDTree to quickly find the closest tile to each target
+    # tile_kdtree = KDTree(tiles[["ra", "dec"]].values)  # coordinates of the tile centers
+
+    # # e.g. ['CALBLOCK_PV-005_R2', 'CALBLOCK_PV-005_R3', 'F-003_240321', 'F-003_240612' , 'F-006']
+    # if cfg.release_priority is None:
+    #     release_priority_key = None
+    # else:
+    #     release_priority_key = dict(zip(cfg.release_priority, range(len(cfg.release_priority))))
+    #     # e.g. {'CALBLOCK_PV-005_R2': 0, 'CALBLOCK_PV-005_R3': 1, ...}
+
+    # logging.info('Begin target/tile cross-match')
+    # for target_n, target in external_targets.iterrows():
+    #     # query for all tiles within one degree of target
+    #     close_tile_indices = tile_kdtree.query_radius(target[['target_ra', 'target_dec']].values.reshape(1, -1), r=1)[0]  # 0 for first row, all results
+    #     close_tiles = tiles.iloc[close_tile_indices]
+
+    #     if len(close_tiles) > 0:
+
+    #         safety_margin = 0.01 # degrees
+
+    #         # check which close tiles are actually within the FoV
+    #         # this will fail for tiles on the RA flip boundary, but none yet TODO
+    #         within_ra = (
+    #             close_tiles["ra_min"] + safety_margin < target["target_ra"] ) & (
+    #             target["target_ra"] < close_tiles["ra_max"] - safety_margin
+    #         )
+    #         within_dec = (
+    #             close_tiles["dec_min"] + safety_margin < target["target_dec"] ) & (
+    #             target["target_dec"] < close_tiles["dec_max"] - safety_margin
+    #         )
+    #         close_tiles = close_tiles[within_ra & within_dec]
+
+    #         if len(close_tiles) > 0:
+    #             # we have at least one tile within the FoV, which should we use?
+
+    #             if release_priority_key is None:  
+    #                 # user did not set a priority order for the tiles in cfg.release_priority
+    #                 # just pick the first tile that's within the FoV
+    #                 chosen_tile = close_tiles.iloc[0]
+    #             else:
+    #                 # pick in order of release priority
+    #                 # if the release is not recognised, it gets a priority of -1 (lowest)
+    #                 # higher priority is a higher number (higher index in cfg.release_priority)
+    #                 # after sorting (ascending) by release priority, pick the last one for tile with the highest priority
+    #                 close_tiles['priority'] = close_tiles['release_name'].apply(lambda x: release_priority_key.get(x, -1))
+    #                 chosen_tile = close_tiles.sort_values(by='priority').iloc[-1]
+    #             external_targets.loc[target_n, "tile_index"] = chosen_tile["tile_index"]
+    #             # useful for debugging
+    #             external_targets.loc[target_n, "release_name"] = chosen_tile['release_name']
+    #             external_targets.loc[target_n, "tile_ra"] = chosen_tile['ra']
+    #             external_targets.loc[target_n, "tile_ra_min"] = chosen_tile['ra_min']
+    #             external_targets.loc[target_n, "tile_ra_max"] = chosen_tile['ra_max']
+    #             external_targets.loc[target_n, "tile_dec_min"] = chosen_tile['dec_min']
+    #             external_targets.loc[target_n, "tile_dec_max"] = chosen_tile['dec_max']
+    #             external_targets.loc[target_n, "tile_dec"] = chosen_tile['dec']
+
+    # if 'tile_index' not in external_targets.columns:
+    #     logging.error('No tiles found for any targets, likely a bug - check your coordinates and FoV')
+    #     return None
+    
+
 
 
 def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
@@ -728,30 +792,30 @@ def save_multifits_cutout(cfg: OmegaConf, target_data: dict, target_header_data:
     hdul.writeto(save_loc, overwrite=True)
 
 
-def create_folders(cfg: OmegaConf):
-    cfg.download_dir = cfg.base_dir + "/" + cfg.name
-    cfg.tile_dir = cfg.download_dir + "/tiles"
+# def create_folders(cfg: OmegaConf):
+#     cfg.download_dir = cfg.base_dir + "/" + cfg.name
+#     cfg.tile_dir = cfg.download_dir + "/tiles"
 
-    cfg.cutout_dir = cfg.download_dir + "/cutouts"
-    cfg.fits_dir = cfg.cutout_dir + "/fits"
-    cfg.jpg_dir = cfg.cutout_dir + "/jpg"
+#     cfg.cutout_dir = cfg.download_dir + "/cutouts"
+#     cfg.fits_dir = cfg.cutout_dir + "/fits"
+#     cfg.jpg_dir = cfg.cutout_dir + "/jpg"
 
-    cfg.sanity_dir = cfg.download_dir + "/sanity"
+#     cfg.sanity_dir = cfg.download_dir + "/sanity"
 
-    logging.info(f"Saving to {cfg.download_dir}")
-    assert os.path.exists(os.path.dirname(cfg.download_dir))
-    for d in [
-        cfg.download_dir,
-        cfg.tile_dir,
-        cfg.cutout_dir,
-        cfg.fits_dir,
-        cfg.jpg_dir,
-        cfg.sanity_dir,
-    ]:
-        if not os.path.exists(d):
-            os.makedirs(d)
+#     logging.info(f"Saving to {cfg.download_dir}")
+#     assert os.path.exists(os.path.dirname(cfg.download_dir))
+#     for d in [
+#         cfg.download_dir,
+#         cfg.tile_dir,
+#         cfg.cutout_dir,
+#         cfg.fits_dir,
+#         cfg.jpg_dir,
+#         cfg.sanity_dir,
+#     ]:
+#         if not os.path.exists(d):
+#             os.makedirs(d)
 
-    return cfg
+#     return cfg
 
 def make_archive_for_download(cfg: OmegaConf):
     # list subdirectories within cfg.jpg_dir
