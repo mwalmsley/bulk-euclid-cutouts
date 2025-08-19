@@ -119,10 +119,15 @@ def find_matching_tiles(
 
     logging.info(f'Matched {len(external_targets)} targets to {len(external_targets["tile_index"].unique())} tiles')
     targets_with_tiles = external_targets.dropna(subset=['tile_index'])
-    logging.info(f'Targets with tile matches: {len(targets_with_tiles)}')
+    logging.info(f'Targets with possible tile matches: {len(targets_with_tiles)}')
     
-    assert len(targets_with_tiles) > 0, "No targets within FoV of any tiles, likely a bug"
-    assert len(targets_with_tiles) > 0
+    assert len(targets_with_tiles) > 0, "No targets within FoV of any tiles, even before selecting this release: likely a bug"
+
+    logging.info('Selecting only targets with tile in current release')
+    tile_indices_in_release = pipeline_utils.get_tile_indices_in_release(cfg)
+    external_targets = external_targets[external_targets["tile_index"].isin(tile_indices_in_release)]
+    logging.info(f'Targets with tile in current release: {len(external_targets)}')
+    assert len(external_targets) > 0, "No targets with tile in current release, check your coordinates are in this release"
 
     # avoid annoying type conversion
     targets_with_tiles["tile_index"] = targets_with_tiles["tile_index"].astype(int)
