@@ -124,6 +124,7 @@ def find_matching_tiles(
     assert len(targets_with_tiles) > 0, "No targets within FoV of any tiles, even before selecting this release: likely a bug"
 
     logging.info('Selecting only targets with tile in current release')
+    cfg.max_tiles = 0  # override to ensure we always get every tile in the release
     tile_indices_in_release = pipeline_utils.get_tile_indices_in_release(cfg)
     external_targets = external_targets[external_targets["tile_index"].isin(tile_indices_in_release)]
     logging.info(f'Targets with tile in current release: {len(external_targets)}')
