@@ -6,6 +6,9 @@ release_name: 'RR2_R1'
 bands: ['VIS', 'NIR_Y']
 
 # TODO download from https://euclid.roe.ac.uk/projects/mer_pf/wiki/Tiling#Healpix-maps-for-Wide-Field-V12-tiling 
+# specifically, https://euclid.roe.ac.uk/attachments/153460
+# do not unpack, it's 30mb compressed and astropy can read directly,
+# but 3GB uncompressed!
 healpix_loc: '/media/user/repos/bulk-euclid-cutouts/data/tile_index_map.v1.2.fits.gz'
 
 download_dir: !

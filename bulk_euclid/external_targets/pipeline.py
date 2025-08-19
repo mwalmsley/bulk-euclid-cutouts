@@ -105,8 +105,12 @@ def get_matching_tiles(
         pd.DataFrame: with columns ['tile_index', 'id_str', 'target_ra', 'target_dec', 'target_field_of_view']
     """
 
-    logging.info('Loading healpix tile lookup from {}'.format(cfg.healpix_loc))
-    healpix_array = healpy.read_map('tile_index_map.v1.2.fits.gz', nest=True)
+    # logging.info('Loading healpix tile lookup from {}'.format(cfg.healpix_loc))
+    try:
+        healpix_array = healpy.read_map(cfg.healpix_loc, nest=True)
+    except FileNotFoundError as e:
+        logging.error(f"Could not find healpix file at {cfg.healpix_loc} - download it first from https://euclid.roe.ac.uk/attachments/153460")
+        raise e
 
     external_targets['tile_index'] = get_matching_tile_indices(
         external_targets['target_ra'].values,
