@@ -414,6 +414,7 @@ def create_folders(cfg: OmegaConf):
         cfg.tile_dir, 
         cfg.catalog_dir,
         cfg.jpg_dir,
+        cfg.fits_dir,
         cfg.sanity_dir 
         ]:
         if not os.path.exists(d):
