@@ -167,8 +167,8 @@ def get_matching_tile_indices(ra: np.ndarray, dec: np.ndarray, healpix_array: np
     tile_index: np.ndarray = healpix_array[hp_object_indices]
 
     # sometimes the tile index is big endian and datalabs is little endian, byte swap to ensure little endian
-    if tile_index.dtype == np.dtype('>i4'):
-        tile_index = tile_index.byteswap().newbyteorder()
+    if tile_index.dtype == np.dtype('>i4'):  # big endian int32
+        tile_index = tile_index.byteswap()  # now little endian int32
 
     return tile_index
 
