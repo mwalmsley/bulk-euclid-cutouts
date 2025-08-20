@@ -172,7 +172,10 @@ def get_matching_tile_indices(ra: np.ndarray, dec: np.ndarray, healpix_array: np
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.byteswap.html
         # byteswap moves the bytes
         # newbyteorder changes the definition of byte order
-        tile_index = tile_index.newbyteorder().byteswap()  # now little endian
+        if int(np.__version__[0]) < 2:
+            tile_index = tile_index.newbyteorder().byteswap()  # now little endian ; np < 2.0
+        else: 
+            tile_index = tile_index.view(tile_index.dtype.newbyteorder('=')).byteswap()  # Numpy >= 2.0 
 
     return tile_index
 
