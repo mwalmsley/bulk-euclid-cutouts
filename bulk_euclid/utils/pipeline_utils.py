@@ -35,6 +35,9 @@ mem = joblib.Memory('.', verbose=False)
 
 # setting up like nested json db, with this schema
 
+def get_id_str(df):
+     return df['release_name'] + '_' + df['tile_index'].astype(int).astype(str) + '_' + df['object_id'].astype(int).astype(str).str.replace('-', 'NEG')
+
 @dataclass
 class Mosaic:
     path: str
