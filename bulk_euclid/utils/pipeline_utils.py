@@ -42,16 +42,26 @@ def get_id_str(df):
 class Mosaic:
     path: str
     _data: Optional[np.ndarray] = None  # hidden attr, loaded on demand and then stored
+    _header: Optional[fits.Header] = None  # similarly
 
     # def __post_init__(self):
         # this would be better but it triggers a super slow datalabs first read
 
     @property # public attr for accessing _data
     def data(self):
-        if self.path and self._data is None:
-            assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
-            self._data = load_observation_fits(self.path)
+        if self._data is None:
+            self.load()
         return self._data
+    
+    @property
+    def header(self):
+        if self._header is None:
+            self.load()
+        return self._header
+    
+    def load(self):
+        assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
+        self._data, self._header = load_observation_fits(self.path)  # may as well always load header
 
 @dataclass
 class Observation:
@@ -90,25 +100,11 @@ def find_available_tiles(cfg: OmegaConf):
 
     # tiles = pipeline_utils.get_tiles_in_survey(bands=cfg.bands, release_name=cfg.release_name)  # F-003_240321 recently appeared
 
-    if cfg.release_name == 'Q1_R1':
-        release_dir = '/media/home/data/euclid_q1/Q1_R1'
-    elif cfg.release_name == 'RR2_R1':
-        release_dir = '/media/home/data/euclid_reg/REGREPROC2_R1'
-    else:
-        raise ValueError('Release name not recognised for tile search: {}'.format(cfg.release_name))
-
-    # all subfolders in the release_dir, each name is a tile_index
-    tile_indices = [ int(os.path.basename(f.path)) for f in os.scandir(release_dir + '/MER') if f.is_dir() ]
-    tile_indices = sorted(tile_indices)
-    logging.info(f'Found {len(tile_indices)} tiles e.g. {tile_indices[0]}')
-
-    if cfg.max_tiles and len(tile_indices) > cfg.max_tiles:
-        logging.info(f'Randomly subselecting {cfg.max_tiles} tiles')
-        tile_indices = np.random.choice(tile_indices, cfg.max_tiles, replace=False).tolist()
+    tile_indices = get_tile_indices_in_release(cfg)
 
     tiles = []
     for tile_index in tile_indices:
-        tile = create_tile_object(cfg, release_dir, tile_index)
+        tile = create_tile_object(cfg, tile_index)
         tiles.append(tile)
 
     if len(tiles) == 0:
@@ -119,8 +115,34 @@ def find_available_tiles(cfg: OmegaConf):
     
     return tiles
 
+
+def get_tile_indices_in_release(cfg):
+    release_dir = get_datalabs_release_dir(cfg)
+
+    # all subfolders in the release_dir, each name is a tile_index
+    tile_indices = [ int(os.path.basename(f.path)) for f in os.scandir(release_dir + '/MER') if f.is_dir() ]
+    tile_indices = sorted(tile_indices)
+    logging.info(f'Found {len(tile_indices)} tiles e.g. {tile_indices[0]}')
+
+    if cfg.max_tiles and len(tile_indices) > cfg.max_tiles:
+        logging.info(f'Randomly subselecting {cfg.max_tiles} tiles')
+        tile_indices = np.random.choice(tile_indices, cfg.max_tiles, replace=False).tolist()
+    return tile_indices
+
+@mem.cache  # almost never changes
+def get_datalabs_release_dir(cfg):
+    if cfg.release_name == 'Q1_R1':
+        release_dir = '/media/home/data/euclid_q1/Q1_R1'
+    elif cfg.release_name == 'RR2_R1':
+        release_dir = '/media/home/data/euclid_reg/REGREPROC2_R1'
+    else:
+        raise ValueError('Release name not recognised for tile search: {}'.format(cfg.release_name))
+    return release_dir
+
 @mem.cache  # we assume the release directory changes rarely, so caching is fine
-def create_tile_object(cfg, release_dir, tile_index):
+def create_tile_object(cfg, tile_index):
+
+    release_dir = get_datalabs_release_dir(cfg)
     tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
     tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
         # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
@@ -245,11 +267,12 @@ def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, o
     return os.path.join(base_dir, subdir, filename_without_format + '.' + output_format)
 
 
-def load_observation_fits(mosaic_path: str, header: bool = False) -> np.ndarray:
+def load_observation_fits(mosaic_path: str) -> tuple[np.ndarray, fits.Header]:
+    # annoyingly this does not work for PSF
     logging.debug(f'Loading mosaic {os.path.basename(mosaic_path)} from {mosaic_path}')
-    mosaic = fits.getdata(mosaic_path, header=header, memmap=False, decompress_in_memory=False)  # type: ignore
+    (mosaic, header) = fits.getdata(mosaic_path, header=True, memmap=False, decompress_in_memory=False)  # type: ignore
     logging.debug(f'Loaded mosaic {os.path.basename(mosaic_path)}, shape: {mosaic.shape}')
-    return mosaic
+    return mosaic, header
     # https://docs.astropy.org/en/latest/io/fits/api/files.html
     # memmap allows access to small segments without loading the whole file into memory
     # decompress_in_memory probably has no effect on uncompressed .fits? 
@@ -375,6 +398,32 @@ def create_simple_fits(cfg, galaxy, cutout_by_band):
         fits.HDUList(hdu_list).writeto(galaxy['fits_loc'], overwrite=True)
 
 
+def create_folders(cfg: OmegaConf):
+    cfg.download_dir = cfg.base_dir + '/' + cfg.name
+    cfg.tile_dir = cfg.download_dir + '/tiles'
+    cfg.catalog_dir = cfg.download_dir + '/catalogs'
+
+    cfg.cutout_dir = cfg.download_dir + '/cutouts'
+    cfg.jpg_dir = cfg.cutout_dir + '/jpg'
+    cfg.fits_dir = cfg.cutout_dir + '/fits'
+    
+    cfg.sanity_dir = cfg.download_dir + '/sanity'
+
+    logging.info(f'Saving to {cfg.download_dir}')
+    assert os.path.exists(os.path.dirname(cfg.base_dir))
+    for d in [
+        cfg.base_dir,
+        cfg.download_dir,
+        cfg.tile_dir, 
+        cfg.catalog_dir,
+        cfg.jpg_dir,
+        cfg.fits_dir,
+        cfg.sanity_dir 
+        ]:
+        if not os.path.exists(d):
+            os.makedirs(d)
+
+    return cfg
 
 
 
