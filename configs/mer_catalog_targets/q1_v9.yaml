@@ -1,0 +1,30 @@
+# credentials_file: '/media/user/_credentials/euclid_login.txt' # deprecated
+
+base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/galaxy_zoo_euclid/q1_v6'
+name: 'q1_v6'
+release_name: 'Q1_R1'
+bands: ['VIS', 'NIR_Y']
+data_products: ['BGSUB']
+add_bkg: False
+
+max_tiles: null
+refresh_catalogs: False
+
+seed: 1
+
+selection_cuts: galaxy_zoo_generous
+field_of_view: galaxy_zoo
+
+
+selection_cuts: galaxy_zoo_generous
+field_of_view: galaxy_zoo
+
+jpg_outputs: [
+  'gz_arcsinh_vis_only', 'gz_arcsinh_vis_y', 'gz_arcsinh_vis_lsb',   # typical GZ images
+  'sw_mtf_vis_only', 'sw_mtf_vis_y']  # and the similar SW ones as well
+
+fits_outputs: false
+overwrite_jpg: false
+overwrite_fits: false
+jpg_quality: 98
+use_fits_origin_for_jpg: true

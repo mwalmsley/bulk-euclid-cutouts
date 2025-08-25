@@ -43,13 +43,10 @@ def resize_image(current_loc, new_loc, size, overwrite=False):
     im.resize(size, resample=Image.Resampling.LANCZOS).save(new_loc)
 
 
+# see pipeline_utils for get_id_str
 def get_hash(id_str, extra_key):
         str_to_hash = id_str + extra_key
         return hashlib.sha256(str_to_hash.encode()).hexdigest()
-
-
-def get_id_str(df):
-     return df['release_name'] + '_' + df['tile_index'].astype(int).astype(str) + '_' + df['object_id'].astype(int).astype(str).str.replace('-', 'NEG')
 
 
 def get_resized_loc(galaxy, im_col, save_dir):
