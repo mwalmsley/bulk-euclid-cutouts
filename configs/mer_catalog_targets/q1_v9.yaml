@@ -15,10 +15,6 @@ seed: 1
 selection_cuts: galaxy_zoo_generous
 field_of_view: galaxy_zoo
 
-
-selection_cuts: galaxy_zoo_generous
-field_of_view: galaxy_zoo
-
 jpg_outputs: [
   'gz_arcsinh_vis_only', 'gz_arcsinh_vis_y', 'gz_arcsinh_vis_lsb',   # typical GZ images
   'sw_mtf_vis_only', 'sw_mtf_vis_y']  # and the similar SW ones as well
