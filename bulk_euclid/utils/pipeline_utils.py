@@ -85,10 +85,10 @@ class Tile:
     NIR_J: Optional[Observation] = None
     NIR_H: Optional[Observation] = None
     # EXT
-    CFIS_u: Optional[Observation] = None
-    CFIS_r: Optional[Observation] = None
-    WISHES_g: Optional[Observation] = None
-    WISHES_z: Optional[Observation] = None
+    CFIS_U: Optional[Observation] = None
+    CFIS_R: Optional[Observation] = None
+    WISHES_G: Optional[Observation] = None
+    WISHES_Z: Optional[Observation] = None
 
     mer_final_catalog: Optional[str] = None
     # mer_morphology_catalog: str = None
@@ -153,7 +153,7 @@ def create_tile_object(cfg, tile_index):
     tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
     tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
         # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
-    instrument_band_pairs = [('VIS', 'VIS'), ('NISP', 'NIR_Y'), ('NISP', 'NIR_J'), ('NISP', 'NIR_H'), ('MEGACAM', 'CFIS_u'), ('MEGACAM', 'CFIS_r'), ('HSC', 'WISHES_g'), ('HSC', 'WISHES_z')]
+    instrument_band_pairs = [('VIS', 'VIS'), ('NISP', 'NIR_Y'), ('NISP', 'NIR_J'), ('NISP', 'NIR_H'), ('MEGACAM', 'CFIS_U'), ('MEGACAM', 'CFIS_R'), ('HSC', 'WISHES_G'), ('HSC', 'WISHES_Z')]
 
     for (instrument, band) in instrument_band_pairs:  # could add EXT here
         band_w_hyphen = band.replace('_', '-')  # python can't use hyphens in variable names

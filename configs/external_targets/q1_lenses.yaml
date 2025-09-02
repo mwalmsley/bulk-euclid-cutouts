@@ -13,7 +13,7 @@ release_name: Q1_R1  # Q1 data only, will be missing for non-Q1 lenses (just use
 # bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands
 
 # CFIS is CFHT megacam, WISHES is HSC
-bands: ['CFIS_u', 'WISHES_g', 'CFIS_r', 'VIS', 'WISHES_z', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands inc. EXT
+bands: ['CFIS_U', 'WISHES_G', 'CFIS_R', 'VIS', 'WISHES_Z', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands inc. EXT
 
 data_products: ['BGSUB', 'BGMOD', 'RMS', 'PSF']
 add_bkg: False
