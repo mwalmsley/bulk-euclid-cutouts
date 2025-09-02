@@ -83,6 +83,12 @@ class Tile:
     NIR_Y: Optional[Observation] = None
     NIR_J: Optional[Observation] = None
     NIR_H: Optional[Observation] = None
+    # EXT
+    MEGACAM_u: Optional[Observation] = None
+    MEGACAM_r: Optional[Observation] = None
+    HSC_g: Optional[Observation] = None
+    HSC_z: Optional[Observation] = None
+
     mer_final_catalog: Optional[str] = None
     # mer_morphology_catalog: str = None
 
@@ -146,17 +152,24 @@ def create_tile_object(cfg, tile_index):
     tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
     tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
         # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
-    for (instrument, band) in [('VIS', 'VIS'), ('NISP', 'NIR_Y'), ('NISP', 'NIR_J'), ('NISP', 'NIR_H')]:  # could add EXT here
+    instrument_band_pairs = [('VIS', 'VIS'), ('NISP', 'NIR_Y'), ('NISP', 'NIR_J'), ('NISP', 'NIR_H'), ('MEGACAM', 'CFIS_u'), ('MEGACAM', 'CFIS_r'), ('HSC', 'WISHES_g'), ('HSC', 'WISHES_z')]
+
+    for (instrument, band) in instrument_band_pairs:  # could add EXT here
         band_w_hyphen = band.replace('_', '-')  # python can't use hyphens in variable names
         mosaic = Observation(band=band)
         mosaic.instrument = instrument
 
+        # main pipeline format
+        # if instrument in ['VIS', 'NISP']:
         mosaic.BGMOD = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band_w_hyphen}_TILE{tile_index}-*.fits'))
         mosaic.BGSUB = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGSUB-MOSAIC-{band_w_hyphen}_TILE{tile_index}-*.fits'))
         mosaic.RMS = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_MOSAIC-{band_w_hyphen}-RMS_TILE{tile_index}-*.fits'))
         mosaic.PSF = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_CATALOG-PSF-{band_w_hyphen}_TILE{tile_index}-*.fits'))
+        # elif instrument == 'MEGACAM':
 
-            # for now, only use if all required data products exist
+
+
+        # for now, only use if all required data products exist
         if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy.
             setattr(tile, band, mosaic)
         else:

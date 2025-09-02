@@ -9,9 +9,11 @@ name: 'q1_discovery_engine_data_release_v1_inc_ext_data_repeated'
 # _review version includes Valerio's recentering
 external_targets_loc: /media/home/my_workspace/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/q1_discovery_engine_targets_for_bulk_cutout_download_review.csv
 
-release_name: Q1_R1  # allow tiles from any release. Read as None in Python.
+release_name: Q1_R1  # Q1 data only, will be missing for non-Q1 lenses (just use those already uploaded?)
 # bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands
-bands: ['MEGACAM_u', 'HSC_g', 'MEGACAM_r', 'VIS', 'HSC_z', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands inc. EXT
+
+# CFIS is CFHT megacam, WISHES is HSC
+bands: ['CFIS_u', 'WISHES_g', 'CFIS_r', 'VIS', 'WISHES_z', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands inc. EXT
 
 data_products: ['BGSUB', 'BGMOD', 'RMS', 'PSF']
 add_bkg: False
