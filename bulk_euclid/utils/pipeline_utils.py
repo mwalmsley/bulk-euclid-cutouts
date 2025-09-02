@@ -60,6 +60,7 @@ class Mosaic:
         return self._header
     
     def load(self):
+        assert self.path is not None, f'Mosaic path is None'
         assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
         self._data, self._header = load_observation_fits(self.path)  # may as well always load header
 
@@ -84,10 +85,10 @@ class Tile:
     NIR_J: Optional[Observation] = None
     NIR_H: Optional[Observation] = None
     # EXT
-    MEGACAM_u: Optional[Observation] = None
-    MEGACAM_r: Optional[Observation] = None
-    HSC_g: Optional[Observation] = None
-    HSC_z: Optional[Observation] = None
+    CFIS_u: Optional[Observation] = None
+    CFIS_r: Optional[Observation] = None
+    WISHES_g: Optional[Observation] = None
+    WISHES_z: Optional[Observation] = None
 
     mer_final_catalog: Optional[str] = None
     # mer_morphology_catalog: str = None
@@ -167,10 +168,8 @@ def create_tile_object(cfg, tile_index):
         mosaic.PSF = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_CATALOG-PSF-{band_w_hyphen}_TILE{tile_index}-*.fits'))
         # elif instrument == 'MEGACAM':
 
-
-
         # for now, only use if all required data products exist
-        if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy.
+        if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy. No path = None = False.
             setattr(tile, band, mosaic)
         else:
             logging.warning(f'Skipping mosaic as not all data products exist, for tile {tile_index}, instrument {instrument}, band {band}: {mosaic}')
