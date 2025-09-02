@@ -63,7 +63,7 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
         cutout = make_lsb_cutout(vis_im, stretch=20, power=0.5)
         save_image_wrapper(cutout, save_loc.replace('generic', 'gz_arcsinh_vis_lsb'), quality=cfg.jpg_quality)
 
-    if 'gz_arcsinh_vis_triple' in cfg.jpg_outputs:
+    if 'gz_arcsinh_triple' in cfg.jpg_outputs:
         # unique to GZ, for tidal features etc
         cutout = make_triple_cutout(vis_im, y_im, j_im)
         save_image_wrapper(cutout, save_loc.replace('generic', 'gz_arcsinh_triple'), quality=cfg.jpg_quality)
