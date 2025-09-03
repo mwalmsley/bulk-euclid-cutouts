@@ -79,7 +79,6 @@ def run(cfg: OmegaConf):
 
     logging.info(targets_with_tiles['category'].value_counts())
     targets_with_tiles.to_csv(cfg.download_dir + '/targets_with_tiles.csv', index=False)
-    exit()
 
     # targets_with_tiles = targets_with_tiles.sample(2, random_state=42)  # for testing
 
@@ -130,16 +129,16 @@ def find_matching_tiles(
     )
 
     targets_with_tiles = external_targets.dropna(subset=['tile_index'])
-    logging.info(f'Matched {len(external_targets)} possible targets to {len(external_targets["tile_index"].unique())} tiles in release {cfg.release_name}')
+    logging.info(f'Matched {len(external_targets)} possible targets to {len(external_targets["tile_index"].unique())} tiles, before filtering to this release')
     # logging.info(f'Targets with possible tile matches: {len(targets_with_tiles)}')
     
     assert len(targets_with_tiles) > 0, "No targets within FoV of any tiles, even before selecting this release: likely a bug"
 
-    logging.info('Selecting only targets with tile in current release')
+    logging.info('Selecting only targets with tile in this release')
     cfg.max_tiles = 0  # override to ensure we always get every tile in the release
     tile_indices_in_release = pipeline_utils.get_tile_indices_in_release(cfg)
     external_targets = external_targets[external_targets["tile_index"].isin(tile_indices_in_release)]
-    logging.info(f'Targets with tiles in current release: {len(external_targets)} in {len(external_targets["tile_index"].unique())} unique tiles')
+    logging.info(f'Targets with tiles in this release: {len(external_targets)} in {len(external_targets["tile_index"].unique())} unique tiles')
     assert len(external_targets) > 0, f"No targets with tile in release {cfg.release_name}, check your coordinates are in this release"
 
     # avoid annoying type conversion

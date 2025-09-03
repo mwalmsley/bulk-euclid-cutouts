@@ -64,6 +64,10 @@ class Mosaic:
         assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
         self._data, self._header = load_observation_fits(self.path)  # may as well always load header
 
+    def validate(self):
+        assert self.path is not None, f'Mosaic path is None'
+        assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
+
 @dataclass
 class Observation:
     band: str # e.g. VIS, NIR_Y, NIR_J, NIR_H
@@ -72,6 +76,12 @@ class Observation:
     BGSUB: Optional[Mosaic] = None
     RMS: Optional[Mosaic] = None
     PSF: Optional[Mosaic] = None  # catalog psf
+
+    def validate(self, cfg):
+        for data_product_name in cfg.data_products:
+            data_product = getattr(self, data_product_name, None)
+            assert data_product is not None, f'Observation for band {self.band} missing data product {data_product_name}'
+            data_product.validate()
 
 @dataclass
 class Tile:
@@ -93,6 +103,9 @@ class Tile:
     mer_final_catalog: Optional[str] = None
     # mer_morphology_catalog: str = None
 
+    def validate(self, cfg):
+        for band in cfg.bands:
+            getattr(self, band).validate(cfg)
 
 @mem.cache # again we assume the release directory changes rarely, so caching is fine
 def get_path_if_exists(search_str: str) -> str:
@@ -129,7 +142,7 @@ def get_tile_indices_in_release(cfg):
     # all subfolders in the release_dir, each name is a tile_index
     tile_indices = [ int(os.path.basename(f.path)) for f in os.scandir(release_dir + '/MER') if f.is_dir() ]
     tile_indices = sorted(tile_indices)
-    logging.info(f'Found {len(tile_indices)} tiles e.g. {tile_indices[0]}')
+    logging.info(f'Found {len(tile_indices)} tiles in release {cfg.release_name} e.g. {tile_indices[0]}')
 
     if cfg.max_tiles and len(tile_indices) > cfg.max_tiles:
         logging.info(f'Randomly subselecting {cfg.max_tiles} tiles')
@@ -149,15 +162,25 @@ def get_datalabs_release_dir(cfg):
 # @mem.cache  # we assume the release directory changes rarely, so caching is fine
 def create_tile_object(cfg, tile_index):
 
-    instrument_band_pairs = [('VIS', 'VIS'), ('NISP', 'NIR_Y'), ('NISP', 'NIR_J'), ('NISP', 'NIR_H'), ('MEGACAM', 'CFIS_U'), ('MEGACAM', 'CFIS_R'), ('HSC', 'WISHES_G'), ('HSC', 'WISHES_Z')]
+    instrument_band_pairs = [
+        ('VIS', 'VIS'), 
+        ('NISP', 'NIR_Y'), 
+        ('NISP', 'NIR_J'), 
+        ('NISP', 'NIR_H'),
+        ('MEGACAM', 'CFIS_U'), 
+        ('MEGACAM', 'CFIS_R'), 
+        ('HSC', 'WISHES_G'), 
+        ('HSC', 'WISHES_Z')
+    ]
 
     release_dir = get_datalabs_release_dir(cfg)
     tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
     tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
     if tile.mer_final_catalog is None:
-        logging.warning(f'MER final catalog not found for tile {tile_index} - probably the tile folder does not exist')
-    # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
+        logging.critical(f'MER final catalog not found for tile {tile_index}')
+        exit(1)
 
+    # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
     for (instrument, band) in instrument_band_pairs:  # could add EXT here
         if band in cfg.bands:
             band_w_hyphen = band.replace('_', '-')  # python can't use hyphens in variable names
@@ -170,10 +193,13 @@ def create_tile_object(cfg, tile_index):
             mosaic.PSF = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_CATALOG-PSF-{band_w_hyphen}_TILE{tile_index}-*.fits'))
 
             # for now, only use the mosaic if all required data products exist for that band
-            if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy. No path = None = False.
+            # if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy. No path = None = False.
+            if mosaic.validate(cfg):
                 setattr(tile, band, mosaic)
             else:
                 logging.warning(f'Skipping mosaic as not all data products exist, for tile {tile_index}, instrument {instrument}, band {band}: {mosaic}')
+    
+    assert tile.validate(cfg), f'Tile {tile_index} is missing required bands or data products'
     return tile
 
 
