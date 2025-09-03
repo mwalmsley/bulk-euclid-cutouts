@@ -68,10 +68,17 @@ def run(cfg: OmegaConf):
         targets_with_tiles = find_matching_tiles(
             cfg, external_targets
         )  
+        # all of these tiles exist in healpix but may not exist in the data release
 
     logging.info('{} unique tiles for {} targets'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles)))
+
+    tile_indices_in_release = pipeline_utils.get_tile_indices_in_release(cfg)
+    targets_with_tiles = targets_with_tiles[targets_with_tiles["tile_index"].isin(tile_indices_in_release)]
+    logging.info('Of those, {} unique tiles for {} targets exist in data release {}'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles), cfg.release_name))
+
     logging.info(targets_with_tiles['category'].value_counts())
     targets_with_tiles.to_csv(cfg.download_dir + '/targets_with_tiles.csv', index=False)
+    exit()
 
     # targets_with_tiles = targets_with_tiles.sample(2, random_state=42)  # for testing
 
