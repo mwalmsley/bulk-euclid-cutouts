@@ -67,6 +67,7 @@ class Mosaic:
     def validate(self):
         assert self.path is not None, f'Mosaic path is None'
         assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
+        return True
 
 @dataclass
 class Observation:
@@ -81,7 +82,10 @@ class Observation:
         for data_product_name in cfg.data_products:
             data_product = getattr(self, data_product_name, None)
             assert data_product is not None, f'Observation for band {self.band} missing data product {data_product_name}'
-            data_product.validate()
+            if data_product.validate(cfg):
+                continue
+            return False
+        return True
 
 @dataclass
 class Tile:
@@ -105,7 +109,9 @@ class Tile:
 
     def validate(self, cfg):
         for band in cfg.bands:
-            getattr(self, band).validate(cfg)
+            if not getattr(self, band).validate(cfg):
+                return False
+        return True
 
 @mem.cache # again we assume the release directory changes rarely, so caching is fine
 def get_path_if_exists(search_str: str) -> str:
