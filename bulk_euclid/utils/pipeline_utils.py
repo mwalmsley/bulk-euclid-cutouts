@@ -25,12 +25,12 @@ from bulk_euclid.utils import morphology_utils_ou_mer as m_utils, cutout_utils
 import joblib
 
 logging.warning("""
-                Setting up query cache at ./joblib. 
+                Using query cache at ./joblib_tmp. 
                 Delete this folder to refresh the cache and make new queries.
                 This is CRUCIAL if the underlying data changes, e.g. new tiles are added.
                 """
 )
-mem = joblib.Memory('.', verbose=False)
+mem = joblib.Memory('./joblib_tmp', verbose=False)
 
 
 # setting up like nested json db, with this schema
@@ -146,7 +146,7 @@ def get_datalabs_release_dir(cfg):
         raise ValueError('Release name not recognised for tile search: {}'.format(cfg.release_name))
     return release_dir
 
-@mem.cache  # we assume the release directory changes rarely, so caching is fine
+# @mem.cache  # we assume the release directory changes rarely, so caching is fine
 def create_tile_object(cfg, tile_index):
 
     release_dir = get_datalabs_release_dir(cfg)

@@ -200,7 +200,7 @@ def make_cutouts(cfg: OmegaConf, targets_with_tiles: pd.DataFrame) -> None:
     for tile_n, tile_index in enumerate(unique_tiles):
         logging.info(f'Tile {tile_index}, {tile_n} of {len(unique_tiles)}')
         try:
-
+            
             tile = pipeline_utils.create_tile_object(cfg, tile_index)
 
             targets_at_that_index = targets_with_tiles.query(f"tile_index == {tile_index}").reset_index(drop=True)
