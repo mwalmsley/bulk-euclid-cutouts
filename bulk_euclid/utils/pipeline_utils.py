@@ -116,6 +116,7 @@ def get_path_if_exists(search_str: str) -> str:
         logging.info('Path not found: {}'.format(search_str))
         return None
 
+# only used within mer catalog pipeline
 def find_available_tiles(cfg: OmegaConf):
 
     # tiles = pipeline_utils.get_tiles_in_survey(bands=cfg.bands, release_name=cfg.release_name)  # F-003_240321 recently appeared
