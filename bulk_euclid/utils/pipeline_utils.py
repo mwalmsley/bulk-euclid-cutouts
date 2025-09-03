@@ -149,30 +149,29 @@ def get_datalabs_release_dir(cfg):
 # @mem.cache  # we assume the release directory changes rarely, so caching is fine
 def create_tile_object(cfg, tile_index):
 
+    instrument_band_pairs = [('VIS', 'VIS'), ('NISP', 'NIR_Y'), ('NISP', 'NIR_J'), ('NISP', 'NIR_H'), ('MEGACAM', 'CFIS_U'), ('MEGACAM', 'CFIS_R'), ('HSC', 'WISHES_G'), ('HSC', 'WISHES_Z')]
+
     release_dir = get_datalabs_release_dir(cfg)
     tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
     tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
-        # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
-    instrument_band_pairs = [('VIS', 'VIS'), ('NISP', 'NIR_Y'), ('NISP', 'NIR_J'), ('NISP', 'NIR_H'), ('MEGACAM', 'CFIS_U'), ('MEGACAM', 'CFIS_R'), ('HSC', 'WISHES_G'), ('HSC', 'WISHES_Z')]
+    # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
 
     for (instrument, band) in instrument_band_pairs:  # could add EXT here
-        band_w_hyphen = band.replace('_', '-')  # python can't use hyphens in variable names
-        mosaic = Observation(band=band)
-        mosaic.instrument = instrument
+        if band in cfg.bands:
+            band_w_hyphen = band.replace('_', '-')  # python can't use hyphens in variable names
+            mosaic = Observation(band=band)
+            mosaic.instrument = instrument
 
-        # main pipeline format
-        # if instrument in ['VIS', 'NISP']:
-        mosaic.BGMOD = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band_w_hyphen}_TILE{tile_index}-*.fits'))
-        mosaic.BGSUB = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGSUB-MOSAIC-{band_w_hyphen}_TILE{tile_index}-*.fits'))
-        mosaic.RMS = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_MOSAIC-{band_w_hyphen}-RMS_TILE{tile_index}-*.fits'))
-        mosaic.PSF = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_CATALOG-PSF-{band_w_hyphen}_TILE{tile_index}-*.fits'))
-        # elif instrument == 'MEGACAM':
+            mosaic.BGMOD = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band_w_hyphen}_TILE{tile_index}-*.fits'))
+            mosaic.BGSUB = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGSUB-MOSAIC-{band_w_hyphen}_TILE{tile_index}-*.fits'))
+            mosaic.RMS = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_MOSAIC-{band_w_hyphen}-RMS_TILE{tile_index}-*.fits'))
+            mosaic.PSF = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_CATALOG-PSF-{band_w_hyphen}_TILE{tile_index}-*.fits'))
 
-        # for now, only use if all required data products exist
-        if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy. No path = None = False.
-            setattr(tile, band, mosaic)
-        else:
-            logging.warning(f'Skipping mosaic as not all data products exist, for tile {tile_index}, instrument {instrument}, band {band}: {mosaic}')
+            # for now, only use the mosaic if all required data products exist for that band
+            if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy. No path = None = False.
+                setattr(tile, band, mosaic)
+            else:
+                logging.warning(f'Skipping mosaic as not all data products exist, for tile {tile_index}, instrument {instrument}, band {band}: {mosaic}')
     return tile
 
 
