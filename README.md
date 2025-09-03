@@ -11,28 +11,30 @@ There are actually two pipelines, with many utils shared by both:
 
 These were developed for [Galaxy Zoo Euclid](https://www.esa.int/Science_Exploration/Space_Science/Euclid/Euclid_Galaxy_Zoo_help_us_classify_the_shapes_of_galaxies) and strong lensing, respectively.
 
-Help wanted. Let's build a pipeline that works for many projects. Contact Mike Walmsley ([m.walmsley@utoronto.ca](emailto:m.walmsley@utoronto.ca))
+## RR2/DR1 update note
 
+I (MW) have refactored the pipeline to use only Datalabs, rather than using SAS for pulling catalogs and Datalabs for pulling tiles. This was necessary because RR2 is (as of Sep 2025) only partially available on SAS. But it also makes things cleaner - for example, you now no longer need to log in to the `Euclid` astroquery/SAS client.
 
+At a high level, we read the MER catalogs and tiles from the `data/euclid...` folder on Datalabs, and slice these into jpg/fits.
 
 ## Quick Install/Run Instructions on Datalabs
 
 Create a GitHub personal access token and save it somewhere. You will need it to clone this private repo (see more details on [the Google doc](https://docs.google.com/document/d/10KrelkVQgckFmqHIqVzZ-22oPIKe-uIE_0laMHSl3Rs/edit?usp=sharing)).
 
-Create a Datalab with the Euclid environment
+Create a Datalab with the "Euclid-EC" environment. This automatically mounts all Euclid data under /data.
 
 Open a terminal via Jupyter (NOT within a notebook). Navigate to the folder into which you want to clone this repo
 
     git clone git@github.com:mwalmsley/bulk-euclid-cutouts.git
     cd bulk-euclid-cutouts
-    git checkout external-targets
+    git checkout dev  # optional
 
 Install a few missing dependencies (omegaconf, sklearn)
 
     conda activate euclid-tools
     pip install -e .
 
-Now you can open the notebook (`bulk_euclid/external_targets/tutorial_notebook.ipynb`) and it should run with no further setup.
+Now you can open an example notebook (`bulk_euclid/external_targets/tutorial_notebook.ipynb`, or `bulk_euclid/mer_catalog_targets/tutorial_notebook.ipynb`) and it should run with no further setup.
 
 You might want to change the configuration options (`cfg_dict`, near the top of the notebook), for example
 
@@ -49,19 +51,12 @@ To change the paths, you only need to set those two options. For example, here i
     base_dir: /media/home/team_workspaces/Euclid-Consortium/data/strong_lensing/external_targets_pipeline  # general folder for pipeline runs
     name: external_targets_master_list_q1  # folder for a specific pipeline run
 
-For long (hour plus) downloads, we've noticed Datalabs sometimes silently kills notebooks. Use the terminal instead. See `bulk_euclid/external_targets/run_from_console.py`.
+For long (hour plus) downloads, we recommend using the terminal instead. See `bulk_euclid/external_targets/run_from_console.py`.
 
     python /media/user/repos/bulk-euclid-cutouts/bulk_euclid/external_targets/run_from_console.py
 
+The terminal code reads configuration from YAML files under `configs/...`. Copy and adapt our examples.
 
-## Installing locally
+## Support
 
-    conda create -p .conda python==3.10
-
-Then pip install just like on Datalabs.
-
-If you get "setup.py not found, toml cannot be installed in editable, you need to upgrade pip to > 21.3:
-
-     pip install --upgrade pip
-
-The Euclid package on Datalabs is not yet available outside Datalabs and so you cannot download any Euclid data, unfortunately.
+The main author (Mike Walmsley) is leaving academia, for now. I have tried to make sure this code will scale for DR1 without changes, and I'll check once DR1 is released. Future support beyond DR1 is not planned. Reach out if you'd like to take over maintenance.

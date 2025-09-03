@@ -27,7 +27,8 @@ if __name__ == "__main__":
     # config_loc = 'configs/mer_catalog_targets/mer_catalog_random_tiles_q1.yaml'
     # config_loc = 'configs/v4_post_euclid_challenge.yaml'
     # config_loc = 'configs/mer_catalog_targets/q1_v6.yaml'
-    config_loc = 'configs/mer_catalog_targets/rr2_gz2_v1.yaml'
+    config_loc = 'configs/mer_catalog_targets/q1_v9.yaml'
+    # config_loc = 'configs/mer_catalog_targets/rr2_gz_v1.yaml'
 
     cfg = OmegaConf.load(config_loc)
 
@@ -38,11 +39,12 @@ if __name__ == "__main__":
     #     level=logging.DEBUG, 
     #     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     # )
-
     logging.basicConfig(
         level=logging.INFO, filename=cfg.log_file, filemode='w',
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
+
+
     logging.getLogger().addHandler(logging.StreamHandler())  # also log to console
 
     run(cfg)

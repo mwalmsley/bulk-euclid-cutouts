@@ -1,12 +1,15 @@
 
 import logging
 import os
+import glob
 import warnings
 import hashlib
+from dataclasses import dataclass
+from typing import Optional
 
-# from omegaconf import OmegaConf
-from omegaconf.errors import ConfigAttributeError
-from omegaconf.listconfig import ListConfig
+from omegaconf import OmegaConf
+# from omegaconf.errors import ConfigAttributeError
+# from omegaconf.listconfig import ListConfig
 
 import numpy as np
 import pandas as pd
@@ -22,99 +25,195 @@ from bulk_euclid.utils import morphology_utils_ou_mer as m_utils, cutout_utils
 import joblib
 
 logging.warning("""
-                Setting up query cache at ./joblib. 
-                Previous SQL queries for the list of all tiles, and for the list of sources within a given tile, will be re-used for speed. 
+                Using query cache at ./joblib_tmp. 
                 Delete this folder to refresh the cache and make new queries.
-                This is CRUCIAL if you switch Euclid environments e.g. from IDR (Q1) to OTF or REG.
+                This is CRUCIAL if the underlying data changes, e.g. new tiles are added.
                 """
 )
-mem = joblib.Memory('.', verbose=False)
+mem = joblib.Memory('./joblib_tmp', verbose=False)
 
-@mem.cache
-def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
 
-    # TODO move release name into survey property, once happy with what it means, if it is per survey?
-    query_str = f"""
-        SELECT * FROM sedm.mosaic_product 
-        WHERE (product_type='DpdMerBksMosaic')
-        """
+# setting up like nested json db, with this schema
+
+def get_id_str(df):
+     return df['release_name'] + '_' + df['tile_index'].astype(int).astype(str) + '_' + df['object_id'].astype(int).astype(str).str.replace('-', 'NEG')
+
+@dataclass
+class Mosaic:
+    path: str
+    _data: Optional[np.ndarray] = None  # hidden attr, loaded on demand and then stored
+    _header: Optional[fits.Header] = None  # similarly
+
+    # def __post_init__(self):
+        # this would be better but it triggers a super slow datalabs first read
+
+    @property # public attr for accessing _data
+    def data(self):
+        if self._data is None:
+            self.load()
+        return self._data
     
-    if tile_index is not None:
-        query_str += f"AND (tile_index={tile_index})"
+    @property
+    def header(self):
+        if self._header is None:
+            self.load()
+        return self._header
     
-    if bands is not None:
-        if isinstance(bands, str):
-            query_str += f"AND (filter_name='{bands}')"
-        else:  # assume listlike
-            if len(bands) == 1:
-                band = bands[0]
-                assert isinstance(band, str), 'Found single band passed as listlike, single band must be a string'
-                query_str += f"AND (filter_name='{band}')"
-            else:
-                query_str += f"AND (filter_name IN {tuple(bands)})"
-                
-    if ra_limits:
-        query_str += f" AND (ra > {ra_limits[0]}) AND (ra < {ra_limits[1]})"
-        
-    if dec_limits:
-        query_str += f" AND (dec > {dec_limits[0]}) AND (dec < {dec_limits[1]})"
-        
-    if release_name:
-        query_str += f" AND release_name='{release_name}'"
+    def load(self):
+        assert self.path is not None, f'Mosaic path is None'
+        assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
+        self._data, self._header = load_observation_fits(self.path)  # may as well always load header
 
-    query_str += " ORDER BY tile_index ASC"
+    def validate(self):
+        assert self.path is not None, f'Mosaic path is None'
+        assert os.path.isfile(self.path), f'Mosaic path {self.path} does not exist'
+        return True
 
-    logging.debug(query_str)
+@dataclass
+class Observation:
+    band: str # e.g. VIS, NIR_Y, NIR_J, NIR_H
+    instrument: str = None  # e.g. NISP, VIS
+    BGMOD: Optional[Mosaic] = None
+    BGSUB: Optional[Mosaic] = None
+    RMS: Optional[Mosaic] = None
+    PSF: Optional[Mosaic] = None  # catalog psf
 
-    # this doesn't work as expected and I don't know why
-    # it always fails to find Euclid
-    # if 'Euclid' not in locals() or 'Euclid' not in globals():
+    def validate(self, cfg):
+        for data_product_name in cfg.data_products:
+            data_product: Mosaic = getattr(self, data_product_name, None)  # type: ignore
+            assert data_product is not None, f'Observation for band {self.band} missing data product {data_product_name}'
+            if data_product.validate():
+                continue
+            return False
+        return True
+
+@dataclass
+class Tile:
+    tile_index: int
+    # ra: float
+    # dec: float
+    release_name: str
+    # hate caps but it's convention
+    VIS: Optional[Observation] = None
+    NIR_Y: Optional[Observation] = None
+    NIR_J: Optional[Observation] = None
+    NIR_H: Optional[Observation] = None
+    # EXT
+    CFIS_U: Optional[Observation] = None
+    CFIS_R: Optional[Observation] = None
+    WISHES_G: Optional[Observation] = None
+    WISHES_Z: Optional[Observation] = None
+
+    mer_final_catalog: Optional[str] = None
+    # mer_morphology_catalog: str = None
+
+    def validate(self, cfg):
+        for band in cfg.bands:
+            if not getattr(self, band).validate(cfg):
+                return False
+        return True
+
+@mem.cache # again we assume the release directory changes rarely, so caching is fine
+def get_path_if_exists(search_str: str) -> str:
+    """Check if a path exists, return it if it does, else return None."""
     try:
-        Euclid
-    except NameError:
-        logging.critical('"Euclid" class not found, run pipeline_utils.login(cfg) first')
+        return list(glob.glob(search_str))[0]
+    except IndexError:
+        logging.info('Path not found: {}'.format(search_str))
+        return None
+
+# only used within mer catalog pipeline
+def find_available_tiles(cfg: OmegaConf):
+
+    # tiles = pipeline_utils.get_tiles_in_survey(bands=cfg.bands, release_name=cfg.release_name)  # F-003_240321 recently appeared
+
+    tile_indices = get_tile_indices_in_release(cfg)
+
+    tiles = []
+    for tile_index in tile_indices:
+        tile = create_tile_object(cfg, tile_index)
+        tiles.append(tile)
+
+    if len(tiles) == 0:
+        logging.error('No tiles found, exiting')
+        exit(1)
+
+    logging.info('Tile list created with {} tiles'.format(len(tiles)))
     
-
-    # async to avoid 2k max, just note it saves results somewhere on server
-    job = Euclid.launch_job_async(query_str, verbose=False, background=False) 
-    assert job is not None, 'Query failed with: \n' + query_str
-    df = job.get_results().to_pandas()
-    
-    assert len(df) > 0, 'No results for query with: \n' + query_str
-    logging.info(f"Found {len(df)} query results")
-    return df
-
-
-# not used for GZ Euclid
-def get_tile_extents_fov(tiles: pd.DataFrame) -> pd.DataFrame:
-    """
-    Adds cols ['ra_min', 'ra_max', 'dec_min', 'dec_max'] by unpacking the "fov" tile metadata column
-    fov = Field of View, the corners of the tile in RA and Dec
-    Thanks to Kristin Remmelgas
-
-    Args:
-        tiles (pd.DataFrame): table of MER mosaic products with an 'fov' column in ADQL format
-
-    Returns:
-        pd.DataFrame: same as input, but with ['ra_min', 'ra_max', 'dec_min', 'dec_max'] columns showing edges of tile FoV
-    """
-    
-    tiles = tiles.copy()
-    float_fovs = tiles['fov'].apply(lambda x: np.array(x[1:-1].split(", ")).astype(np.float64)) # from one big string to arrays of floats
-    array_fovs = np.array(float_fovs.values.tolist()) #from pandas series to numpy array
-    ras = array_fovs[:, ::2]
-    decs = array_fovs[:, 1::2]
-
-    tiles['ra_min'] = np.min(ras, axis=1)
-    tiles['ra_max'] = np.max(ras, axis=1)
-    tiles['dec_min'] = np.min(decs, axis=1)
-    tiles['dec_max'] = np.max(decs, axis=1)
     return tiles
 
 
-@mem.cache
-def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
+def get_tile_indices_in_release(cfg):
+    release_dir = get_datalabs_release_dir(cfg)
+
+    # all subfolders in the release_dir, each name is a tile_index
+    tile_indices = [ int(os.path.basename(f.path)) for f in os.scandir(release_dir + '/MER') if f.is_dir() ]
+    tile_indices = sorted(tile_indices)
+    logging.info(f'Found {len(tile_indices)} tiles in release {cfg.release_name} e.g. {tile_indices[0]}')
+
+    if cfg.max_tiles and len(tile_indices) > cfg.max_tiles:
+        logging.info(f'Randomly subselecting {cfg.max_tiles} tiles')
+        tile_indices = np.random.choice(tile_indices, cfg.max_tiles, replace=False).tolist()
+    return tile_indices
+
+@mem.cache  # almost never changes
+def get_datalabs_release_dir(cfg):
+    if cfg.release_name == 'Q1_R1':
+        release_dir = '/media/home/data/euclid_q1/Q1_R1'
+    elif cfg.release_name == 'RR2_R1':
+        release_dir = '/media/home/data/euclid_reg/REGREPROC2_R1'
+    else:
+        raise ValueError('Release name not recognised for tile search: {}'.format(cfg.release_name))
+    return release_dir
+
+# @mem.cache  # we assume the release directory changes rarely, so caching is fine
+def create_tile_object(cfg, tile_index):
+
+    instrument_band_pairs = [
+        ('VIS', 'VIS'), 
+        ('NISP', 'NIR_Y'), 
+        ('NISP', 'NIR_J'), 
+        ('NISP', 'NIR_H'),
+        ('MEGACAM', 'CFIS_U'), 
+        ('MEGACAM', 'CFIS_R'), 
+        ('HSC', 'WISHES_G'), 
+        ('HSC', 'WISHES_Z')
+    ]
+
+    release_dir = get_datalabs_release_dir(cfg)
+    tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
+    tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
+    if tile.mer_final_catalog is None:
+        logging.critical(f'MER final catalog not found for tile {tile_index}')
+        exit(1)
+
+    # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
+    for (instrument, band) in instrument_band_pairs:  # could add EXT here
+        if band in cfg.bands:
+            band_w_hyphen = band.replace('_', '-')  # python can't use hyphens in variable names
+            mosaic = Observation(band=band)
+            mosaic.instrument = instrument
+
+            mosaic.BGMOD = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGMOD-{band_w_hyphen}_TILE{tile_index}-*.fits'))
+            mosaic.BGSUB = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_BGSUB-MOSAIC-{band_w_hyphen}_TILE{tile_index}-*.fits'))
+            mosaic.RMS = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_MOSAIC-{band_w_hyphen}-RMS_TILE{tile_index}-*.fits'))
+            mosaic.PSF = Mosaic(get_path_if_exists(f'{release_dir}/MER/{tile_index}/{instrument}/EUC_MER_CATALOG-PSF-{band_w_hyphen}_TILE{tile_index}-*.fits'))
+
+            # for now, only use the mosaic if all required data products exist for that band
+            # if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy. No path = None = False.
+            if mosaic.validate(cfg):
+                setattr(tile, band, mosaic)
+            else:
+                logging.warning(f'Skipping mosaic as not all data products exist, for tile {tile_index}, instrument {instrument}, band {band}: {mosaic}')
+    
+    assert tile.validate(cfg), f'Tile {tile_index} is missing required bands or data products'
+    return tile
+
+
+
+def find_relevant_sources_in_tile(cfg, df: pd.DataFrame) -> pd.DataFrame:
     # apply our final selection criteria
+    # df should be mer catalogue for that tile
 
     """
     segmentation map id query is like:
@@ -123,151 +222,75 @@ def find_relevant_sources_in_tile(cfg, tile_index: int) -> pd.DataFrame:
     WHERE CAST(segmentation_map_id as varchar) LIKE '102020107%'
     """
 
-    if cfg.sas_environment == 'IDR':
-        vis_flux_col = 'flux_vis_1fwhm_aper'  # now renamed with 1FWHM etc
-        ext_cols = ''  # not yet available
-    elif cfg.sas_environment == 'PDR':
-        vis_flux_col = 'flux_vis_1fwhm_aper'
-        ext_cols = ', flux_g_ext_decam_1fwhm_aper, flux_i_ext_decam_1fwhm_aper, flux_r_ext_decam_1fwhm_aper'
-    else:
-        vis_flux_col = 'flux_vis_aper'
-        ext_cols = ', flux_g_ext_decam_aper, flux_i_ext_decam_aper, flux_r_ext_decam_aper'
-        
-    query_str = f"""
-    SELECT object_id, right_ascension, declination, gaia_id, segmentation_area, flux_segmentation, flux_detection_total, {vis_flux_col}, mumax_minus_mag, mu_max, ellipticity, kron_radius, segmentation_map_id {ext_cols}
-    FROM catalogue.mer_catalogue
-    """
+    # if cfg.cfg.release_name in ['Q1_R1', 'RR2_R1']:
+    vis_flux_col = 'flux_vis_1fwhm_aper'  # now renamed with 1FWHM etc
+        # ext_cols = []  # not yet available
+    # elif cfg.sas_environment == 'PDR':
+        # vis_flux_col = 'flux_vis_1fwhm_aper'
+        # ext_cols = ['flux_g_ext_decam_1fwhm_aper', 'flux_i_ext_decam_1fwhm_aper', 'flux_r_ext_decam_1fwhm_aper']
+    # else:
+        # vis_flux_col = 'flux_vis_aper'
+        # ext_cols = ['flux_g_ext_decam_aper', 'flux_i_ext_decam_aper', 'flux_r_ext_decam_aper']
 
-    # non-negative vis flux
-    # no cross-match to gaia stars
-    # detected in vis
-    # not "spurious" (very similar to detected in vis)
-    standard_quality_cuts = f"""WHERE {vis_flux_col} > 0
-    AND gaia_id IS NULL
-    AND vis_det=1
-    AND spurious_prob < 0.2
-    """
-    query_str += standard_quality_cuts
+    # only relevant columns
+    required_cols = ['object_id', 'right_ascension', 'declination', 'gaia_id', 'segmentation_area', 'flux_segmentation', 'flux_detection_total', vis_flux_col, 'mumax_minus_mag', 'mu_max', 'ellipticity', 'kron_radius', 'segmentation_map_id', 'vis_det', 'spurious_prob']
+    # optional_cols = ext_cols
+    # df = df[relevant_cols]
+    assert all([col in df.columns for col in required_cols]), f'Missing columns in dataframe: {set(required_cols) - set(df.columns)}'
+
+    # apply as pandas cuts
+    df = df.query(vis_flux_col + ' > 0')  # non-negative vis flux
+    # df = df.query('gaia_id.isnull()')  # no cross-match to gaia stars - now replaced
+    # https://euclid.esac.esa.int/dr/q1/dpdd/merdpd/mermorphologycookbook.html#point-like-probability
+    # use point_like_prob to reject stars instead
+    df = df[(df['point_like_prob'] < 0.5) | (df['segmentation_area'] > 10000)]  # point-like is nan for very small objects (should reject) and very large (should keep)
+    df = df.query('vis_det == 1')  # detected in vis
+    df = df.query('spurious_prob < 0.2')  # not "spurious" (very similar to detected in vis)
 
     if cfg.selection_cuts == 'galaxy_zoo':
         logging.info('Applying pre-Q1 volunteer Galaxy Zoo cuts')
+        above_min_area = df['segmentation_area'] > 1200  # at least 1200px in area
+        above_min_flux = (df['flux_segmentation'] > 22.90867652) & (df['segmentation_area'] > 200)
+        df = df[above_min_area | above_min_flux]  # keep galaxies that are either large enough or bright enough
         # at least 1200px in area OR ( vis mag < 20.5 (expressed as flux) and at least 200px in area)
-        query_str += """AND (segmentation_area > 1200 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))"""
-        # UPDATE - for Q1, changed to 800px. Will see how Zoobot performs on these smaller galaxies.
+        # UPDATE - for Q1, changed to 700px. Will see how Zoobot performs on these smaller galaxies.
     elif cfg.selection_cuts == 'galaxy_zoo_generous':
         logging.info('Applying Q1 generous Galaxy Zoo cuts')
         # UPDATE - for Q1, changed to 700px and NO flux cut
         # a hard flux cut of 22.5 (matching strong lensing)? Will see how Zoobot performs on these smaller galaxies.
         # AND (23.9 - 2.5 * LOG10(flux_segmentation)) < 22.5
         # still keep the few bright but small galaxies, for mass completeness
-        query_str += """AND (segmentation_area > 700 OR (segmentation_area > 200 AND flux_segmentation > 22.90867652))"""
+        above_min_area = df['segmentation_area'] > 700  # at least 700px in area
+        above_min_flux = (df['flux_segmentation'] > 22.90867652) & (df['segmentation_area'] > 200)
+        df = df[above_min_area | above_min_flux]  # keep galaxies that are either large enough or bright enough
     elif cfg.selection_cuts == 'space_warps':
         # https://euclidconsortium.slack.com/archives/C05JVCV6TA5/p1728644532577239
         logging.info('Applying lens candidate cuts')
-        query_str += """AND segmentation_area > 200
-        AND flux_detection_total >= 3.63078
-        AND mumax_minus_mag >= -2.6
-        AND mu_max >= 15.0
-        """
+        df = df.query('segmentation_area > 200')  
+        df = df.query('flux_detection_total >= 3.63078')  # flux detection total, not segmentation
+        df = df.query('mumax_minus_mag >= -2.6')  # mumax minus mag, not mu_max
+        df = df.query('mu_max >= 15.0')  # mu_max, not mumax minus mag
     else:
         raise ValueError(f'Unknown selection cuts {cfg.selection_cuts}')
 
     # within the tile via segmentation map id
-    closing_str = f"""AND CAST(segmentation_map_id as varchar) LIKE '{tile_index}%'
-    ORDER BY object_id ASC
-    """
-    query_str += closing_str
-    logging.debug(query_str)
+    tile_index = df['segmentation_map_id'].apply(lambda x: int(str(x)[:9]))
 
-    if 'Euclid' not in locals() or 'Euclid' not in globals():
-        logging.critical('"Euclid" class not foun, run pipeline_utils.login(cfg) first')
-
-    # added min segmentation area to remove tiny bright artifacts
-    # TODO copy to mer cuts/pipeline
-    retries = 0
-    df = None
-    while retries < cfg.max_retries:
-        try:
-            if cfg.run_async:
-                job = Euclid.launch_job_async(query_str, background=False)
-                df = job.get_results().to_pandas()
-            else:
-                job = Euclid.launch_job(query_str)
-                df = job.get_results().to_pandas()
-                assert len(df) < 2000, 'Hit query limit, set run_async=True'
-            break
-        except AttributeError as e:
-            logging.info(e)
-            logging.info(f'Retrying, {retries}')
-        retries += 1
-    if df is None:
-        raise ValueError(f'Query failed after retries: {query_str}')
-    
-
-    logging.info(f"Found {len(df)} query results")
-    
-    df['tile_index'] = tile_index
+    # for convenience
     df['mag_segmentation'] = -2.5 * np.log10(df['flux_segmentation']) + 23.9  # for convenience
+    df['tile_index'] = tile_index  # add tile index column
 
-    return df.reset_index(drop=True)
+    if df.empty:
+        logging.warning('No relevant sources found in tile, returning empty DataFrame')
+        return df
 
+    df = df.sort_values(by='object_id')  # sort by object id, for consistency
+    df = df.reset_index(drop=True)
+    logging.info(f"Found {len(df)} relevant sources")
+    logging.info(f'First galaxy: {df.iloc[0]["object_id"]}, tile {df.iloc[0]["tile_index"]}')
 
-def download_mosaics(tile_index: int, tiles: pd.DataFrame, download_dir: str) -> pd.DataFrame:
-    # save all matching tiles, assuming the tiles catalog only includes relevant data already
-
-    matching_tiles = tiles.query(f'tile_index == {tile_index}')
-    assert len(matching_tiles) > 0, f'No matching tiles found for tile index {tile_index}'
-    
-    matching_tiles = save_euclid_products(matching_tiles, download_dir)  # adds file_loc to downloaded path
-    return matching_tiles
-
-
-def save_euclid_products(df: pd.DataFrame, download_dir: str) -> pd.DataFrame:
-    # adds file_loc to downloaded path
-    df['file_loc'] = df['file_name'].apply(lambda x: save_euclid_product(x, download_dir))
     return df
 
-
-def save_euclid_product(product_filename, download_dir) -> str:
-    output_loc = os.path.join(download_dir, product_filename)
-    if not os.path.isfile(output_loc):
-        downloaded_path = Euclid.get_product(file_name=product_filename, output_file=output_loc)[0]  # 0 as one product
-        logging.info(f'{product_filename} saved at {downloaded_path}')
-    return output_loc
-
-
-@mem.cache
-def get_auxillary_tiles(mosaic_product_oid, auxillary_products: list):
-
-    assert isinstance(auxillary_products, list) or isinstance(auxillary_products, ListConfig), 'auxillary_products must be a list, is {} ({})'.format(auxillary_products, type(auxillary_products))
-
-    for aux in auxillary_products:
-        assert aux in ['MERPSF', 'MERRMS', 'MERBKG', 'MERFLG'], f'Unknown or unsupported auxillary product {aux}'
-
-    query_str = f"""
-    SELECT * FROM sedm.aux_mosaic 
-    WHERE (mosaic_product_oid={mosaic_product_oid})
-    """
-    if len(auxillary_products) > 1:
-        query_str += f"AND (product_type_sas IN {tuple(auxillary_products)})"
-    elif len(auxillary_products) == 1:
-        query_str += f"AND (product_type_sas='{auxillary_products[0]}')"
-
-    df = Euclid.launch_job(query_str).get_results().to_pandas()
-
-
-    """
-    Can sometimes have multiple auxillary tiles with the same mosaic_product_oid
-    EUC_MER_BGSUB-MOSAIC-VIS_TILE102159774-3EAE6B_20240707T183311.123620Z_00.00.fits
-    EUC_MER_BGSUB-MOSAIC-VIS_TILE102159774-FE2962_20240806T043542.352405Z_00.00.fits
-    For now, take the most recent one
-    """
-    df['creation_date'] = df['file_name'].apply(lambda x: x.split('_')[-2])  # str, lead by the datetime
-    df['tile_index'] = df['file_name'].apply(lambda x: x.split('TILE')[1].split('-')[0])  
-    df = df.sort_values(by='creation_date', ascending=False)  # per tile, newest first
-    df = df.drop_duplicates(subset=['tile_index', 'product_type_sas'], keep='first').reset_index(drop=True)
-    # logging.info(df.iloc[0])
-    return df
 
 
 def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, oneway_hash=False):
@@ -290,31 +313,27 @@ def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, o
     return os.path.join(base_dir, subdir, filename_without_format + '.' + output_format)
 
 
-def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
-    # assumes the tile has been downloaded and catalogued
-    # assumes tile_galaxies includes all/only the bands to load and potentially include
-    # print(tile_galaxies.columns.values)
-    
-    logging.info('loading bands for tile')
-    tile_data = {}
-    for band in cfg.bands:
-        tile_data[band] = fits.getdata(tile_galaxies[f'{band.lower()}_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
-        if cfg.add_bkg:
-            bkg_data = fits.getdata(tile_galaxies[f'{band.lower()}_bkg_loc'].iloc[0], header=False, memmap=False, decompress_in_memory=True)
-            tile_data[band] = tile_data[band] + bkg_data
-    header = fits.getheader(tile_galaxies[f'{cfg.bands[0].lower()}_loc'].iloc[0])
-    # vis_loc = tile_galaxies['vis_tile'].iloc[0]
-    # nisp_loc = tile_galaxies['y_tile'].iloc[0]
-    logging.info('tile loaded')
-    
-    tile_galaxies = tile_galaxies.reset_index(drop=True)
-    
+def load_observation_fits(mosaic_path: str) -> tuple[np.ndarray, fits.Header]:
+    # annoyingly this does not work for PSF
+    logging.debug(f'Loading mosaic {os.path.basename(mosaic_path)} from {mosaic_path}')
+    (mosaic, header) = fits.getdata(mosaic_path, header=True, memmap=False, decompress_in_memory=False)  # type: ignore
+    logging.debug(f'Loaded mosaic {os.path.basename(mosaic_path)}, shape: {mosaic.shape}')
+    return mosaic, header
+    # https://docs.astropy.org/en/latest/io/fits/api/files.html
+    # memmap allows access to small segments without loading the whole file into memory
+    # decompress_in_memory probably has no effect on uncompressed .fits? 
+
+def save_cutouts(cfg, tile: Tile, tile_galaxies: pd.DataFrame):
+
+    # assume we always have VIS and use BGSUB tile as our reference for WCS etc
+    header = fits.getheader(tile.VIS.BGSUB.path)
+
     tile_wcs = WCS(header)
 
     for i, galaxy in tile_galaxies.iterrows():
         
-        if i % 100 == 0:
-            logging.info(f'galaxy {i} of {len(tile_galaxies)}')
+        if i % 1000 == 0 or i == 1 or i == 2:  # useful for checking how long it takes to load mosaics
+            logging.info(f'galaxy {i} of {len(tile_galaxies)}, {galaxy["object_id"]} in tile {tile.tile_index}')
                   
         c = SkyCoord(galaxy['right_ascension'], galaxy['declination'], frame='icrs', unit="deg")
         x_center, y_center = tile_wcs.world_to_pixel(c)
@@ -327,19 +346,36 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
         galaxy['log_kron_radius'] = np.log10(galaxy['kron_radius'])
 
         cutout_by_band = {}
-        for band in cfg.bands:
+        for band in cfg.bands:  
 
-            if cfg.field_of_view == 'galaxy_zoo':
-                # TODO this bit should use Cutout2D instead
-                galaxy.index = galaxy.index.str.upper()  # for the radius estimate
-                cutout_by_band[band] = m_utils.extract_cutout_from_array(tile_data[band], galaxy, buff=0, allow_radius_estimate=True)
-                galaxy.index = galaxy.index.str.lower()
-            else:
-                if cfg.field_of_view == 'space_warps':
-                    cfg.field_of_view = 20  # arcsec
+            # create the flux array
+
+            # background-subtracted flux
+            # e.g. tile.NIR_Y.BGSUB.data
+            flux = tile.__dict__[band].BGSUB.data
+            if cfg.add_bkg:  # twice as long to make cutouts and very very small effect for sources smaller than a few tens of arcsec
+                subtracted_bkg = tile.__dict__[band].BGMOD.data
+                flux = flux + subtracted_bkg
+
+            # set field of view for the slice from the flux array
+
+            logging.debug('Getting FoV')
+            if cfg.field_of_view == 'galaxy_zoo':  # use segmentation map sizing
+                source_r_max = m_utils.estimate_source_r_max(galaxy)
+                # source_r_max is half cutout width in pixels
+                # so source_r_max * 2 / 10 is cutout width in arcsec
+                field_of_view = source_r_max * 0.2 * u.arcsec  
+                
+            elif cfg.field_of_view == 'space_warps':  # use standard fixed sizing of 20 arcsec
+                field_of_view = 20 * u.arcsec
+            else:  # assume cfg.field_of_view is a number
                 assert isinstance(cfg.field_of_view, float) or isinstance(cfg.field_of_view, int)
-                # TODO once Cutout2D throughout, I can preserve the header, for now, do .data instead
-                cutout_by_band[band] = Cutout2D(tile_data[band], (x_center, y_center), cfg.field_of_view * u.arcsec, wcs=tile_wcs).data 
+                field_of_view = cfg.field_of_view  * u.arcsec
+                
+            # TODO I could preserve the header, for now, do .data instead
+            # use cutout2D to apply the slice
+            logging.debug(f'Creating cutout for {band} band with field of view {field_of_view}')
+            cutout_by_band[band] = Cutout2D(flux, (x_center, y_center), field_of_view, wcs=tile_wcs).data
 
         
         if cfg.jpg_outputs:  # anything in this list
@@ -349,10 +385,6 @@ def save_cutouts(cfg, tile_galaxies: pd.DataFrame):
             # e.g. jpg_loc/generic/102159774/102159774_123456_generic.jpg
 
             try:
-                # if i == 0:
-                #     cutout_subdir = os.path.dirname(generic_loc)
-                #     if not os.path.isdir(cutout_subdir):
-                #         os.makedirs(cutout_subdir)
                 
                 # we expect to find the outputs here, see cutout_utils.py
                 # skip if all exist and not overwriting. If any missing, don't skip.
@@ -412,21 +444,191 @@ def create_simple_fits(cfg, galaxy, cutout_by_band):
         fits.HDUList(hdu_list).writeto(galaxy['fits_loc'], overwrite=True)
 
 
-def login(cfg):
-    if os.path.isdir('/media/home/team_workspaces'):
-        # two line file, username and password
-        # do not commit or put in any team workspace, obviously...
-        from astroquery.esa.euclid.core import EuclidClass
-        Euclid = EuclidClass(environment=cfg.sas_environment)
-        logging.info(cfg)
-        try:
-            logging.info(f'Logging in with credentials file {cfg.credentials_file}')
-            assert os.path.isfile(cfg.credentials_file), f'Credentials file not found at {cfg.credentials_file}'
-            Euclid.login(credentials_file=cfg.credentials_file)
-        except ConfigAttributeError:
-        # if OmegaConf.is_missing(cfg, "credentials_file"):  # this actually only catches "???", not simply no key
-            logging.info('No cfg.credentials_file, logging in with username and password')
-            Euclid.login()
-        globals()['Euclid'] = Euclid  # hack this into everything else, janky but it works and is cleaner than passing it around
-    else:
-        raise ValueError('Not on DataLabs')
+def create_folders(cfg: OmegaConf):
+    cfg.download_dir = cfg.base_dir + '/' + cfg.name
+    cfg.tile_dir = cfg.download_dir + '/tiles'
+    cfg.catalog_dir = cfg.download_dir + '/catalogs'
+
+    cfg.cutout_dir = cfg.download_dir + '/cutouts'
+    cfg.jpg_dir = cfg.cutout_dir + '/jpg'
+    cfg.fits_dir = cfg.cutout_dir + '/fits'
+    
+    cfg.sanity_dir = cfg.download_dir + '/sanity'
+
+    logging.info(f'Saving to {cfg.download_dir}')
+    assert os.path.exists(os.path.dirname(cfg.base_dir))
+    for d in [
+        cfg.base_dir,
+        cfg.download_dir,
+        cfg.tile_dir, 
+        cfg.catalog_dir,
+        cfg.jpg_dir,
+        cfg.fits_dir,
+        cfg.sanity_dir 
+        ]:
+        if not os.path.exists(d):
+            os.makedirs(d)
+
+    return cfg
+
+
+
+# # @mem.cache
+# def get_tiles_in_survey(tile_index=None, bands=None, release_name=None, ra_limits=None, dec_limits=None) -> pd.DataFrame:
+
+#     # TODO move release name into survey property, once happy with what it means, if it is per survey?
+#     query_str = f"""
+#         SELECT * FROM sedm.mosaic_product 
+#         WHERE (product_type='DpdMerBksMosaic')
+#         """
+    
+#     if tile_index is not None:
+#         query_str += f"AND (tile_index={tile_index})"
+    
+#     if bands is not None:
+#         if isinstance(bands, str):
+#             query_str += f"AND (filter_name='{bands}')"
+#         else:  # assume listlike
+#             if len(bands) == 1:
+#                 band = bands[0]
+#                 assert isinstance(band, str), 'Found single band passed as listlike, single band must be a string'
+#                 query_str += f"AND (filter_name='{band}')"
+#             else:
+#                 query_str += f"AND (filter_name IN {tuple(bands)})"
+                
+#     if ra_limits:
+#         query_str += f" AND (ra > {ra_limits[0]}) AND (ra < {ra_limits[1]})"
+        
+#     if dec_limits:
+#         query_str += f" AND (dec > {dec_limits[0]}) AND (dec < {dec_limits[1]})"
+        
+#     if release_name:
+#         query_str += f" AND release_name='{release_name}'"
+
+#     query_str += " ORDER BY tile_index ASC"
+
+#     logging.debug(query_str)
+
+#     # this doesn't work as expected and I don't know why
+#     # it always fails to find Euclid
+#     # if 'Euclid' not in locals() or 'Euclid' not in globals():
+#     try:
+#         Euclid
+#     except NameError:
+#         logging.critical('"Euclid" class not found, run pipeline_utils.login(cfg) first')
+    
+
+#     # async to avoid 2k max, just note it saves results somewhere on server
+#     job = Euclid.launch_job_async(query_str, verbose=False, background=False) 
+#     assert job is not None, 'Query failed with: \n' + query_str
+#     df = job.get_results().to_pandas()
+    
+#     assert len(df) > 0, 'No results for query with: \n' + query_str
+#     logging.info(f"Found {len(df)} query results")
+#     return df
+
+
+# not used for GZ Euclid
+# def get_tile_extents_fov(tiles: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Adds cols ['ra_min', 'ra_max', 'dec_min', 'dec_max'] by unpacking the "fov" tile metadata column
+#     fov = Field of View, the corners of the tile in RA and Dec
+#     Thanks to Kristin Remmelgas
+
+#     Args:
+#         tiles (pd.DataFrame): table of MER mosaic products with an 'fov' column in ADQL format
+
+#     Returns:
+#         pd.DataFrame: same as input, but with ['ra_min', 'ra_max', 'dec_min', 'dec_max'] columns showing edges of tile FoV
+#     """
+    
+#     tiles = tiles.copy()
+#     float_fovs = tiles['fov'].apply(lambda x: np.array(x[1:-1].split(", ")).astype(np.float64)) # from one big string to arrays of floats
+#     array_fovs = np.array(float_fovs.values.tolist()) #from pandas series to numpy array
+#     ras = array_fovs[:, ::2]
+#     decs = array_fovs[:, 1::2]
+
+#     tiles['ra_min'] = np.min(ras, axis=1)
+#     tiles['ra_max'] = np.max(ras, axis=1)
+#     tiles['dec_min'] = np.min(decs, axis=1)
+#     tiles['dec_max'] = np.max(decs, axis=1)
+#     return tiles
+
+
+
+# def login(cfg):
+#     if os.path.isdir('/media/home/team_workspaces'):
+#         # two line file, username and password
+#         # do not commit or put in any team workspace, obviously...
+#         from astroquery.esa.euclid.core import EuclidClass
+#         Euclid = EuclidClass(environment=cfg.sas_environment)
+#         logging.info(cfg)
+#         try:
+#             logging.info(f'Logging in with credentials file {cfg.credentials_file}')
+#             assert os.path.isfile(cfg.credentials_file), f'Credentials file not found at {cfg.credentials_file}'
+#             Euclid.login(credentials_file=cfg.credentials_file)
+#         except ConfigAttributeError:
+#         # if OmegaConf.is_missing(cfg, "credentials_file"):  # this actually only catches "???", not simply no key
+#             logging.info('No cfg.credentials_file, logging in with username and password')
+#             Euclid.login()
+#         globals()['Euclid'] = Euclid  # hack this into everything else, janky but it works and is cleaner than passing it around
+#     else:
+#         raise ValueError('Not on DataLabs')
+
+
+# def download_mosaics(tile_index: int, tiles: pd.DataFrame, download_dir: str) -> pd.DataFrame:
+#     # save all matching tiles, assuming the tiles catalog only includes relevant data already
+
+#     matching_tiles = tiles.query(f'tile_index == {tile_index}')
+#     assert len(matching_tiles) > 0, f'No matching tiles found for tile index {tile_index}'
+    
+#     matching_tiles = save_euclid_products(matching_tiles, download_dir)  # adds file_loc to downloaded path
+#     return matching_tiles
+
+
+# def save_euclid_products(df: pd.DataFrame, download_dir: str) -> pd.DataFrame:
+#     # adds file_loc to downloaded path
+#     df['file_loc'] = df['file_name'].apply(lambda x: save_euclid_product(x, download_dir))
+#     return df
+
+
+# def save_euclid_product(product_filename, download_dir) -> str:
+#     output_loc = os.path.join(download_dir, product_filename)
+#     if not os.path.isfile(output_loc):
+#         downloaded_path = Euclid.get_product(file_name=product_filename, output_file=output_loc)[0]  # 0 as one product
+#         logging.info(f'{product_filename} saved at {downloaded_path}')
+#     return output_loc
+
+
+# @mem.cache
+# def get_auxillary_tiles(mosaic_product_oid, auxillary_products: list):
+
+#     assert isinstance(auxillary_products, list) or isinstance(auxillary_products, ListConfig), 'auxillary_products must be a list, is {} ({})'.format(auxillary_products, type(auxillary_products))
+
+#     for aux in auxillary_products:
+#         assert aux in ['MERPSF', 'MERRMS', 'MERBKG', 'MERFLG'], f'Unknown or unsupported auxillary product {aux}'
+
+#     query_str = f"""
+#     SELECT * FROM sedm.aux_mosaic 
+#     WHERE (mosaic_product_oid={mosaic_product_oid})
+#     """
+#     if len(auxillary_products) > 1:
+#         query_str += f"AND (product_type_sas IN {tuple(auxillary_products)})"
+#     elif len(auxillary_products) == 1:
+#         query_str += f"AND (product_type_sas='{auxillary_products[0]}')"
+
+#     df = Euclid.launch_job(query_str).get_results().to_pandas()
+
+
+#     """
+#     Can sometimes have multiple auxillary tiles with the same mosaic_product_oid
+#     EUC_MER_BGSUB-MOSAIC-VIS_TILE102159774-3EAE6B_20240707T183311.123620Z_00.00.fits
+#     EUC_MER_BGSUB-MOSAIC-VIS_TILE102159774-FE2962_20240806T043542.352405Z_00.00.fits
+#     For now, take the most recent one
+#     """
+#     df['creation_date'] = df['file_name'].apply(lambda x: x.split('_')[-2])  # str, lead by the datetime
+#     df['tile_index'] = df['file_name'].apply(lambda x: x.split('TILE')[1].split('-')[0])  
+#     df = df.sort_values(by='creation_date', ascending=False)  # per tile, newest first
+#     df = df.drop_duplicates(subset=['tile_index', 'product_type_sas'], keep='first').reset_index(drop=True)
+#     # logging.info(df.iloc[0])
+#     return df

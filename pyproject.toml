@@ -23,6 +23,7 @@ dependencies = [
     'astropy',
     'tqdm',
     'panoptes-client',
+    'healpy',
     'omegaconf',  # for config
     'pytest'  # for testing
 ]

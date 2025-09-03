@@ -1,0 +1,27 @@
+base_dir: '/media/home/team_workspaces/Euclid-Consortium/data/bulk_cutouts_debug'
+name: 'example_config_external'
+
+external_targets_loc: '/media/user/repos/bulk-euclid-cutouts/tests/data/102021539_mer_catalog.csv'
+release_name: 'Q1_R1'
+
+bands: ['VIS', 'NIR_Y']
+
+data_products: ['BGSUB', 'BGMOD', 'RMS', 'PSF']
+add_bkg: False
+
+jpg_outputs: [
+  'sw_mtf_vis_y', 'gz_arcsinh_vis_y'
+  ] 
+jpg_quality: 98
+use_fits_origin_for_jpg: true
+
+fits_outputs: true
+
+overwrite_jpg: false
+overwrite_fits: false
+
+# TODO download from https://euclid.roe.ac.uk/projects/mer_pf/wiki/Tiling#Healpix-maps-for-Wide-Field-V12-tiling 
+# specifically, https://euclid.roe.ac.uk/attachments/153460
+# do not unpack, it's 30mb compressed and astropy can read directly,
+# but 3GB uncompressed!
+healpix_loc: '/media/home/my_workspace/repos/bulk-euclid-cutouts/data/tile_index_map.v1.2.fits.gz'

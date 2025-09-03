@@ -153,10 +153,13 @@ def get_cutout_mosaic_coordinates(mosaic, source, buff, allow_radius_estimate=Fa
     return x_center, y_center, r1, r2, c1, c2
 
 
-def estimate_source_r_max(source):
+def estimate_source_r_max(source: pd.Series):
     intercept = -0.35048866
-    coefs = {'LOG_SEGMENTATION_AREA': 0.506900163942416, 'ELLIPTICITY': 0.2405883433225405, 'LOG_KRON_RADIUS': 0.11148176647655159}
-    log_r_max_estimate = intercept + source['LOG_SEGMENTATION_AREA'] * coefs['LOG_SEGMENTATION_AREA'] + source['ELLIPTICITY'] * coefs['ELLIPTICITY'] + source['LOG_KRON_RADIUS'] * coefs['LOG_KRON_RADIUS']
+    # make source keys lower case to match the catalog
+    # source = source.str.lower()
+    coefs = {'log_segmentation_area': 0.506900163942416, 'ellipticity': 0.2405883433225405, 'log_kron_radius': 0.11148176647655159}
+    log_r_max_estimate = intercept + sum([source[key] * coefs[key] for key in coefs.keys()])
+    assert not np.isnan(log_r_max_estimate), f'NaN in log_r_max_estimate for source {source["log_segmentation_area"]}, {source["ellipticity"]}, {source["log_kron_radius"]}'
     return 10 ** log_r_max_estimate
 
 
@@ -264,3 +267,25 @@ def load_wcs_from_file(filename):
     # Parse the WCS keywords in the primary HDU
     w = wcs.WCS(hdulist[0].header)
     return w
+
+
+# def estimate_source_r_max_old(source):
+#     intercept = -0.35048866
+#     coefs = {'LOG_SEGMENTATION_AREA': 0.506900163942416, 'ELLIPTICITY': 0.2405883433225405, 'LOG_KRON_RADIUS': 0.11148176647655159}
+#     log_r_max_estimate = intercept + source['LOG_SEGMENTATION_AREA'] * coefs['LOG_SEGMENTATION_AREA'] + source['ELLIPTICITY'] * coefs['ELLIPTICITY'] + source['LOG_KRON_RADIUS'] * coefs['LOG_KRON_RADIUS']
+#     return 10 ** log_r_max_estimate
+
+if __name__ == '__main__':
+    
+    galaxy = pd.Series({
+        'segmentation_area': 32.0,
+        'ellipticity': 0.299203,
+        'kron_radius': 11.333019
+    })
+    galaxy['log_segmentation_area'] = np.log10(galaxy['segmentation_area'])
+    galaxy['log_kron_radius'] = np.log10(galaxy['kron_radius'])
+
+    for col in galaxy.index:
+        galaxy[col.upper()] = galaxy[col]
+
+    print(estimate_source_r_max(galaxy), estimate_source_r_max_old(galaxy))

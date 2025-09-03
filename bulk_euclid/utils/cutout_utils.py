@@ -12,12 +12,13 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
     # see lensing_cutout_colours.ipynb for a minimal example
 
     # flip to match fits if requested
-    if cfg.use_fits_origin_for_jpg:
-        vis_im = np.flipud(vis_im)
-        if y_im is not None:
-            y_im = np.flipud(y_im)
-        if j_im is not None:
-            j_im = np.flipud(j_im)
+    # NOW DEPRECATED as Cutout2D seems to do this consistently with fits files
+    # if cfg.use_fits_origin_for_jpg:
+    #     vis_im = np.flipud(vis_im)
+    #     if y_im is not None:
+    #         y_im = np.flipud(y_im)
+    #     if j_im is not None:
+    #         j_im = np.flipud(j_im)
 
     if 'generic' not in save_loc:
         logging.debug(f'{save_loc} must include the string "generic" for renaming each cutout format e.g. foo_generic.jpg -> foo_sw_arcsinh_vis_y.jpg')
@@ -62,6 +63,11 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
         cutout = make_lsb_cutout(vis_im, stretch=20, power=0.5)
         save_image_wrapper(cutout, save_loc.replace('generic', 'gz_arcsinh_vis_lsb'), quality=cfg.jpg_quality)
 
+    if 'gz_arcsinh_triple' in cfg.jpg_outputs:
+        # unique to GZ, for tidal features etc
+        cutout = make_triple_cutout(vis_im, y_im, j_im)
+        save_image_wrapper(cutout, save_loc.replace('generic', 'gz_arcsinh_triple'), quality=cfg.jpg_quality)
+
     ### Space Warps arcinsh processing ###
 
     if 'sw_arcsinh_vis_only' in cfg.jpg_outputs:
@@ -86,6 +92,7 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
     ### Space Warps MTF processing ###
 
     if any(['mtf' in x for x in cfg.jpg_outputs]):
+        logging.debug('Creating MTF cutouts')
 
         vis_mtf = apply_MTF(vis_im)
         # assume if the other bands are available then we will probably want these as well
@@ -98,6 +105,7 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
             save_image_wrapper(vis_mtf, save_loc.replace('generic', 'sw_mtf_vis_only'), quality=cfg.jpg_quality)
 
         if 'sw_mtf_vis_y' in cfg.jpg_outputs:
+            logging.debug('Grouping MTF cutout for vis and y')
             mean_mtf = np.mean([vis_mtf, y_mtf], axis=0)
             rgb_mtf = np.stack([y_mtf, mean_mtf, vis_mtf], axis=2).astype(np.uint8)
             lab_mtf = replace_luminosity_channel(rgb_mtf, rgb_channel_for_luminosity=2, desaturate_speckles=False)
@@ -117,7 +125,7 @@ def save_jpg_cutouts(cfg, save_loc, vis_im: np.ndarray, y_im: np.ndarray=None, j
     logging.debug('Saved all jpg cutouts for single galaxy')
 
 def save_image_wrapper(image, save_loc, quality):
-    logging.debug(save_loc)
+    logging.debug(f'Saving to {save_loc}')
     subdir = os.path.dirname(save_loc)
     if not os.path.isdir(subdir):
         os.makedirs(subdir, exist_ok=True)
@@ -131,6 +139,7 @@ def make_composite_cutout_from_tiles(source, vis_im, nir_im, allow_radius_estima
     
 
 def make_composite_cutout(vis_cutout, nisp_cutout, vis_q=100, vis_clip=99.85, nisp_q=1, nisp_clip=99.85):
+    logging.debug('Creating composite cutout')
     if vis_cutout.shape != nisp_cutout.shape:
         logging.debug(f'vis shape {vis_cutout.shape}, nisp shape {nisp_cutout.shape}')
         raise AssertionError('Shapes do not match')

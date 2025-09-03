@@ -14,7 +14,8 @@ def run(cfg):
 
     visualise_catalog(cfg, master_catalog)
 
-    make_archive_for_download(cfg)
+    # stop doing this - faster through datalabs file browser interface
+    # make_archive_for_download(cfg)
 
 
 
