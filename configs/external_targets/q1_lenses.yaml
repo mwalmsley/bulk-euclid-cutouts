@@ -13,7 +13,8 @@ release_name: Q1_R1  # Q1 data only, will be missing for non-Q1 lenses (just use
 # bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands
 
 # CFIS is CFHT megacam, WISHES is HSC
-bands: ['CFIS_U', 'WISHES_G', 'CFIS_R', 'VIS', 'WISHES_Z', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands inc. EXT
+# bands: ['CFIS_U', 'WISHES_G', 'CFIS_R', 'VIS', 'WISHES_Z', 'NIR_Y', 'NIR_J', 'NIR_H']  # all bands inc. EXT
+bands: ['VIS', 'NIR_Y', 'NIR_J', 'NIR_H'] # many Q1 tiles don't have EXT except DECAM 
 
 data_products: ['BGSUB', 'BGMOD', 'RMS', 'PSF']
 add_bkg: False
