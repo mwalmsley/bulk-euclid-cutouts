@@ -80,9 +80,9 @@ class Observation:
 
     def validate(self, cfg):
         for data_product_name in cfg.data_products:
-            data_product = getattr(self, data_product_name, None)
+            data_product: Mosaic = getattr(self, data_product_name, None)  # type: ignore
             assert data_product is not None, f'Observation for band {self.band} missing data product {data_product_name}'
-            if data_product.validate(cfg):
+            if data_product.validate():
                 continue
             return False
         return True
