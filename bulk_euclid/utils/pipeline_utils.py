@@ -154,6 +154,8 @@ def create_tile_object(cfg, tile_index):
     release_dir = get_datalabs_release_dir(cfg)
     tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
     tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
+    if tile.mer_final_catalog is None:
+        logging.warning(f'MER final catalog not found for tile {tile_index} - probably the tile folder does not exist')
     # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
 
     for (instrument, band) in instrument_band_pairs:  # could add EXT here

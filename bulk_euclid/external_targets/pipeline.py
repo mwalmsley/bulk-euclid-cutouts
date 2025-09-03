@@ -68,13 +68,14 @@ def run(cfg: OmegaConf):
         targets_with_tiles = find_matching_tiles(
             cfg, external_targets
         )  
-        # all of these tiles exist in healpix but may not exist in the data release
+        # all of these tiles exist in healpix and in the current data release
+        # they should almost all have (at the very least) MER mosaics
 
-    logging.info('{} unique tiles for {} targets'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles)))
+    # logging.info('{} unique tiles for {} targets'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles)))
 
-    tile_indices_in_release = pipeline_utils.get_tile_indices_in_release(cfg)
-    targets_with_tiles = targets_with_tiles[targets_with_tiles["tile_index"].isin(tile_indices_in_release)]
-    logging.info('Of those, {} unique tiles for {} targets exist in data release {}'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles), cfg.release_name))
+    # tile_indices_in_release = pipeline_utils.get_tile_indices_in_release(cfg)
+    # targets_with_tiles = targets_with_tiles[targets_with_tiles["tile_index"].isin(tile_indices_in_release)]
+    # logging.info('Of those, {} unique tiles for {} targets exist in data release {}'.format(targets_with_tiles['tile_index'].nunique(), len(targets_with_tiles), cfg.release_name))
 
     logging.info(targets_with_tiles['category'].value_counts())
     targets_with_tiles.to_csv(cfg.download_dir + '/targets_with_tiles.csv', index=False)
@@ -96,9 +97,12 @@ def find_matching_tiles(
     cfg: OmegaConf, external_targets: pd.DataFrame = None
 ):  # simplified from a_make_catalogs_and_cutouts.py
     """
-    For each target in the external_targets dataframe, find the closest tile that covers it.
+    For each target in the external_targets dataframe, find the closest tile in this data release that covers it.
     It returns a dataframe acting as a lookup table between target and tile.
     This is then used later to choose which tiles to download and, for each tile, which targets to make cutouts of
+
+    First, finds the tile for those coordinates in the healpix table
+    Then, filters for tiles which actually exist in the current data release.
 
     external_targets must have columns ['id_str', 'target_ra' (deg), 'target_dec' (deg), 'target_field_of_view' (arcsec)]. 
     id_str has no effect, it's just a primary key.
@@ -118,15 +122,16 @@ def find_matching_tiles(
         logging.error(f"Could not find healpix file at {cfg.healpix_loc} - download it first from https://euclid.roe.ac.uk/attachments/153460")
         raise e
 
+
     external_targets['tile_index'] = get_matching_tile_indices(
         external_targets['target_ra'].values,
         external_targets['target_dec'].values,
         healpix_array
     )
 
-    logging.info(f'Matched {len(external_targets)} targets to {len(external_targets["tile_index"].unique())} tiles')
     targets_with_tiles = external_targets.dropna(subset=['tile_index'])
-    logging.info(f'Targets with possible tile matches: {len(targets_with_tiles)}')
+    logging.info(f'Matched {len(external_targets)} possible targets to {len(external_targets["tile_index"].unique())} tiles in release {cfg.release_name}')
+    # logging.info(f'Targets with possible tile matches: {len(targets_with_tiles)}')
     
     assert len(targets_with_tiles) > 0, "No targets within FoV of any tiles, even before selecting this release: likely a bug"
 
@@ -134,8 +139,8 @@ def find_matching_tiles(
     cfg.max_tiles = 0  # override to ensure we always get every tile in the release
     tile_indices_in_release = pipeline_utils.get_tile_indices_in_release(cfg)
     external_targets = external_targets[external_targets["tile_index"].isin(tile_indices_in_release)]
-    logging.info(f'Targets with tile in current release: {len(external_targets)}')
-    assert len(external_targets) > 0, "No targets with tile in current release, check your coordinates are in this release"
+    logging.info(f'Targets with tiles in current release: {len(external_targets)} in {len(external_targets["tile_index"].unique())} unique tiles')
+    assert len(external_targets) > 0, f"No targets with tile in release {cfg.release_name}, check your coordinates are in this release"
 
     # avoid annoying type conversion
     targets_with_tiles["tile_index"] = targets_with_tiles["tile_index"].astype(int)
@@ -153,6 +158,9 @@ def get_matching_tile_indices(ra: np.ndarray, dec: np.ndarray, healpix_array: np
     Tile info. based on healpix: -tiling v1.2 -
     https://euclid.roe.ac.uk/projects/mer_pf/wiki/Tiling#Healpix-maps-for-Wide-Field-V12-tiling
     Healpix file 1.2 available on the redmine
+
+    Does NOT filter for tiles which actually exist in datalabs i.e. are in the current release
+
     Args:
         ra: np.array of ra in deg (likely output of target['target_ra'].values (for one specific target))
         dec: np.array dec in deg (likely output of target['target_deg'].values (for one specific target))
