@@ -166,7 +166,7 @@ def get_datalabs_release_dir(cfg):
         raise ValueError('Release name not recognised for tile search: {}'.format(cfg.release_name))
     return release_dir
 
-# @mem.cache  # we assume the release directory changes rarely, so caching is fine
+@mem.cache  # we assume the release directory changes rarely, so caching is fine
 def create_tile_object(cfg, tile_index):
 
     instrument_band_pairs = [
