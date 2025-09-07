@@ -131,8 +131,11 @@ def find_available_tiles(cfg: OmegaConf):
 
     tiles = []
     for tile_index in tile_indices:
-        tile = create_tile_object(cfg, tile_index)
-        tiles.append(tile)
+        try:
+            tile = create_tile_object(cfg, tile_index)
+            tiles.append(tile)
+        except Exception as e:
+            logging.error(f'Error creating tile object for tile {tile_index}: {e}')
 
     if len(tiles) == 0:
         logging.error('No tiles found, exiting')
@@ -168,7 +171,7 @@ def get_datalabs_release_dir(cfg):
         raise ValueError('Release name not recognised for tile search: {}'.format(cfg.release_name))
     return release_dir
 
-@mem.cache  # we assume the release directory changes rarely, so caching is fine
+# @mem.cache  # we assume the release directory changes rarely, so caching is fine
 def create_tile_object(cfg, tile_index):
 
     instrument_band_pairs = [
@@ -186,8 +189,7 @@ def create_tile_object(cfg, tile_index):
     tile = Tile(tile_index=tile_index, release_name=cfg.release_name)
     tile.mer_final_catalog = get_path_if_exists(f'{release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
     if tile.mer_final_catalog is None:
-        logging.critical(f'MER final catalog not found for tile {tile_index}')
-        exit(1)
+        raise FileNotFoundError(f'MER final catalog not found for tile {tile_index}: {release_dir}/MER_FINAL_CATALOG/{tile_index}/EUC_MER_FINAL-CAT_TILE{tile_index}*.fits')
 
     # fill columns for paths/existence to mosaics (all bands), MER final/morphology catalogs, value-added products
     for (instrument, band) in instrument_band_pairs:  # could add EXT here
@@ -203,11 +205,9 @@ def create_tile_object(cfg, tile_index):
 
             # for now, only use the mosaic if all required data products exist for that band
             # if all([getattr(mosaic, key, False) for key in cfg.data_products]):  # e.g. BGSUB, BGMOD, RMS. String is Truthy. No path = None = False.
-            if mosaic.validate(cfg):
-                setattr(tile, band, mosaic)
-            else:
-                logging.warning(f'Skipping mosaic as not all data products exist, for tile {tile_index}, instrument {instrument}, band {band}: {mosaic}')
-    
+            assert mosaic.validate(cfg)
+            setattr(tile, band, mosaic)
+
     assert tile.validate(cfg), f'Tile {tile_index} is missing required bands or data products'
     return tile
 
