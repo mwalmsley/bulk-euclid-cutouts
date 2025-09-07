@@ -162,6 +162,8 @@ def get_datalabs_release_dir(cfg):
         release_dir = '/media/home/data/euclid_q1/Q1_R1'
     elif cfg.release_name == 'RR2_R1':
         release_dir = '/media/home/data/euclid_reg/REGREPROC2_R1'
+    elif cfg.release_name == 'DR1_R2':
+        release_dir = '/media/home/data/euclid_idr1/DR1/R2'
     else:
         raise ValueError('Release name not recognised for tile search: {}'.format(cfg.release_name))
     return release_dir
