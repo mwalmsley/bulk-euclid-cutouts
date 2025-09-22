@@ -315,6 +315,24 @@ def get_cutout_loc(base_dir, galaxy, output_format='jpg', version_suffix=None, o
     return os.path.join(base_dir, subdir, filename_without_format + '.' + output_format)
 
 
+
+def get_cutout_loc_fast(df, base_dir, suffix):
+    # much faster version that works on whole df at once
+    # e.g. jpg_loc_generic
+    tile_index = df['tile_index'].astype(int).astype(str)
+    object_id = df['object_id'].astype(int).astype(str).str.replace('-', 'NEG')
+
+    filename_without_format = tile_index + '_' + object_id
+    subdir = tile_index
+    
+    if suffix is not None:
+        subdir = suffix + '/' + tile_index
+        filename_without_format = filename_without_format + '_' + suffix
+        # e.g. vis_only/102159774/102159774_123456_vis_only.jpg
+
+    return base_dir + '/' + subdir + '/' + filename_without_format + '.jpg'  # no format suffix
+
+
 def load_observation_fits(mosaic_path: str) -> tuple[np.ndarray, fits.Header]:
     # annoyingly this does not work for PSF
     logging.debug(f'Loading mosaic {os.path.basename(mosaic_path)} from {mosaic_path}')
